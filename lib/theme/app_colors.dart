@@ -11,4 +11,13 @@ abstract final class AppColors {
   static const success = Color(0xFFC5FAA8); // completed day
   static const warning = Color(0xFFFFF170);
   static const error = Color(0xFFB31212);
+
+  /// Dimmed surface color for unselected pills and steppers.
+  static const surfaceDim = Color(0xFFECD3A4);
+
+  /// Muted text on dark cards (background at 70% opacity).
+  static Color get onDarkMuted => background.withValues(alpha: 0.7);
+
+  /// Muted dark text (text at 70% opacity).
+  static Color get textMuted => text.withValues(alpha: 0.7);
 }

@@ -6,6 +6,7 @@ import 'screens/photo_of_the_day/photo_of_the_day_screen.dart';
 import 'screens/scream_tank/scream_tank_screen.dart';
 import 'screens/tear_collection/tear_collection_screen.dart';
 import 'theme/app_colors.dart';
+import 'screens/custom_breathing/custom_breathing_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,6 +65,10 @@ class HomeScreen extends StatelessWidget {
               FilledButton(
                 onPressed: () => _open(context, const EmotionalDetectiveScreen()),
                 child: const Text('Sprout Detective'),
+              ),
+              FilledButton(
+                onPressed: () => _open(context, const CustomBreathingScreen()),
+                child: const Text('Custom Breathing'),
               ),
             ],
           ),
