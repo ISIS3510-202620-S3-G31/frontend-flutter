@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'screens/custom_breathing/custom_breathing_screen.dart';
 import 'screens/emotional_detective/emotional_detective_screen.dart';
 import 'screens/photo_of_the_day/photo_of_the_day_screen.dart';
 import 'screens/scream_tank/scream_tank_screen.dart';
 import 'screens/tear_collection/tear_collection_screen.dart';
+import 'screens/tool_hub/tool_hub_screen.dart';
 import 'theme/app_colors.dart';
-import 'screens/custom_breathing/custom_breathing_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +27,7 @@ class MainApp extends StatelessWidget {
         colorSchemeSeed: AppColors.primary,
         scaffoldBackgroundColor: AppColors.background,
       ),
-      home: const HomeScreen(),
+      home: const ToolHubScreen(),
     );
   }
 }
@@ -50,6 +51,10 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 12,
             children: [
+              FilledButton(
+                onPressed: () => _open(context, const ToolHubScreen()),
+                child: const Text('Your Toolbox'),
+              ),
               FilledButton(
                 onPressed: () => _open(context, const PhotoOfTheDayScreen()),
                 child: const Text('Photo of the day'),
