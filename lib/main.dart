@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'screens/photo_of_the_day/photo_of_the_day_screen.dart';
+import 'screens/scream_tank/scream_tank_screen.dart';
 import 'theme/app_colors.dart';
 
 void main() {
@@ -49,6 +50,10 @@ class HomeScreen extends StatelessWidget {
               FilledButton(
                 onPressed: () => _open(context, const PhotoOfTheDayScreen()),
                 child: const Text('Photo of the day'),
+              ),
+              FilledButton(
+                onPressed: () => _open(context, const ScreamTankScreen()),
+                child: const Text('Scream Tank'),
               ),
             ],
           ),
