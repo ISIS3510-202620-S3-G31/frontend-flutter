@@ -24,4 +24,12 @@ abstract final class AppText {
   /// "Scream Tank" title only.
   static TextStyle get wordmark =>
       GoogleFonts.sonsieOne(fontSize: 30, height: 1.2, color: AppColors.text);
+
+  /// "Custom breathing" retro display serif title.
+  static TextStyle get breathingTitle => GoogleFonts.fraunces(
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        height: 1.2,
+        color: AppColors.text,
+      );
 }
