@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Photo of the day: camera preview and capture. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- google_fonts downloads the fonts on first launch (debug builds already have it). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="frontend_flutter"
         android:name="${applicationName}"
