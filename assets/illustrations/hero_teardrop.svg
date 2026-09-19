@@ -1,0 +1,39 @@
+<svg width="180" height="200" viewBox="0 0 180 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Teardrop Teal-to-Orange Gradient -->
+    <linearGradient id="dropGradient" x1="90" y1="42" x2="90" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#269E91" />
+      <stop offset="40%" stop-color="#559F74" />
+      <stop offset="68%" stop-color="#B29432" />
+      <stop offset="85%" stop-color="#E87D15" />
+      <stop offset="100%" stop-color="#F56B08" />
+    </linearGradient>
+
+    <!-- Warm Radial Aura Glow -->
+    <radialGradient id="auraGlow" cx="90" cy="95" r="75" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFE2BE" stop-opacity="0.75" />
+      <stop offset="35%" stop-color="#FFEDD6" stop-opacity="0.4" />
+      <stop offset="70%" stop-color="#FFF6E8" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#FFFBF5" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Soft Ground Shadow -->
+    <radialGradient id="groundShadow" cx="90" cy="168" rx="26" ry="6" fx="90" fy="168" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5E432A" stop-opacity="0.25" />
+      <stop offset="55%" stop-color="#5E432A" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#5E432A" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Aura Glow behind teardrop -->
+  <circle cx="90" cy="95" r="75" fill="url(#auraGlow)" />
+
+  <!-- Ground Shadow underneath -->
+  <ellipse cx="90" cy="168" rx="26" ry="6" fill="url(#groundShadow)" />
+
+  <!-- Teardrop -->
+  <path d="M 90 42 C 106 64 124 86 124 106 C 124 125 109 140 90 140 C 71 140 56 125 56 106 C 56 86 74 64 90 42 Z" fill="url(#dropGradient)" />
+
+  <!-- Soft Curved Highlight on the left -->
+  <path d="M 83 62 C 85 64 84 68 81 72 C 75 80 71 90 70 98 C 70 102 65 102 64 99 C 63 96 64 93 65 89 C 67 79 73 69 81 61 C 82 60 83 61 83 62 Z" fill="#FFFFFF" fill-opacity="0.4" />
+</svg>

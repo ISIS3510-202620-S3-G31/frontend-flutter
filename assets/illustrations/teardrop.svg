@@ -1,0 +1,13 @@
+<svg width="68" height="98" viewBox="0 0 68 98" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="dropGrad" x1="34" y1="0" x2="34" y2="98" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#269E91" />
+      <stop offset="40%" stop-color="#559F74" />
+      <stop offset="68%" stop-color="#B29432" />
+      <stop offset="85%" stop-color="#E87D15" />
+      <stop offset="100%" stop-color="#F56B08" />
+    </linearGradient>
+  </defs>
+  <path d="M 34 0 C 50 22 68 44 68 64 C 68 83 53 98 34 98 C 15 98 0 83 0 64 C 0 44 18 22 34 0 Z" fill="url(#dropGrad)" />
+  <path d="M 27 20 C 29 22 28 26 25 30 C 19 38 15 48 14 56 C 14 60 9 60 8 57 C 7 54 8 51 9 47 C 11 37 17 27 25 19 C 26 18 27 19 27 20 Z" fill="#FFFFFF" fill-opacity="0.4" />
+</svg>
