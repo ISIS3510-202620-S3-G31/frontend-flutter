@@ -14,7 +14,10 @@ dependencies:
   google_fonts: ^8.2.1
   image_picker: ^1.2.3
   intl: ^0.20.3
+  noise_meter: ^6.0.0
   path_provider: ^2.1.6
+  # 13.x needs Android compileSdk 37; Flutter 3.44 projects compile against 36.
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:
@@ -26,3 +29,4 @@ flutter:
 
   assets:
     - assets/icons/
+    - assets/illustrations/

@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Photo of the day: camera preview and capture. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Scream Tank: microphone level (noise_meter). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- google_fonts downloads the fonts on first launch (debug builds already have it). -->
     <uses-permission android:name="android.permission.INTERNET" />
 
