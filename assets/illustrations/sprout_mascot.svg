@@ -1,0 +1,45 @@
+<svg width="180" height="200" viewBox="0 0 180 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="heartGradient" x1="90" y1="124" x2="90" y2="158" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFA22E" />
+      <stop offset="100%" stop-color="#F24B27" />
+    </linearGradient>
+  </defs>
+
+  <!-- Ground Cushion / Sitting Folded Legs -->
+  <ellipse cx="90" cy="168" rx="52" ry="13" fill="#F8EBD7" stroke="#7A654C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 50 166 C 62 172 118 172 130 166" stroke="#7A654C" stroke-width="2.2" stroke-linecap="round" />
+
+  <!-- Left and Right resting knees/hands circles -->
+  <circle cx="28" cy="155" r="10" fill="#F8EBD7" stroke="#7A654C" stroke-width="2.6"/>
+  <circle cx="152" cy="155" r="10" fill="#F8EBD7" stroke="#7A654C" stroke-width="2.6"/>
+
+  <!-- Main Body (Egg-shaped circle) -->
+  <ellipse cx="90" cy="114" rx="49" ry="52" fill="#F8EBD7" stroke="#7A654C" stroke-width="2.8"/>
+
+  <!-- Sprout Leaves on Top -->
+  <!-- Stem -->
+  <path d="M 88 64 L 88 47 C 88 46 92 46 92 47 L 92 64 Z" fill="#24A394"/>
+  <!-- Left Leaf -->
+  <path d="M 90 47 C 86 37 72 25 68 16 C 62 26 71 43 90 47 Z" fill="#24A394"/>
+  <!-- Right Leaf -->
+  <path d="M 90 47 C 94 37 108 25 112 16 C 118 26 109 43 90 47 Z" fill="#24A394"/>
+
+  <!-- Eyebrows -->
+  <path d="M 68 93 Q 74 90 80 93" stroke="#3C2A1A" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  <path d="M 100 93 Q 106 90 112 93" stroke="#3C2A1A" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+
+  <!-- Eyes (Happy Closed / Meditating) -->
+  <path d="M 69 104 Q 75 97 81 104" stroke="#3C2A1A" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <path d="M 99 104 Q 105 97 111 104" stroke="#3C2A1A" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+
+  <!-- Soft Pink Blush -->
+  <ellipse cx="64" cy="112" rx="5.5" ry="5" fill="#F1958B" />
+  <ellipse cx="116" cy="112" rx="5.5" ry="5" fill="#F1958B" />
+
+  <!-- Smiling Mouth -->
+  <path d="M 84 116 Q 90 122 96 116" stroke="#3C2A1A" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+
+  <!-- Heart on Chest with Warm Vibrant Gradient -->
+  <path d="M 90 158 C 88 155.5 72 143.5 72 134 C 72 127 77.5 123 83.5 125 C 86.8 126.5 89 129.5 90 131 C 91 129.5 93.2 126.5 96.5 125 C 102.5 123 108 127 108 134 C 108 143.5 92 155.5 90 158 Z" fill="url(#heartGradient)" />
+</svg>

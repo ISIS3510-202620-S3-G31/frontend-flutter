@@ -132,7 +132,7 @@ class _TearCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.panel,
       borderRadius: BorderRadius.circular(20),
       elevation: 0,
       clipBehavior: Clip.antiAlias,

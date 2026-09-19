@@ -114,12 +114,12 @@ class _DetailCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.panel,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           // Soft outer warm glow
           BoxShadow(
-            color: Colors.white.withValues(alpha: 0.85),
+            color: AppColors.panel.withValues(alpha: 0.85),
             blurRadius: 20,
             spreadRadius: 2,
           ),

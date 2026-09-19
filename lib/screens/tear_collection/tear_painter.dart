@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../theme/app_colors.dart';
-
-/// Renders a teardrop shape with either a solid color or a gradient.
+/// Renders a teardrop shape with either a solid color, gradient, or default SVG.
 class Teardrop extends StatelessWidget {
   const Teardrop({
     super.key,
@@ -10,7 +9,7 @@ class Teardrop extends StatelessWidget {
     required this.height,
     this.color,
     this.gradient,
-  }) : assert(color != null || gradient != null, 'Either color or gradient must be provided');
+  });
 
   final double width;
   final double height;
@@ -19,6 +18,15 @@ class Teardrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (color == null && gradient == null) {
+      return SvgPicture.asset(
+        'assets/illustrations/teardrop.svg',
+        width: width,
+        height: height,
+        fit: BoxFit.contain,
+      );
+    }
+
     return CustomPaint(
       size: Size(width, height),
       painter: _TeardropPainter(color: color, gradient: gradient),
@@ -59,12 +67,12 @@ class _TeardropPainter extends CustomPainter {
   }
 }
 
-/// Large floating teardrop with a soft radial halo and subtle ground shadow.
+/// Large floating teardrop illustration with halo and ground shadow loaded from SVG asset.
 class FloatingHeroTeardrop extends StatelessWidget {
   const FloatingHeroTeardrop({
     super.key,
-    this.width = 62,
-    this.height = 84,
+    this.width = 160,
+    this.height = 160,
   });
 
   final double width;
@@ -72,60 +80,11 @@ class FloatingHeroTeardrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 160,
-      height: 160,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Soft radial glow aura behind the teardrop
-          Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  Colors.white.withValues(alpha: 0.75),
-                  Colors.white.withValues(alpha: 0.4),
-                  AppColors.background.withValues(alpha: 0.0),
-                ],
-                stops: const [0.0, 0.5, 1.0],
-              ),
-            ),
-          ),
-
-          // Floating teardrop with vertical gradient
-          Positioned(
-            top: 24,
-            child: Teardrop(
-              width: width,
-              height: height,
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.secondary, // Teal at top
-                  AppColors.primary,   // Orange at bottom
-                ],
-              ),
-            ),
-          ),
-
-          // Ground shadow beneath the floating tear
-          Positioned(
-            bottom: 22,
-            child: Container(
-              width: 38,
-              height: 10,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.all(Radius.elliptical(19, 5)),
-                color: AppColors.text.withValues(alpha: 0.12),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return SvgPicture.asset(
+      'assets/illustrations/hero_teardrop.svg',
+      width: width,
+      height: height,
+      fit: BoxFit.contain,
     );
   }
 }
