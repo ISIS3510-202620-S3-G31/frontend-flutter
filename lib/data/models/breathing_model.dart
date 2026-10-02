@@ -28,13 +28,16 @@ enum BreathingStep {
   const BreathingStep(this.label);
 
   final String label;
+
+  BreathingPhase get phase => switch (this) {
+    BreathingStep.inhale => BreathingPhase.inhale,
+    BreathingStep.hold => BreathingPhase.hold,
+    BreathingStep.exhale => BreathingPhase.exhale,
+  };
 }
 
 const List<int> sessionDurations = [2, 5, 10];
 
-/// State representation for Custom Breathing.
-/// The default values match the mid-session state shown in the mockup:
-/// 3-step, 4s breathe in, cycle 2 of 6, Inhale 4s, Hold 7s, Exhale 6s, 5 min.
 class CustomBreathingState {
   const CustomBreathingState({
     this.pattern = BreathingPattern.threeStep,
@@ -42,12 +45,10 @@ class CustomBreathingState {
     this.holdSeconds = 7,
     this.exhaleSeconds = 6,
     this.sessionMinutes = 5,
-    this.isRunning = true,
+    this.isRunning = false,
     this.phase = BreathingPhase.inhale,
-    this.secondsLeft = 4,
-    this.cycle = 2,
-    this.totalCycles = 6,
-    this.progress = 0.4,
+    this.cycle = 1,
+    this.progress = 0,
   });
 
   final BreathingPattern pattern;
@@ -57,9 +58,7 @@ class CustomBreathingState {
   final int sessionMinutes;
   final bool isRunning;
   final BreathingPhase phase;
-  final int secondsLeft;
   final int cycle;
-  final int totalCycles;
   final double progress;
 
   int secondsOf(BreathingStep step) {
@@ -73,8 +72,20 @@ class CustomBreathingState {
     }
   }
 
+  int secondsOfPhase(BreathingPhase phase) => switch (phase) {
+    BreathingPhase.inhale => inhaleSeconds,
+    BreathingPhase.hold => holdSeconds,
+    BreathingPhase.exhale => exhaleSeconds,
+  };
+
   int get cycleDuration =>
       inhaleSeconds + (pattern.hasHold ? holdSeconds : 0) + exhaleSeconds;
+    
+  int get totalCycles =>
+      (sessionMinutes * 60 / cycleDuration).round().clamp(1,99);
+  
+  int get secondsLeft =>
+      (secondsOfPhase(phase) * (1 - progress)).ceil();
 
   List<BreathingStep> get visibleSteps => BreathingStep.values
       .where((step) => step != BreathingStep.hold || pattern.hasHold)
@@ -88,9 +99,7 @@ class CustomBreathingState {
     int? sessionMinutes,
     bool? isRunning,
     BreathingPhase? phase,
-    int? secondsLeft,
     int? cycle,
-    int? totalCycles,
     double? progress,
   }) {
     return CustomBreathingState(
@@ -101,9 +110,7 @@ class CustomBreathingState {
       sessionMinutes: sessionMinutes ?? this.sessionMinutes,
       isRunning: isRunning ?? this.isRunning,
       phase: phase ?? this.phase,
-      secondsLeft: secondsLeft ?? this.secondsLeft,
       cycle: cycle ?? this.cycle,
-      totalCycles: totalCycles ?? this.totalCycles,
       progress: progress ?? this.progress,
     );
   }

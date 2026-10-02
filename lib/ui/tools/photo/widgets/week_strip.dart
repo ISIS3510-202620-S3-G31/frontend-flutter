@@ -5,7 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../view_model/photo_of_the_day_view_model.dart' show DayState;
 
-/// Monday → Sunday dots showing which days already have a photo.
+/// Monday to Sunday dots showing which days already have a photo.
 class WeekStrip extends StatelessWidget {
   const WeekStrip({super.key, required this.states})
     : assert(states.length == 7);
