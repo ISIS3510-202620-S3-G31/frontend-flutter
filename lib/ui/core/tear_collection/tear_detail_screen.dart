@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
-import '../../ui/core/widgets/screen_header.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text.dart';
+import '../widgets/screen_header.dart';
 import 'tear_entry.dart';
 import 'tear_mascot.dart';
 import 'tear_painter.dart';

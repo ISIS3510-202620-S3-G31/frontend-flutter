@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../ui/core/theme/app_colors.dart';
+import '../theme/app_colors.dart';
 
 /// Represents a single recorded emotional tear entry.
 class TearEntry {

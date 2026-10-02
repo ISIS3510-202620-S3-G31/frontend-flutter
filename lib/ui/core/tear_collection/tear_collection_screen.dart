@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
-import '../../ui/core/widgets/screen_header.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text.dart';
+import '../widgets/screen_header.dart';
 import 'tear_detail_screen.dart';
 import 'tear_entry.dart';
 import 'tear_jar_illustration.dart';
@@ -97,7 +97,8 @@ class TearCollectionScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => TearDetailScreen(entry: entries.first),
+                          builder: (_) =>
+                              TearDetailScreen(entry: entries.first),
                         ),
                       );
                     },
@@ -121,10 +122,7 @@ class TearCollectionScreen extends StatelessWidget {
 }
 
 class _TearCard extends StatelessWidget {
-  const _TearCard({
-    required this.entry,
-    required this.onTap,
-  });
+  const _TearCard({required this.entry, required this.onTap});
 
   final TearEntry entry;
   final VoidCallback onTap;
@@ -153,11 +151,7 @@ class _TearCard extends StatelessWidget {
           child: Row(
             children: [
               // Tear drop icon
-              Teardrop(
-                width: 16,
-                height: 22,
-                color: entry.color,
-              ),
+              Teardrop(width: 16, height: 22, color: entry.color),
               const SizedBox(width: 16),
 
               // Title and timestamp
