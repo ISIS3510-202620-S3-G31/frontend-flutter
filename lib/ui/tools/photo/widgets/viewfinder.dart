@@ -105,9 +105,7 @@ class _Prompt extends StatelessWidget {
           child: Text(
             hint,
             textAlign: TextAlign.center,
-            style: AppText.body.copyWith(
-              color: AppColors.onDarkMuted,
-            ),
+            style: AppText.body.copyWith(color: AppColors.onDarkMuted),
           ),
         ),
       ],

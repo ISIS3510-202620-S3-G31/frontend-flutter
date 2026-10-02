@@ -114,7 +114,7 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
                         return Column(
                           children: [
                             Padding(
-                                padding: const EdgeInsets.symmetric(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 24,
                                 vertical: 12,
                               ),

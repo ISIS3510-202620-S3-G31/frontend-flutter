@@ -23,14 +23,6 @@ class PhotoStorageService {
     return await file.exists() ? file : null;
   }
 
-  Future<Set<DateTime>> daysWithPhoto(List<DateTime> days) async {
-    final result = <DateTime>{};
-    for (final day in days) {
-      if (await photoFor(day) != null) result.add(day);
-    }
-    return result;
-  }
-
   Future<File> save(DateTime day, XFile photo) async {
     final file = await _fileFor(day);
     await photo.saveTo(file.path);
