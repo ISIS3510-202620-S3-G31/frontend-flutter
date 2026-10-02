@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
-import '../../ui/core/widgets/circle_icon_button.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text.dart';
+import '../widgets/circle_icon_button.dart';
 
 /// The 3 distinct stages of the Sprout Detective flow.
 enum _DetectiveStage { intro, clues, summary }
@@ -393,9 +393,6 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // View 3: Investigation Summary
-  // ---------------------------------------------------------------------------
   Widget _buildSummaryView() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
