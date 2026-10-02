@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../ui/core/theme/app_colors.dart';
+import '../../../core/theme/app_colors.dart';
 
 /// 116 × 116 mic button. While listening, the two outer rings grow with the mic level.
 class MicButton extends StatelessWidget {
@@ -13,7 +13,6 @@ class MicButton extends StatelessWidget {
   });
 
   final bool listening;
-
 
   final double level;
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../screens/scream_tank/scream_tank_screen.dart';
 import '../tools/breathing/widgets/custom_breathing_screen.dart';
 import '../tools/emotional_detective/widgets/emotional_detective_screen.dart';
 import '../tools/photo/widgets/photo_of_the_day_screen.dart';
+import '../tools/scream_tank/widgets/scream_tank_screen.dart';
 import '../tools/tear_collection/widgets/tear_collection_screen.dart';
 
 /// Screen of each tool that is already built. Tools missing here are shown as
