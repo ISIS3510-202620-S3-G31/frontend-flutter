@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../theme/app_colors.dart';
+import '../../ui/core/theme/app_colors.dart';
 
 /// In the mockup the sparkles are drawn for a ring at 40%, so they are rotated from there.
 const double _sparklesProgress = 0.4;

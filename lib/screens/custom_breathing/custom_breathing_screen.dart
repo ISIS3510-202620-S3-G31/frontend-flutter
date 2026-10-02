@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_text.dart';
-import '../../widgets/screen_header.dart';
+import '../../ui/core/theme/app_colors.dart';
+import '../../ui/core/theme/app_text.dart';
+import '../../ui/core/widgets/screen_header.dart';
 import 'custom_breathing_models.dart';
 import 'duration_pills.dart';
 import 'pattern_selector.dart';

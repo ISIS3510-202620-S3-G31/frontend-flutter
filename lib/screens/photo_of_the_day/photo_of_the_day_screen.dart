@@ -6,10 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_text.dart';
-import '../../widgets/circle_icon_button.dart';
-import '../../widgets/screen_header.dart';
+import '../../ui/core/theme/app_colors.dart';
+import '../../ui/core/theme/app_text.dart';
+import '../../ui/core/widgets/circle_icon_button.dart';
+import '../../ui/core/widgets/screen_header.dart';
 import 'photo_store.dart';
 import 'shutter_button.dart';
 import 'viewfinder.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_text.dart';
+import '../../ui/core/theme/app_colors.dart';
+import '../../ui/core/theme/app_text.dart';
 import 'custom_breathing_models.dart';
 
 class DurationPills extends StatelessWidget {

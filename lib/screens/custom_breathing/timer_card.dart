@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_text.dart';
+import '../../ui/core/theme/app_colors.dart';
+import '../../ui/core/theme/app_text.dart';
 import 'breathing_ring.dart';
 import 'custom_breathing_models.dart';
 
