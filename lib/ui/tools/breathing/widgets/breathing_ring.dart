@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../ui/core/theme/app_colors.dart';
+import '../../../core/theme/app_colors.dart';
 
 /// In the mockup the sparkles are drawn for a ring at 40%, so they are rotated from there.
 const double _sparklesProgress = 0.4;
@@ -89,8 +89,9 @@ class _RingPainter extends CustomPainter {
     // The gradient goes from the top of the ring to the head of the arc.
     // After half a turn the head goes up again, so the bottom of the ring is used.
     final top = center.dy - radius;
-    final gradientEnd =
-        sweep < math.pi ? math.max(head.dy, top + 1) : center.dy + radius;
+    final gradientEnd = sweep < math.pi
+        ? math.max(head.dy, top + 1)
+        : center.dy + radius;
     canvas.drawArc(
       rect,
       _startAngle,

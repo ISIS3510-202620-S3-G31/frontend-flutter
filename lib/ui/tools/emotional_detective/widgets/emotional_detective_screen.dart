@@ -1,24 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
-import '../../ui/core/widgets/circle_icon_button.dart';
-
-/// The 3 distinct stages of the Sprout Detective flow.
-enum _DetectiveStage { intro, clues, summary }
-
-/// Data representation for an investigation clue question.
-class _Clue {
-  const _Clue({required this.question, required this.options});
-
-  final String question;
-  final List<String> options;
-}
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text.dart';
+import '../../../core/widgets/circle_icon_button.dart';
+import '../view_model/emotional_detective_view_model.dart';
 
 /// Emotional Detective screen where "Sprout Detective" guides the user through
 /// identifying emotional triggers, root feelings, and actionable recommendations.
 class EmotionalDetectiveScreen extends StatefulWidget {
-  const EmotionalDetectiveScreen({super.key});
+  const EmotionalDetectiveScreen({super.key, this.viewModel});
+
+  /// Pass one in tests; otherwise the screen builds and disposes its own.
+  final EmotionalDetectiveViewModel? viewModel;
 
   @override
   State<EmotionalDetectiveScreen> createState() =>
@@ -26,48 +19,31 @@ class EmotionalDetectiveScreen extends StatefulWidget {
 }
 
 class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
-  _DetectiveStage _stage = _DetectiveStage.intro;
-  int _currentClueIndex = 1; // Default to Clue 2 (index 1)
-  final Map<int, int> _selectedAnswers = {1: 1};
+  late final EmotionalDetectiveViewModel _viewModel =
+      widget.viewModel ?? EmotionalDetectiveViewModel();
+  late final bool _ownsViewModel = widget.viewModel == null;
 
-  static const List<_Clue> _clues = [
-    _Clue(
-      question: 'What feeling is most present for you right now?',
-      options: [
-        'I feel anxious or on edge',
-        'I feel overwhelmed with everything',
-        'I feel drained and low on energy',
-        'Something else is happening...',
-      ],
-    ),
-    _Clue(
-      question: 'What happened right before you felt overwhelmed?',
-      options: [
-        'A tough test or deadline at school/work',
-        'An argument or misunderstanding with a friend',
-        'Too many small things piled up',
-        'Something else happened...',
-      ],
-    ),
-    _Clue(
-      question: 'Where do you notice this tension in your body?',
-      options: [
-        'In my shoulders, jaw, or neck',
-        'In my chest or shallow breathing',
-        'In my stomach or headache',
-        'I feel mostly numb or disconnected',
-      ],
-    ),
-    _Clue(
-      question: 'What thought keeps looping in your head?',
-      options: [
-        'I won\'t be able to get everything done',
-        'I feel like I let someone down',
-        'Everything is just too much right now',
-        'I need to step back and breathe',
-      ],
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.addListener(_onViewModelChanged);
+  }
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    if (_ownsViewModel) _viewModel.dispose();
+    super.dispose();
+  }
+
+  void _onViewModelChanged() {
+    final message = _viewModel.errorMessage;
+    if (message == null || !mounted) return;
+    _viewModel.clearError();
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   /// Cream background color for cards and panels.
   static const _panelColor = Color(0xFFFDF3E0);
@@ -86,25 +62,8 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
   );
 
   void _onBack() {
-    switch (_stage) {
-      case _DetectiveStage.intro:
-        Navigator.maybePop(context);
-      case _DetectiveStage.clues:
-        if (_currentClueIndex > 0) {
-          setState(() => _currentClueIndex--);
-        } else {
-          setState(() => _stage = _DetectiveStage.intro);
-        }
-      case _DetectiveStage.summary:
-        setState(() => _stage = _DetectiveStage.clues);
-    }
-  }
-
-  void _onContinueClue() {
-    if (_currentClueIndex < _clues.length - 1) {
-      setState(() => _currentClueIndex++);
-    } else {
-      setState(() => _stage = _DetectiveStage.summary);
+    if (!_viewModel.handleBack()) {
+      Navigator.maybePop(context);
     }
   }
 
@@ -127,15 +86,20 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: switch (_stage) {
-          _DetectiveStage.intro => _buildIntroView(),
-          _DetectiveStage.clues => _buildCluesView(),
-          _DetectiveStage.summary => _buildSummaryView(),
-        },
-      ),
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: switch (_viewModel.stage) {
+              DetectiveStage.intro => _buildIntroView(),
+              DetectiveStage.clues => _buildCluesView(),
+              DetectiveStage.summary => _buildSummaryView(),
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -195,7 +159,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
           ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: () => setState(() => _stage = _DetectiveStage.clues),
+            onPressed: _viewModel.startInvestigation,
             style: _primaryButtonStyle,
             child: const Text('Let\'s Investigate!'),
           ),
@@ -206,9 +170,8 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
   }
 
   Widget _buildCluesView() {
-    final clue = _clues[_currentClueIndex];
-    final selectedOption = _selectedAnswers[_currentClueIndex];
-    final progress = (_currentClueIndex + 1) / _clues.length;
+    final question = _viewModel.currentQuestion;
+    final selectedOption = _viewModel.selectedOption;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -227,7 +190,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
                 ),
               ),
               Text(
-                'Clue ${_currentClueIndex + 1} of ${_clues.length}',
+                'Clue ${_viewModel.currentClueNumber} of ${_viewModel.totalClues}',
                 style: AppText.body.copyWith(
                   color: AppColors.secondary,
                   fontWeight: FontWeight.bold,
@@ -240,7 +203,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
-              value: progress,
+              value: _viewModel.progress,
               minHeight: 6,
               backgroundColor: AppColors.text.withValues(alpha: 0.12),
               valueColor: const AlwaysStoppedAnimation<Color>(
@@ -281,7 +244,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    clue.question,
+                    question.text,
                     style: AppText.h3.copyWith(
                       fontWeight: FontWeight.bold,
                       height: 1.25,
@@ -292,18 +255,14 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
 
                   Expanded(
                     child: ListView.separated(
-                      itemCount: clue.options.length,
+                      itemCount: question.options.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final isSelected = selectedOption == index;
-                        final optionText = clue.options[index];
+                        final optionText = question.options[index];
 
                         return InkWell(
-                          onTap: () {
-                            setState(() {
-                              _selectedAnswers[_currentClueIndex] = index;
-                            });
-                          },
+                          onTap: () => _viewModel.selectAnswer(index),
                           borderRadius: BorderRadius.circular(16),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
@@ -383,7 +342,8 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
 
           // Bottom action button
           FilledButton(
-            onPressed: selectedOption != null ? _onContinueClue : null,
+            onPressed:
+                _viewModel.canContinue ? _viewModel.continueInvestigation : null,
             style: _primaryButtonStyle,
             child: const Text('Continue Investigation'),
           ),
@@ -393,9 +353,6 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // View 3: Investigation Summary
-  // ---------------------------------------------------------------------------
   Widget _buildSummaryView() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -455,7 +412,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
                       children: [
                         _buildSummarySection(
                           label: 'TRIGGER DISCOVERED',
-                          content: 'Fear of falling behind in deadlines',
+                          content: _viewModel.triggerDiscovered,
                           isBold: true,
                         ),
                         const Divider(
@@ -465,7 +422,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
                         ),
                         _buildSummarySection(
                           label: 'ROOT EMOTION IDENTIFIED',
-                          content: 'Overwhelm & Anxiety',
+                          content: _viewModel.rootEmotionIdentified,
                           isBold: true,
                         ),
                         const Divider(
@@ -475,8 +432,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
                         ),
                         _buildSummarySection(
                           label: 'RECOMMENDATION',
-                          content:
-                              'Take 2 minutes to try Custom Interval Breathing or leave a note in the Achievement Jar.',
+                          content: _viewModel.recommendation,
                           isBold: false,
                         ),
                       ],
@@ -492,8 +448,8 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
           FilledButton(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Opening Custom Interval Breathing...'),
+                SnackBar(
+                  content: Text('Opening ${_viewModel.recommendedTool}...'),
                 ),
               );
             },
@@ -504,7 +460,12 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
 
           // Secondary action
           TextButton(
-            onPressed: () => Navigator.maybePop(context),
+            onPressed: () async {
+              await _viewModel.saveToInsights();
+              if (mounted) {
+                Navigator.maybePop(context);
+              }
+            },
             child: Text(
               'Save to My Insights & Finish',
               style: AppText.body.copyWith(

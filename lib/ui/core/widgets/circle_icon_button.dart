@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/app_colors.dart';
 
-/// 48 × 48 round button with an SVG icon (back, gallery, flip, restart, done…).
+/// 48x48 round button with an SVG icon (back, gallery, flip, restart...).
 ///
 /// When [onPressed] is null the button is drawn at 40% opacity.
 class CircleIconButton extends StatelessWidget {
