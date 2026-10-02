@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../custom_breathing/custom_breathing_screen.dart';
-import '../../ui/core/emotional_detective/emotional_detective_screen.dart';
+import '../../ui/tools/emotional_detective/widgets/emotional_detective_screen.dart';
 import '../../ui/tools/photo/widgets/photo_of_the_day_screen.dart';
 import '../scream_tank/scream_tank_screen.dart';
 import '../tear_collection/tear_collection_screen.dart';
