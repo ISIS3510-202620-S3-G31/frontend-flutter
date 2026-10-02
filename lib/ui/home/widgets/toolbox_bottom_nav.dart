@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text.dart';
 
 /// Bottom navigation bar for the Toolbox with Tools, Random, and Stats tabs.
 class ToolboxBottomNav extends StatelessWidget {
@@ -97,11 +97,7 @@ class _NavItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Center(
-                child: SvgPicture.asset(
-                  iconAsset,
-                  width: 20,
-                  height: 20,
-                ),
+                child: SvgPicture.asset(iconAsset, width: 20, height: 20),
               ),
             ),
             const SizedBox(height: 4),

@@ -1,42 +1,21 @@
-import 'package:flutter/material.dart';
+import 'dart:math';
 
-import '../../ui/tools/breathing/widgets/custom_breathing_screen.dart';
-import '../../ui/tools/emotional_detective/widgets/emotional_detective_screen.dart';
-import '../../ui/tools/photo/widgets/photo_of_the_day_screen.dart';
-import '../../ui/tools/scream_tank/widgets/scream_tank_screen.dart';
-import '../../ui/tools/tear_collection/widgets/tear_collection_screen.dart';
+import '../models/tool_model.dart';
 
-enum ToolCategory {
-  all('All'),
-  calmDown('Calm down'),
-  release('Release'),
-  reflect('Reflect');
+class ToolRepository {
+  const ToolRepository();
 
-  const ToolCategory(this.label);
+  List<ToolItem> allTools() => _tools;
 
-  final String label;
+  List<ToolItem> toolsIn(ToolCategory category) => category == ToolCategory.all
+      ? _tools
+      : _tools.where((tool) => tool.category == category).toList();
+
+  ToolItem randomTool() => _tools[Random().nextInt(_tools.length)];
 }
 
-class ToolItem {
-  const ToolItem({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.iconAsset,
-    required this.category,
-    this.screenBuilder,
-  });
-
-  final String id;
-  final String title;
-  final String description;
-  final String iconAsset;
-  final ToolCategory category;
-  final Widget Function(BuildContext)? screenBuilder;
-}
-
-final List<ToolItem> defaultTools = [
-  const ToolItem(
+const _tools = [
+  ToolItem(
     id: 'blow',
     title: 'Blow it out',
     description: 'Blow out the tension, one breath at a time.',
@@ -49,7 +28,6 @@ final List<ToolItem> defaultTools = [
     description: 'One photo a day, one new memory.',
     iconAsset: 'assets/icons/ic_tool_photo.svg',
     category: ToolCategory.reflect,
-    screenBuilder: (_) => const PhotoOfTheDayScreen(),
   ),
   ToolItem(
     id: 'breathing',
@@ -57,9 +35,8 @@ final List<ToolItem> defaultTools = [
     description: 'Build the rhythm that fits you.',
     iconAsset: 'assets/icons/ic_tool_breathing.svg',
     category: ToolCategory.calmDown,
-    screenBuilder: (_) => const CustomBreathingScreen(),
   ),
-  const ToolItem(
+  ToolItem(
     id: 'jar',
     title: 'Achievement jar',
     description: 'Save and celebrate your daily wins.',
@@ -72,7 +49,6 @@ final List<ToolItem> defaultTools = [
     description: 'Let it all out in a safe space.',
     iconAsset: 'assets/icons/ic_tool_scream.svg',
     category: ToolCategory.release,
-    screenBuilder: (_) => const ScreamTankScreen(),
   ),
   ToolItem(
     id: 'tear',
@@ -80,7 +56,6 @@ final List<ToolItem> defaultTools = [
     description: 'Tear away what no longer serves you.',
     iconAsset: 'assets/icons/ic_tool_tear.svg',
     category: ToolCategory.release,
-    screenBuilder: (_) => const TearCollectionScreen(),
   ),
   ToolItem(
     id: 'detective',
@@ -88,16 +63,15 @@ final List<ToolItem> defaultTools = [
     description: 'Uncover and reframe unhelpful thoughts.',
     iconAsset: 'assets/icons/ic_tool_detective.svg',
     category: ToolCategory.reflect,
-    screenBuilder: (_) => const EmotionalDetectiveScreen(),
   ),
-  const ToolItem(
+  ToolItem(
     id: 'body',
     title: 'Body scan',
     description: 'Tune in and release physical tension.',
     iconAsset: 'assets/icons/ic_tool_body.svg',
     category: ToolCategory.calmDown,
   ),
-  const ToolItem(
+  ToolItem(
     id: 'contain',
     title: 'Contain the worry',
     description: 'Set aside worries to revisit later.',

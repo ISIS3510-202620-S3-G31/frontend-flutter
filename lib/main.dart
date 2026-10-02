@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'screens/tool_hub/tool_hub_screen.dart';
+import 'ui/home/widgets/tool_hub_screen.dart';
 import 'ui/core/theme/app_colors.dart';
 
 void main() {
