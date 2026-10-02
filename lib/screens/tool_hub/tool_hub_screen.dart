@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../theme/app_colors.dart';
-import '../../theme/app_text.dart';
+import '../../ui/core/theme/app_colors.dart';
+import '../../ui/core/theme/app_text.dart';
 import 'category_filter_bar.dart';
 import 'leave_to_chance_card.dart';
 import 'tool_card.dart';

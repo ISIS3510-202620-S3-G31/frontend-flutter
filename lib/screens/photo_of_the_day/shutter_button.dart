@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
+import '../../ui/core/theme/app_colors.dart';
 
 /// 84 × 84 shutter: a 3 px ring with a 66 × 66 orange disc inside.
 /// Shrinks to 94% while pressed.
