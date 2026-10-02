@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../custom_breathing/custom_breathing_screen.dart';
+import '../../ui/tools/breathing/widgets/custom_breathing_screen.dart';
 import '../emotional_detective/emotional_detective_screen.dart';
 import '../../ui/tools/photo/widgets/photo_of_the_day_screen.dart';
 import '../scream_tank/scream_tank_screen.dart';

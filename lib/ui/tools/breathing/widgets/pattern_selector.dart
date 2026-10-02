@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
-import 'custom_breathing_models.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text.dart';
+import '../../../../data/models/breathing_model.dart';
 
 /// Three pills with the same width: 2-step, 3-step, 4-7-8.
 /// Each option has an icon and a label.

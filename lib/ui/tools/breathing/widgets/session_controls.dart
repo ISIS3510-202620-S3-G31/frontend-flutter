@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/widgets/circle_icon_button.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/circle_icon_button.dart';
 
 /// Bottom row with three controls:
 /// - Small teal reset button on the left
@@ -32,10 +32,7 @@ class SessionControls extends StatelessWidget {
           semanticLabel: 'Reset the session',
           onPressed: onReset,
         ),
-        _MainActionButton(
-          isRunning: isRunning,
-          onPressed: onToggleRunning,
-        ),
+        _MainActionButton(isRunning: isRunning, onPressed: onToggleRunning),
         CircleIconButton(
           asset: 'assets/icons/ic_check.svg',
           semanticLabel: 'Finish the session',
@@ -47,10 +44,7 @@ class SessionControls extends StatelessWidget {
 }
 
 class _MainActionButton extends StatelessWidget {
-  const _MainActionButton({
-    required this.isRunning,
-    required this.onPressed,
-  });
+  const _MainActionButton({required this.isRunning, required this.onPressed});
 
   final bool isRunning;
   final VoidCallback onPressed;

@@ -100,7 +100,7 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
       _controller = controller;
       _cameraFailed = false;
     } on Exception {
-      // Permission denied, no camera, emulator without camera…
+      // Permission denied, no camera, emulator without camera.
       _cameraFailed = true;
     } finally {
       _startingCamera = false;
