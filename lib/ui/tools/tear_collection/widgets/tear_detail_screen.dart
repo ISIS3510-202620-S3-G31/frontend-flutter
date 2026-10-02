@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
-import '../../ui/core/widgets/screen_header.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text.dart';
+import '../../../core/widgets/screen_header.dart';
 import 'tear_entry.dart';
 import 'tear_mascot.dart';
 import 'tear_painter.dart';
@@ -13,7 +13,7 @@ import 'tear_painter.dart';
 class TearDetailScreen extends StatelessWidget {
   const TearDetailScreen({super.key, required this.entry});
 
-  final TearEntry entry;
+  final Tear entry;
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +106,7 @@ class TearDetailScreen extends StatelessWidget {
 class _DetailCard extends StatelessWidget {
   const _DetailCard({required this.entry});
 
-  final TearEntry entry;
+  final Tear entry;
 
   @override
   Widget build(BuildContext context) {
