@@ -4,7 +4,7 @@ import '../custom_breathing/custom_breathing_screen.dart';
 import '../emotional_detective/emotional_detective_screen.dart';
 import '../../ui/tools/photo/widgets/photo_of_the_day_screen.dart';
 import '../scream_tank/scream_tank_screen.dart';
-import '../../ui/core/tear_collection/tear_collection_screen.dart';
+import '../../ui/tools/tear_collection/widgets/tear_collection_screen.dart';
 
 enum ToolCategory {
   all('All'),

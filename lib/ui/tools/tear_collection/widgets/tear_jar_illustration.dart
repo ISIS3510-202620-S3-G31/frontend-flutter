@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import '../../../core/theme/app_colors.dart';
 import 'tear_mascot.dart';
 import 'tear_painter.dart';
 
