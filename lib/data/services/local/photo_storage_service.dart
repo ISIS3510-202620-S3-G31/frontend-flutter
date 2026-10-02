@@ -4,7 +4,6 @@ import 'package:camera/camera.dart' show XFile;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// One photo per day, stored as `<documents>/photo_of_the_day/yyyy-MM-dd.jpg`.
 class PhotoStorageService {
   static final _fileDate = DateFormat('yyyy-MM-dd');
 

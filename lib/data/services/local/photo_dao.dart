@@ -2,8 +2,7 @@ import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-/// Local table with one row per day that has a photo, and whether that photo
-/// was already uploaded.
+
 class PhotoDao {
   static final _dayFormat = DateFormat('yyyy-MM-dd');
 

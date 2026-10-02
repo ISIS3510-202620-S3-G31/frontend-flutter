@@ -12,12 +12,10 @@ import 'shutter_button.dart';
 import 'viewfinder.dart';
 import 'week_strip.dart';
 
-/// Daily photo journal: one photo per day, and a strip showing which days of
-/// the week already have one.
+
 class PhotoOfTheDayScreen extends StatefulWidget {
   const PhotoOfTheDayScreen({super.key, this.viewModel});
 
-  /// Pass one in tests; otherwise the screen builds and disposes its own.
   final PhotoOfTheDayViewModel? viewModel;
 
   @override

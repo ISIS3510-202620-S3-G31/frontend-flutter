@@ -44,7 +44,6 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   File? get todayPhoto => _todayPhoto?.file;
   String? get message => _message;
 
-  /// One photo a day: the controls turn off once today's photo exists.
   bool get canShoot => _todayPhoto == null && !_busy;
 
   bool get canSwitchCamera => _cameras.length > 1;
