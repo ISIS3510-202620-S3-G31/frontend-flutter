@@ -12,11 +12,8 @@ import 'shutter_button.dart';
 import 'viewfinder.dart';
 import 'week_strip.dart';
 
-/// Daily photo journal: the user takes one photo per day, and the week strip
-/// shows which days already have one.
-///
-/// This is the view: it draws what [PhotoOfTheDayViewModel] exposes and sends
-/// every action back to it.
+/// Daily photo journal: one photo per day, and a strip showing which days of
+/// the week already have one.
 class PhotoOfTheDayScreen extends StatefulWidget {
   const PhotoOfTheDayScreen({super.key, this.viewModel});
 
@@ -109,8 +106,8 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        // 456 px on the 844 px Figma frame; shorter phones get
-                        // a shorter card so the controls always fit.
+                        // 456 px on the 844 px Figma frame, shorter on
+                        // smaller phones so the controls always fit.
                         final cardHeight =
                             (constraints.maxHeight - 24 - _minControlsHeight)
                                 .clamp(240.0, 456.0);
@@ -185,7 +182,6 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
   }
 }
 
-/// Camera preview scaled to cover the whole card, like `BoxFit.cover`.
 class _CameraFill extends StatelessWidget {
   const _CameraFill({required this.controller});
 

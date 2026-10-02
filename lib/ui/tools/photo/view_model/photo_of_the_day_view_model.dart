@@ -7,14 +7,8 @@ import '../../../../data/models/photo_model.dart';
 import '../../../../data/repositories/photo_repository.dart';
 import '../../../../data/services/camera_service.dart';
 
-/// How one day is drawn in the week strip.
 enum DayState { done, today, future }
 
-/// State and actions of the Photo of the day screen.
-///
-/// The screen only reads these values and calls these methods; everything else
-/// (camera, gallery, stored photos) happens behind the repository and the
-/// services.
 class PhotoOfTheDayViewModel extends ChangeNotifier {
   PhotoOfTheDayViewModel({
     PhotoRepository? repository,
@@ -25,7 +19,6 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   final PhotoRepository _repository;
   final CameraService _cameraService;
 
-  /// Today, without time. The screen is built around a single day.
   final DateTime today = DateUtils.dateOnly(DateTime.now());
 
   List<CameraDescription> _cameras = [];
@@ -43,26 +36,17 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   DailyPhoto? _todayPhoto;
   Set<DateTime> _daysWithPhoto = {};
 
-  /// Live camera, or null while it is closed, failing or not needed.
   CameraController? get cameraController => _controller;
-
-  /// True when the camera could not be opened: no permission, no camera…
   bool get cameraFailed => _cameraFailed;
-
   bool get flashOn => _flashOn;
-
-  /// Today's photo, or null if it hasn't been taken yet.
   File? get todayPhoto => _todayPhoto?.file;
+  String? get errorMessage => _errorMessage;
 
   /// One photo a day: the controls turn off once today's photo exists.
   bool get canShoot => _todayPhoto == null && !_busy;
 
   bool get canSwitchCamera => _cameras.length > 1;
 
-  /// Message to show once in a snack bar. The screen calls [clearError] after.
-  String? get errorMessage => _errorMessage;
-
-  /// Monday → Sunday of the current week.
   List<DateTime> get week {
     final monday = DateUtils.addDaysToDate(today, 1 - today.weekday);
     return [for (var i = 0; i < 7; i++) DateUtils.addDaysToDate(monday, i)];
@@ -78,7 +62,6 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
         DayState.future,
   ];
 
-  /// Reads the stored photos and opens the camera. Call it once, on start-up.
   Future<void> load() async {
     _todayPhoto = await _repository.photoOf(today);
     _daysWithPhoto = await _repository.daysWithPhoto(week);
@@ -87,7 +70,6 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   }
 
   Future<void> startCamera() async {
-    // Once today's photo exists the camera isn't needed any more.
     if (_controller != null ||
         _startingCamera ||
         _todayPhoto != null ||
@@ -134,8 +116,7 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     await controller.dispose();
   }
 
-  /// The camera plugin doesn't handle the app lifecycle: release the camera
-  /// when the app goes to the background and reopen it when it comes back.
+  // The camera plugin doesn't handle the app lifecycle itself.
   void onAppLifecycleChanged(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive && _controller != null) {
       _restartOnResume = true;
@@ -199,7 +180,6 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     await _stopCamera();
   }
 
-  /// Called by the screen once it has shown [errorMessage].
   void clearError() => _errorMessage = null;
 
   void _notify() {
