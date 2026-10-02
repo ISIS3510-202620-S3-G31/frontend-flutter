@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Keeps one photo per day on the device, as `<documents>/photo_of_the_day/yyyy-MM-dd.jpg`.
-class PhotoStore {
+class PhotoStorageService {
   static final _fileDate = DateFormat('yyyy-MM-dd');
 
   Future<Directory> _folder() async {
