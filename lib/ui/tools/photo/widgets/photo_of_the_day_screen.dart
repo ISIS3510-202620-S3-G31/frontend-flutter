@@ -54,9 +54,9 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
       _viewModel.onAppLifecycleChanged(state);
 
   void _onViewModelChanged() {
-    final message = _viewModel.errorMessage;
+    final message = _viewModel.message;
     if (message == null || !mounted) return;
-    _viewModel.clearError();
+    _viewModel.clearMessage();
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
