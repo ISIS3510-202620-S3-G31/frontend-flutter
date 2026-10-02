@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
-import '../../ui/core/widgets/circle_icon_button.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text.dart';
+import '../../../core/widgets/circle_icon_button.dart';
 
 /// Label on the left and "minus, value, plus" on the right.
 class StepperRow extends StatelessWidget {
