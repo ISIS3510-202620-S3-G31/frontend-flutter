@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
-
-enum DayState { done, today, future }
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text.dart';
+import '../view_model/photo_of_the_day_view_model.dart' show DayState;
 
 /// Monday → Sunday dots showing which days already have a photo.
 class WeekStrip extends StatelessWidget {
