@@ -1,185 +1,155 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
+import '../../../data/models/tool_model.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text.dart';
+import '../tool_routes.dart';
+import '../view_model/tool_hub_view_model.dart';
 import 'category_filter_bar.dart';
 import 'leave_to_chance_card.dart';
 import 'tool_card.dart';
 import 'tool_hub_header.dart';
-import 'tool_item_model.dart';
 import 'toolbox_bottom_nav.dart';
 
-/// Main Toolbox screen that serves as the hub for all wellness tools.
+/// Toolbox: the home screen that lists every wellness tool.
 class ToolHubScreen extends StatefulWidget {
-  const ToolHubScreen({super.key});
+  const ToolHubScreen({super.key, this.viewModel});
+
+  /// Pass one in tests; otherwise the screen builds and disposes its own.
+  final ToolHubViewModel? viewModel;
 
   @override
   State<ToolHubScreen> createState() => _ToolHubScreenState();
 }
 
 class _ToolHubScreenState extends State<ToolHubScreen> {
-  ToolCategory _selectedCategory = ToolCategory.all;
-  int _selectedNavIndex = 0;
+  late final ToolHubViewModel _viewModel =
+      widget.viewModel ?? ToolHubViewModel();
+  late final bool _ownsViewModel = widget.viewModel == null;
 
-  List<ToolItem> get _filteredTools {
-    if (_selectedCategory == ToolCategory.all) {
-      return defaultTools;
+  @override
+  void dispose() {
+    if (_ownsViewModel) _viewModel.dispose();
+    super.dispose();
+  }
+
+  void _openTool(ToolItem tool) {
+    final screen = toolScreens[tool.id];
+    if (screen == null) {
+      _showMessage('${tool.title} is coming soon!');
+      return;
     }
-    return defaultTools
-        .where((tool) => tool.category == _selectedCategory)
-        .toList();
+    Navigator.push(context, MaterialPageRoute(builder: screen));
   }
 
-  void _onCategorySelected(ToolCategory category) {
-    setState(() {
-      _selectedCategory = category;
-    });
+  Future<void> _openRandomTool() async {
+    final tool = _viewModel.randomTool();
+    _showMessage('Surprise! Opening ${tool.title}...', seconds: 1);
+    // Let the user read the message before the screen changes.
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted || toolScreens[tool.id] == null) return;
+    _openTool(tool);
   }
 
-  void _onToolTapped(ToolItem tool) {
-    if (tool.screenBuilder != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: tool.screenBuilder!),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${tool.title} is coming soon!'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+  void _onTabSelected(int index) {
+    switch (index) {
+      case 1:
+        _openRandomTool();
+      case 2:
+        _showMessage('Stats coming soon!');
+      default:
+        _viewModel.selectTab(index);
     }
   }
 
-  void _onSurpriseMe() {
-    // Pick a random tool
-    final random = math.Random();
-    final tool = defaultTools[random.nextInt(defaultTools.length)];
-
+  void _showMessage(String message, {int seconds = 2}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Surprise! Opening ${tool.title}...'),
-        duration: const Duration(seconds: 1),
+        content: Text(message),
+        duration: Duration(seconds: seconds),
       ),
     );
-
-    if (tool.screenBuilder != null) {
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: tool.screenBuilder!),
-        );
-      });
-    }
-  }
-
-  void _onNavTabSelected(int index) {
-    if (index == 1) {
-      // Random tab
-      _onSurpriseMe();
-      return;
-    }
-    if (index == 2) {
-      // Stats tab
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Stats coming soon!'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-    setState(() {
-      _selectedNavIndex = index;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final tools = _filteredTools;
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        final tools = _viewModel.tools;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        bottomNavigationBar: ToolboxBottomNav(
-          selectedIndex: _selectedNavIndex,
-          onTabSelected: _onNavTabSelected,
-        ),
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              ToolHubHeader(
-                onProfileTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profile coming soon!')),
-                  );
-                },
-              ),
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    CategoryFilterBar(
-                      selectedCategory: _selectedCategory,
-                      onCategorySelected: _onCategorySelected,
-                    ),
-                    LeaveToChanceCard(
-                      onSurpriseMe: _onSurpriseMe,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _selectedCategory == ToolCategory.all
-                                ? 'All tools'
-                                : '${_selectedCategory.label} tools',
-                            style: AppText.h3.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 18,
-                              color: AppColors.text,
-                            ),
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.dark,
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            bottomNavigationBar: ToolboxBottomNav(
+              selectedIndex: _viewModel.selectedTab,
+              onTabSelected: _onTabSelected,
+            ),
+            body: SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  ToolHubHeader(
+                    onProfileTap: () => _showMessage('Profile coming soon!'),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        CategoryFilterBar(
+                          selectedCategory: _viewModel.selectedCategory,
+                          onCategorySelected: _viewModel.selectCategory,
+                        ),
+                        LeaveToChanceCard(onSurpriseMe: _openRandomTool),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _viewModel.listTitle,
+                                style: AppText.h3.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 18,
+                                  color: AppColors.text,
+                                ),
+                              ),
+                              Text(
+                                '${tools.length}',
+                                style: AppText.body.copyWith(
+                                  color: AppColors.textMuted,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            '${tools.length}',
-                            style: AppText.body.copyWith(
-                              color: AppColors.textMuted,
-                              fontSize: 15,
-                            ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            children: [
+                              for (var i = 0; i < tools.length; i++) ...[
+                                if (i > 0) const SizedBox(height: 12),
+                                ToolCard(
+                                  tool: tools[i],
+                                  onTap: () => _openTool(tools[i]),
+                                ),
+                              ],
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        children: [
-                          for (var i = 0; i < tools.length; i++) ...[
-                            if (i > 0) const SizedBox(height: 12),
-                            ToolCard(
-                              tool: tools[i],
-                              onTap: () => _onToolTapped(tools[i]),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

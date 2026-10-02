@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../ui/core/theme/app_colors.dart';
-import '../../ui/core/theme/app_text.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text.dart';
 
 /// Dark card banner with Bloom Curious and "Surprise me" action.
 class LeaveToChanceCard extends StatelessWidget {
