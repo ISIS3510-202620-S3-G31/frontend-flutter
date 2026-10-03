@@ -12,7 +12,6 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await AnalyticsService().logAppOpen();
 
-  // The screens are designed for portrait only.
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const MainApp());
 }

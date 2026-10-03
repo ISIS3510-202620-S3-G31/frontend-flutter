@@ -64,7 +64,6 @@ class AnalyticsService {
     );
   }
 
-  /// Explicitly logs 'app_open' to register an active session in GA4.
   Future<void> logAppOpen() async {
     if (kDebugMode) {
       debugPrint('[Analytics] 🚀 App Open');
@@ -104,7 +103,7 @@ class AnalyticsService {
         parameters: {
           'tool_id': toolId,
           'tool_name': toolName,
-          'duration_seconds':? durationSeconds,
+          'duration_seconds': ?durationSeconds,
           ...?additionalParams,
         },
       );
@@ -126,7 +125,7 @@ class AnalyticsService {
           'tool_id': toolId,
           'tool_name': toolName,
           'duration_seconds': durationSeconds,
-          'exit_reason':? exitReason,
+          'exit_reason': ?exitReason,
         },
       );
     }
@@ -143,7 +142,7 @@ class AnalyticsService {
       parameters: {
         'tool_id': toolId,
         'step_name': stepName,
-        'step_index':? stepIndex,
+        'step_index': ?stepIndex,
       },
     );
   }
