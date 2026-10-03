@@ -37,8 +37,7 @@ class PhotoRepository {
     return DailyPhoto(day: day, file: file);
   }
 
-  /// Uploads the photos that are only on the phone. Returns false when there
-  /// is no connection, so they stay pending for later.
+
   Future<bool> uploadPending() async {
     if (!await _connectivity.isOnline()) return false;
     for (final day in await _dao.notSyncedDays()) {
