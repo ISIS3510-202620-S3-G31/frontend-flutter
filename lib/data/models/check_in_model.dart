@@ -22,12 +22,42 @@ class CheckIn {
     required this.emotions,
     required this.intensity,
     required this.timestamp,
+    this.note = '',
   });
 
   final List<Emotion> emotions;
   final int intensity;
   final DateTime timestamp;
 
+  /// What the user wrote about the day, empty when they wrote nothing.
+  final String note;
+
   /// A check-in is difficult if it has at least one difficult emotion.
   bool get isDifficult => emotions.any((emotion) => emotion.isDifficult);
+
+  Map<String, Object?> toMap() => {
+    'emotions': [for (final emotion in emotions) emotion.name],
+    'intensity': intensity,
+    'timestamp': timestamp.toUtc().toIso8601String(),
+    'note': note,
+  };
+
+  static CheckIn fromMap(Map<String, Object?> map) => CheckIn(
+    emotions: [
+      for (final name in (map['emotions'] as List?) ?? [])
+        ?_emotionNamed(name as String?),
+    ],
+    intensity: (map['intensity'] as num?)?.toInt() ?? 3,
+    timestamp:
+        DateTime.tryParse(map['timestamp'] as String? ?? '')?.toLocal() ??
+        DateTime.now(),
+    note: map['note'] as String? ?? '',
+  );
+
+  static Emotion? _emotionNamed(String? name) {
+    for (final emotion in Emotion.values) {
+      if (emotion.name == name) return emotion;
+    }
+    return null;
+  }
 }

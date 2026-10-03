@@ -4,13 +4,17 @@ import 'package:flutter/services.dart';
 import '../../../data/models/tool_model.dart';
 import '../../../data/services/analytics_service.dart';
 import '../../auth/widgets/profile_screen.dart';
+import '../../check_in/daily_check_in_prompt.dart';
+import '../../check_in/widgets/mood_check_in_sheet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../stats/widgets/stats_screen.dart';
+import '../../usage_flow/widgets/usage_flow_screen.dart';
 import '../tool_routes.dart';
 import '../view_model/tool_hub_view_model.dart';
 import 'category_filter_bar.dart';
 import 'leave_to_chance_card.dart';
+import 'recommendation_section.dart';
 import 'tool_card.dart';
 import 'tool_hub_header.dart';
 import 'toolbox_bottom_nav.dart';
@@ -30,11 +34,20 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
   late final ToolHubViewModel _viewModel =
       widget.viewModel ?? ToolHubViewModel();
   late final bool _ownsViewModel = widget.viewModel == null;
+  final _checkInPrompt = DailyCheckInPrompt();
 
   @override
   void initState() {
     super.initState();
+    _viewModel.loadRecommendation();
+    _askForCheckIn();
     AnalyticsService().logScreenView(screenName: 'ToolHub');
+  }
+
+  /// The first time the app opens each day, asks the user how they feel.
+  Future<void> _askForCheckIn() async {
+    if (!await _checkInPrompt.shouldAsk() || !mounted) return;
+    await showMoodCheckIn(context);
   }
 
   @override
@@ -49,11 +62,11 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
       _showMessage('${tool.title} is coming soon!');
       return;
     }
-    openToolScreen(
+    Navigator.push(
       context,
-      toolId: tool.id,
-      toolName: tool.title,
-      builder: screen,
+      MaterialPageRoute(
+        builder: (_) => UsageFlowScreen(tool: tool, toolScreen: screen),
+      ),
     );
   }
 
@@ -90,6 +103,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
       listenable: _viewModel,
       builder: (context, _) {
         final tools = _viewModel.tools;
+        final recommendation = _viewModel.recommendation;
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark,
@@ -124,6 +138,11 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
                                 onCategorySelected: _viewModel.selectCategory,
                               ),
                               LeaveToChanceCard(onSurpriseMe: _openRandomTool),
+                              if (recommendation != null)
+                                RecommendationSection(
+                                  recommendation: recommendation,
+                                  onOpen: () => _openTool(recommendation.tool),
+                                ),
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(
                                   24,
