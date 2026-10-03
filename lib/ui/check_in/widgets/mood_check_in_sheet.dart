@@ -76,7 +76,8 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
         child: ListenableBuilder(
           listenable: _viewModel,
           builder: (context, _) {
-            final selected = _viewModel.emotion;
+            final selected = _viewModel.emotions;
+            final mood = _viewModel.mood;
             return SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -103,19 +104,23 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                     style: AppText.h3.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    'Pick the one that fits best.',
-                    style: AppText.bodyMuted,
-                  ),
+                  Text('Pick one or more.', style: AppText.bodyMuted),
                   const SizedBox(height: 14),
                   _EmotionGrid(
                     selected: selected,
-                    onSelected: _viewModel.selectEmotion,
+                    onSelected: _viewModel.toggleEmotion,
                   ),
+                  if (mood != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'You feel: ${mood.name}',
+                      style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   _IntensitySlider(
                     value: _viewModel.intensity,
-                    color: selected?.color ?? AppColors.primary,
+                    color: selected.firstOrNull?.color ?? AppColors.primary,
                     onChanged: _viewModel.setIntensity,
                   ),
                   const SizedBox(height: 16),
@@ -175,7 +180,7 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
 class _EmotionGrid extends StatelessWidget {
   const _EmotionGrid({required this.selected, required this.onSelected});
 
-  final Emotion? selected;
+  final Set<Emotion> selected;
   final ValueChanged<Emotion> onSelected;
 
   @override
@@ -193,7 +198,7 @@ class _EmotionGrid extends StatelessWidget {
                 width: itemWidth,
                 child: _EmotionTile(
                   emotion: emotion,
-                  isSelected: emotion == selected,
+                  isSelected: selected.contains(emotion),
                   onTap: () => onSelected(emotion),
                 ),
               ),
