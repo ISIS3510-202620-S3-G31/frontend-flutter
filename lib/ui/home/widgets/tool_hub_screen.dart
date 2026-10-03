@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
+import '../../check_in/daily_check_in_prompt.dart';
+import '../../check_in/widgets/mood_check_in_sheet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../stats/widgets/stats_screen.dart';
@@ -31,11 +33,19 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
   late final ToolHubViewModel _viewModel =
       widget.viewModel ?? ToolHubViewModel();
   late final bool _ownsViewModel = widget.viewModel == null;
+  final _checkInPrompt = DailyCheckInPrompt();
 
   @override
   void initState() {
     super.initState();
     _viewModel.loadRecommendation();
+    _askForCheckIn();
+  }
+
+  /// The first time the app opens each day, asks the user how they feel.
+  Future<void> _askForCheckIn() async {
+    if (!await _checkInPrompt.shouldAsk() || !mounted) return;
+    await showMoodCheckIn(context);
   }
 
   @override
