@@ -3,17 +3,18 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
+import '../view_model/tool_hub_view_model.dart';
 
-/// Bottom navigation bar for the Toolbox with Tools, Random, and Stats tabs.
+/// Bottom navigation bar with the Stats, Home and Profile tabs.
 class ToolboxBottomNav extends StatelessWidget {
   const ToolboxBottomNav({
     super.key,
-    required this.selectedIndex,
+    required this.selectedTab,
     required this.onTabSelected,
   });
 
-  final int selectedIndex;
-  final ValueChanged<int> onTabSelected;
+  final HomeTab selectedTab;
+  final ValueChanged<HomeTab> onTabSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -36,25 +37,22 @@ class ToolboxBottomNav extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _NavItem(
-                index: 0,
-                iconAsset: 'assets/icons/ic_tools.svg',
-                label: 'Tools',
-                isSelected: selectedIndex == 0,
-                onTap: () => onTabSelected(0),
-              ),
-              _NavItem(
-                index: 1,
-                iconAsset: 'assets/icons/ic_random.svg',
-                label: 'Random',
-                isSelected: selectedIndex == 1,
-                onTap: () => onTabSelected(1),
-              ),
-              _NavItem(
-                index: 2,
                 iconAsset: 'assets/icons/ic_stats.svg',
                 label: 'Stats',
-                isSelected: selectedIndex == 2,
-                onTap: () => onTabSelected(2),
+                isSelected: selectedTab == HomeTab.stats,
+                onTap: () => onTabSelected(HomeTab.stats),
+              ),
+              _NavItem(
+                iconAsset: 'assets/icons/ic_tools.svg',
+                label: 'Home',
+                isSelected: selectedTab == HomeTab.home,
+                onTap: () => onTabSelected(HomeTab.home),
+              ),
+              _NavItem(
+                iconAsset: 'assets/icons/ic_profile.svg',
+                label: 'Profile',
+                isSelected: selectedTab == HomeTab.profile,
+                onTap: () => onTabSelected(HomeTab.profile),
               ),
             ],
           ),
@@ -66,14 +64,12 @@ class ToolboxBottomNav extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   const _NavItem({
-    required this.index,
     required this.iconAsset,
     required this.label,
     required this.isSelected,
     required this.onTap,
   });
 
-  final int index;
   final String iconAsset;
   final String label;
   final bool isSelected;
