@@ -71,7 +71,7 @@ class _ScreamTankScreenState extends State<ScreamTankScreen>
 
   void _finishSession() {
     _viewModel.stopListening();
-    Navigator.maybePop(context);
+    Navigator.maybePop(context, _viewModel.isFull);
   }
 
   @override

@@ -4,14 +4,19 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../data/services/analytics_service.dart';
 import '../../../../data/services/microphone_service.dart';
 import '../../../../utils/noise_level.dart';
 
 class ScreamTankViewModel extends ChangeNotifier {
-  ScreamTankViewModel({MicrophoneService? microphone})
-    : _microphone = microphone ?? const MicrophoneService();
+  ScreamTankViewModel({
+    MicrophoneService? microphone,
+    AnalyticsService? analytics,
+  }) : _microphone = microphone ?? const MicrophoneService(),
+       _analytics = analytics ?? AnalyticsService();
 
   final MicrophoneService _microphone;
+  final AnalyticsService _analytics;
 
   /// Seconds of screaming at full level needed to fill the tank.
   static const _secondsToFill = 20.0;
@@ -90,6 +95,10 @@ class ScreamTankViewModel extends ChangeNotifier {
     if (isFull) {
       HapticFeedback.heavyImpact();
       stopListening();
+      _analytics.completeToolSession(
+        toolId: 'scream',
+        toolName: 'Scream Tank',
+      );
     }
   }
 

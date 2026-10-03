@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../data/models/photo_model.dart';
 import '../../../../data/repositories/photo_repository.dart';
+import '../../../../data/services/analytics_service.dart';
 import '../../../../data/services/camera_service.dart';
 
 enum DayState { done, today, future }
@@ -14,11 +15,14 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   PhotoOfTheDayViewModel({
     PhotoRepository? repository,
     CameraService? cameraService,
+    AnalyticsService? analytics,
   }) : _repository = repository ?? PhotoRepository(),
-       _cameraService = cameraService ?? const CameraService();
+       _cameraService = cameraService ?? const CameraService(),
+       _analytics = analytics ?? AnalyticsService();
 
   final PhotoRepository _repository;
   final CameraService _cameraService;
+  final AnalyticsService _analytics;
 
   final DateTime today = DateUtils.dateOnly(DateTime.now());
 
@@ -45,6 +49,7 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   String? get message => _message;
 
   bool get canShoot => _todayPhoto == null && !_busy;
+  bool get isCompleted => _todayPhoto != null;
 
   bool get canSwitchCamera => _cameras.length > 1;
 
@@ -183,6 +188,10 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     _daysWithPhoto = {..._daysWithPhoto, today};
     _notify();
     await _stopCamera();
+    _analytics.completeToolSession(
+      toolId: 'photo',
+      toolName: 'Photo of the Day',
+    );
     if (!await _uploadPending()) {
       _message = 'Saved on your phone. It will upload later.';
     }

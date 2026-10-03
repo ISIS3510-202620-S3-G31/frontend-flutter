@@ -282,6 +282,8 @@ class _TearCollectionScreenState extends State<TearCollectionScreen> {
                   ScreenHeader(
                     title: Text('Tear Collection', style: AppText.h1),
                     subtitle: 'Your emotional sanctuary',
+                    onBack: () =>
+                        Navigator.maybePop(context, _viewModel.isCompleted),
                   ),
                   Expanded(
                     child: ListView(

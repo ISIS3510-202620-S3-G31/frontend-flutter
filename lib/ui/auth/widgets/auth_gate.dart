@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../data/services/analytics_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../home/widgets/tool_hub_screen.dart';
 import 'login_screen.dart';
@@ -22,10 +23,13 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        if (snapshot.hasData && snapshot.data != null) {
+        final user = snapshot.data;
+        if (snapshot.hasData && user != null) {
+          AnalyticsService().setUserId(user.uid);
           return const ToolHubScreen();
         }
 
+        AnalyticsService().setUserId(null);
         return const LoginScreen();
       },
     );
