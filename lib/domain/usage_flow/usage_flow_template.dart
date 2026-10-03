@@ -10,7 +10,7 @@ import 'flow_step.dart';
 ///     ├── <tool>
 ///     └── After the tool
 ///         ├── Mood check
-///         └── Rating
+///         └── Tool feedback
 abstract final class UsageFlowTemplate {
   static FlowGroup forTool(ToolItem tool) => FlowGroup('Use ${tool.title}')
     ..add(
@@ -21,6 +21,6 @@ abstract final class UsageFlowTemplate {
     ..add(
       FlowGroup('After the tool')
         ..add(MoodCheckStep('And now, how strong is it?'))
-        ..add(RatingStep('Did it help?')),
+        ..add(FeedbackStep()),
     );
 }

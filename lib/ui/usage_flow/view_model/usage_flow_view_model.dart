@@ -7,11 +7,18 @@ import '../../../domain/usage_flow/usage_flow_template.dart';
 
 /// Walks the user through the usage flow of one tool, one step at a time.
 class UsageFlowViewModel extends ChangeNotifier {
-  UsageFlowViewModel({required ToolItem tool})
-    : flow = UsageFlowTemplate.forTool(tool);
+  UsageFlowViewModel({required this.tool, DateTime Function()? now})
+    : flow = UsageFlowTemplate.forTool(tool),
+      _now = now ?? DateTime.now;
 
+  /// Leaving a tool sooner than this is a misclick, not a session.
+  static const _minToolSeconds = 10;
+
+  final ToolItem tool;
   final FlowGroup flow;
+  final DateTime Function() _now;
   late final List<SingleStep> _steps = flow.steps;
+  late final ToolStep _toolStep = _steps.whereType<ToolStep>().first;
   late final List<MoodCheckStep> _moodChecks = _steps
       .whereType<MoodCheckStep>()
       .toList();
@@ -33,9 +40,12 @@ class UsageFlowViewModel extends ChangeNotifier {
     return flow.children.firstWhere((part) => part.steps.contains(step)).title;
   }
 
+  /// When the tool was opened and for how long, for the feedback screen.
+  DateTime get toolStartedAt => _toolStep.startedAt ?? _now();
+  int get toolSeconds => _toolStep.durationSeconds;
+
   int? get intensityBefore => _moodChecks.first.intensity;
   int? get intensityAfter => _moodChecks.last.intensity;
-  Usefulness? get usefulness => _steps.whereType<RatingStep>().first.answer;
 
   String get summary {
     final before = intensityBefore;
@@ -53,17 +63,29 @@ class UsageFlowViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void startTool() {
+    if (currentStep is! ToolStep) return;
+    _toolStep.startedAt = _now();
+  }
+
+  /// Called when the user comes back from the tool. A misclick keeps the
+  /// user on the tool step.
   void finishTool() {
-    final step = currentStep;
-    if (step is! ToolStep) return;
-    step.finished = true;
+    final startedAt = _toolStep.startedAt;
+    if (currentStep is! ToolStep || startedAt == null) return;
+    final seconds = _now().difference(startedAt).inSeconds;
+    if (seconds < _minToolSeconds) return;
+    _toolStep
+      ..durationSeconds = seconds
+      ..finished = true;
     notifyListeners();
   }
 
-  void rate(Usefulness answer) {
+  /// Called when the user leaves the feedback screen, saved or not.
+  void finishFeedback() {
     final step = currentStep;
-    if (step is! RatingStep) return;
-    step.answer = answer;
+    if (step is! FeedbackStep) return;
+    step.answered = true;
     notifyListeners();
   }
 }

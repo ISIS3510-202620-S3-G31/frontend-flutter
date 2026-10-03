@@ -17,7 +17,7 @@ void main() {
   group('Composite', () {
     test('a group collects the steps of its children in order', () {
       final first = MoodCheckStep('a');
-      final second = RatingStep('b');
+      final second = FeedbackStep();
       final third = MoodCheckStep('c');
       final root = FlowGroup('root')
         ..add(first)
@@ -28,15 +28,15 @@ void main() {
 
     test('a group is complete only when every child is', () {
       final mood = MoodCheckStep('a');
-      final rating = RatingStep('b');
+      final feedback = FeedbackStep();
       final root = FlowGroup('root')
         ..add(mood)
-        ..add(FlowGroup('nested')..add(rating));
+        ..add(FlowGroup('nested')..add(feedback));
 
       expect(root.isComplete, isFalse);
       mood.intensity = 3;
       expect(root.isComplete, isFalse);
-      rating.answer = Usefulness.aLot;
+      feedback.answered = true;
       expect(root.isComplete, isTrue);
     });
 
@@ -52,26 +52,37 @@ void main() {
         MoodCheckStep,
         ToolStep,
         MoodCheckStep,
-        RatingStep,
+        FeedbackStep,
       ]);
     });
   });
 
   group('UsageFlowViewModel', () {
-    test('walks every step and ends with a summary', () {
-      final viewModel = UsageFlowViewModel(tool: _tool);
+    late DateTime now;
+    late UsageFlowViewModel viewModel;
 
+    setUp(() {
+      now = DateTime(2026, 10, 2, 9);
+      viewModel = UsageFlowViewModel(tool: _tool, now: () => now);
+    });
+
+    test('walks every step and ends with a summary', () {
       expect(viewModel.currentStep, isA<MoodCheckStep>());
       expect(viewModel.partTitle, 'Before the tool');
       viewModel.chooseIntensity(4);
 
       expect(viewModel.currentStep, isA<ToolStep>());
+      final startedAt = now;
+      viewModel.startTool();
+      now = now.add(const Duration(seconds: 90));
       viewModel.finishTool();
 
+      expect(viewModel.toolStartedAt, startedAt);
+      expect(viewModel.toolSeconds, 90);
       expect(viewModel.partTitle, 'After the tool');
       viewModel.chooseIntensity(2);
-      expect(viewModel.currentStep, isA<RatingStep>());
-      viewModel.rate(Usefulness.aLot);
+      expect(viewModel.currentStep, isA<FeedbackStep>());
+      viewModel.finishFeedback();
 
       expect(viewModel.isFinished, isTrue);
       expect(viewModel.currentStep, isNull);
@@ -81,10 +92,19 @@ void main() {
       expect(viewModel.summary, 'You feel lighter than when you started.');
     });
 
-    test('ignores answers that do not match the current step', () {
-      final viewModel = UsageFlowViewModel(tool: _tool);
+    test('leaving the tool too soon keeps the user on the tool step', () {
+      viewModel.chooseIntensity(3);
+      viewModel.startTool();
+      now = now.add(const Duration(seconds: 3));
+      viewModel.finishTool();
 
-      viewModel.rate(Usefulness.aLot);
+      expect(viewModel.currentStep, isA<ToolStep>());
+      expect(viewModel.toolSeconds, 0);
+    });
+
+    test('ignores answers that do not match the current step', () {
+      viewModel.finishFeedback();
+      viewModel.startTool();
       viewModel.finishTool();
 
       expect(viewModel.doneCount, 0);

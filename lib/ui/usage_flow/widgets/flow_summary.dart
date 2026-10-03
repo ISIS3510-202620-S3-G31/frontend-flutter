@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../../domain/usage_flow/flow_step.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import 'flow_button.dart';
@@ -12,14 +11,12 @@ class FlowSummary extends StatelessWidget {
     super.key,
     required this.before,
     required this.after,
-    required this.usefulness,
     required this.message,
     required this.onDone,
   });
 
   final int before;
   final int after;
-  final Usefulness usefulness;
   final String message;
   final VoidCallback onDone;
 
@@ -43,11 +40,6 @@ class FlowSummary extends StatelessWidget {
               child: _Score(label: 'After', value: after),
             ),
           ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'It helped: ${usefulness.label.toLowerCase()}',
-          style: AppText.bodyMuted,
         ),
         const SizedBox(height: 32),
         FlowButton(label: 'Back to tools', onPressed: onDone),

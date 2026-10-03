@@ -37,28 +37,20 @@ class ToolStep extends SingleStep {
   ToolStep(this.tool) : super(tool.title);
 
   final ToolItem tool;
+  DateTime? startedAt;
+  int durationSeconds = 0;
   bool finished = false;
 
   @override
   bool get isComplete => finished;
 }
 
-enum Usefulness {
-  notReally('Not really'),
-  aLittle('A little'),
-  aLot('A lot');
+/// The tool feedback screen: rating, mood and comments, saved in Firebase.
+class FeedbackStep extends SingleStep {
+  FeedbackStep() : super('Tool feedback');
 
-  const Usefulness(this.label);
-
-  final String label;
-}
-
-/// Asks if the tool helped.
-class RatingStep extends SingleStep {
-  RatingStep(super.title);
-
-  Usefulness? answer;
+  bool answered = false;
 
   @override
-  bool get isComplete => answer != null;
+  bool get isComplete => answered;
 }
