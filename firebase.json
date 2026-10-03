@@ -1,0 +1,22 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "ark-mobiles",
+                    "appId": "1:517416266986:android:67ab4ab7eba78425ad3b93",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "ark-mobiles",
+                    "configurations": {
+                        "android": "1:517416266986:android:67ab4ab7eba78425ad3b93",
+                        "ios": "1:517416266986:ios:d83084cbdeda711bad3b93"
+                    }
+                }
+            }
+        }
+    }
+}
