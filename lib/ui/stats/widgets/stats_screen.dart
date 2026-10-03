@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/models/insight_model.dart';
+import '../../check_in/widgets/mood_check_in_sheet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/circle_icon_button.dart';
@@ -61,8 +62,14 @@ class _StatsScreenState extends State<StatsScreen> {
       case OpenToolbox():
         widget.onOpenToolbox();
       case OpenCheckIn():
-        _showMessage('Check-ins are coming soon!');
+        _openCheckIn();
     }
+  }
+
+  /// A new check-in changes the numbers, so the screen reloads after it.
+  Future<void> _openCheckIn() async {
+    final saved = await showMoodCheckIn(context);
+    if (saved) await _viewModel.load();
   }
 
   void _showMessage(String message) {
