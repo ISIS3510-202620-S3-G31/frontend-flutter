@@ -2,15 +2,46 @@ import 'breathing_music_model.dart';
 export 'breathing_music_model.dart';
 
 enum BreathingPattern {
-  twoStep('2-step', 'assets/icons/ic_two_step.svg', false),
-  threeStep('3-step', 'assets/icons/ic_three_step.svg', true),
-  fourSevenEight('4-7-8', 'assets/icons/ic_sleep_step.svg', true);
+  twoStep(
+    '2-step',
+    'assets/icons/ic_two_step.svg',
+    false,
+    defaultInhale: 4,
+    defaultHold: 4,
+    defaultExhale: 4,
+  ),
+  threeStep(
+    '3-step',
+    'assets/icons/ic_three_step.svg',
+    true,
+    defaultInhale: 4,
+    defaultHold: 4,
+    defaultExhale: 4,
+  ),
+  fourSevenEight(
+    '4-7-8',
+    'assets/icons/ic_sleep_step.svg',
+    true,
+    defaultInhale: 4,
+    defaultHold: 7,
+    defaultExhale: 8,
+  );
 
-  const BreathingPattern(this.label, this.icon, this.hasHold);
+  const BreathingPattern(
+    this.label,
+    this.icon,
+    this.hasHold, {
+    this.defaultInhale = 4,
+    this.defaultHold = 4,
+    this.defaultExhale = 4,
+  });
 
   final String label;
   final String icon;
   final bool hasHold;
+  final int defaultInhale;
+  final int defaultHold;
+  final int defaultExhale;
 }
 
 enum BreathingPhase {
@@ -45,8 +76,8 @@ class CustomBreathingState {
   const CustomBreathingState({
     this.pattern = BreathingPattern.threeStep,
     this.inhaleSeconds = 4,
-    this.holdSeconds = 7,
-    this.exhaleSeconds = 6,
+    this.holdSeconds = 4,
+    this.exhaleSeconds = 4,
     this.sessionMinutes = 5,
     this.isRunning = false,
     this.phase = BreathingPhase.inhale,

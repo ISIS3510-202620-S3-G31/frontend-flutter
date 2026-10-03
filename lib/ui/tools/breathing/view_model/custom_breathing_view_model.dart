@@ -32,6 +32,7 @@ class CustomBreathingViewModel extends ChangeNotifier {
   Timer? _timer;
   StreamSubscription<bool>? _connectivitySub;
   StreamSubscription<BreathingMusicTrack>? _trackCachedSub;
+  final Map<BreathingPattern, ({int inhale, int hold, int exhale})> _customTimings = {};
 
   double _phaseElapsed = 0;
   String? _message;
@@ -370,23 +371,17 @@ class CustomBreathingViewModel extends ChangeNotifier {
   }
 
   void selectPattern(BreathingPattern pattern) {
-    _state = switch (pattern) {
-      BreathingPattern.twoStep => _state.copyWith(pattern: pattern),
-      BreathingPattern.threeStep => _state.copyWith(
-        pattern: pattern,
-        inhaleSeconds: 4,
-        holdSeconds: 7,
-        exhaleSeconds: 6,
-      ),
-      BreathingPattern.fourSevenEight => _state.copyWith(
-        pattern: pattern,
-        inhaleSeconds: 4,
-        holdSeconds: 7,
-        exhaleSeconds: 8,
-      ),
-    };
+    final custom = _customTimings[pattern];
+    final inhale = custom?.inhale ?? pattern.defaultInhale;
+    final hold = custom?.hold ?? pattern.defaultHold;
+    final exhale = custom?.exhale ?? pattern.defaultExhale;
+
     _phaseElapsed = 0;
     _state = _state.copyWith(
+      pattern: pattern,
+      inhaleSeconds: inhale,
+      holdSeconds: hold,
+      exhaleSeconds: exhale,
       phase: BreathingPhase.inhale,
       progress: 0,
     );
@@ -403,6 +398,14 @@ class CustomBreathingViewModel extends ChangeNotifier {
       BreathingStep.hold => _state.copyWith(holdSeconds: seconds),
       BreathingStep.exhale => _state.copyWith(exhaleSeconds: seconds),
     };
+
+    // Remember user's custom timing for this pattern
+    _customTimings[_state.pattern] = (
+      inhale: _state.inhaleSeconds,
+      hold: _state.holdSeconds,
+      exhale: _state.exhaleSeconds,
+    );
+
     if (step.phase == _state.phase) {
       _phaseElapsed = 0;
       _state = _state.copyWith(progress: 0);
