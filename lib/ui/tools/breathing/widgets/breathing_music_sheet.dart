@@ -282,13 +282,15 @@ class _PreviewBottomBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          // Select for Session Button
           if (!isSelected)
             TextButton(
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.secondary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(
@@ -327,7 +329,6 @@ class _PreviewBottomBar extends StatelessWidget {
 
           const SizedBox(width: 4),
 
-          // Close preview button
           IconButton(
             tooltip: 'Stop preview',
             padding: EdgeInsets.zero,
@@ -382,16 +383,16 @@ class _TrackTile extends StatelessWidget {
         color: isSelected
             ? AppColors.secondary.withValues(alpha: 0.12)
             : isPreviewing
-                ? AppColors.primary.withValues(alpha: 0.08)
-                : AppColors.surfaceDim.withValues(alpha: 0.5),
+            ? AppColors.primary.withValues(alpha: 0.08)
+            : AppColors.surfaceDim.withValues(alpha: 0.5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
             color: isSelected
                 ? AppColors.secondary
                 : isPreviewing
-                    ? AppColors.primary
-                    : Colors.transparent,
+                ? AppColors.primary
+                : Colors.transparent,
             width: isSelected || isPreviewing ? 1.5 : 1.0,
           ),
         ),
@@ -423,10 +424,10 @@ class _TrackTile extends StatelessWidget {
                     color: isPreviewPlaying
                         ? AppColors.secondary
                         : isPreviewing
-                            ? AppColors.secondary.withValues(alpha: 0.7)
-                            : isSelected
-                                ? AppColors.secondary.withValues(alpha: 0.25)
-                                : AppColors.text.withValues(alpha: 0.08),
+                        ? AppColors.secondary.withValues(alpha: 0.7)
+                        : isSelected
+                        ? AppColors.secondary.withValues(alpha: 0.25)
+                        : AppColors.text.withValues(alpha: 0.08),
                     shape: const CircleBorder(),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
@@ -452,8 +453,8 @@ class _TrackTile extends StatelessWidget {
                           color: isPreviewPlaying
                               ? Colors.white
                               : isSelected
-                                  ? AppColors.secondary
-                                  : AppColors.text,
+                              ? AppColors.secondary
+                              : AppColors.text,
                           size: 24,
                         ),
                       ),
@@ -492,7 +493,9 @@ class _TrackTile extends StatelessWidget {
                                 vertical: 1,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.secondary.withValues(alpha: 0.15),
+                                color: AppColors.secondary.withValues(
+                                  alpha: 0.15,
+                                ),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
@@ -543,7 +546,9 @@ class _TrackTile extends StatelessWidget {
                                 vertical: 1,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.secondary.withValues(alpha: 0.12),
+                                color: AppColors.secondary.withValues(
+                                  alpha: 0.12,
+                                ),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
