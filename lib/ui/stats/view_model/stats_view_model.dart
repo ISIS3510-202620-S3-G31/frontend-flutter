@@ -42,6 +42,7 @@ class StatsViewModel extends ChangeNotifier {
   final UsefulInsightsEngine _insightsEngine;
 
   bool _loading = true;
+  bool _isSample = true;
   bool _disposed = false;
   Emotion? _topFeeling;
   int _weekCheckIns = 0;
@@ -50,6 +51,17 @@ class StatsViewModel extends ChangeNotifier {
   List<Insight> _insights = [];
 
   bool get loading => _loading;
+
+  /// True while these numbers are the sample history, not the user's own.
+  bool get isSample => _isSample;
+
+  /// Title of a tool, to show it the same way the toolbox does.
+  String toolNameOf(String toolId) {
+    for (final tool in _toolRepository.allTools()) {
+      if (tool.id == toolId) return tool.title;
+    }
+    return toolId;
+  }
 
   /// Most frequent emotion in this week's check-ins, or null if there are none.
   Emotion? get topFeeling => _topFeeling;
@@ -63,13 +75,24 @@ class StatsViewModel extends ChangeNotifier {
   Future<void> load() async {
     _loading = true;
     _notify();
+    try {
+      await _load();
+    } finally {
+      // Whatever happens, the screen must stop waiting.
+      _loading = false;
+      _notify();
+    }
+  }
 
+  Future<void> _load() async {
     final now = _now();
     final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
     final monthAgo = DateTime(now.year, now.month, now.day - 29);
 
-    final checkIns = await _repository.checkInsSince(monthAgo);
-    final sessions = await _repository.sessionsSince(monthAgo);
+    final data = await _repository.dataSince(monthAgo);
+    final checkIns = data.checkIns;
+    final sessions = data.sessions;
+    _isSample = data.isSample;
     final toolNames = {
       for (final tool in _toolRepository.allTools()) tool.id: tool.title,
     };
@@ -89,9 +112,6 @@ class StatsViewModel extends ChangeNotifier {
         .generate(checkIns: checkIns, sessions: sessions, toolNames: toolNames)
         .take(_maxInsightsShown)
         .toList();
-
-    _loading = false;
-    _notify();
   }
 
   DayMood? _moodOf(List<CheckIn> checkIns, DateTime day) {

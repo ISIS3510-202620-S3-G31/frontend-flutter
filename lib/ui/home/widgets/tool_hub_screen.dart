@@ -42,7 +42,12 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
       _showMessage('${tool.title} is coming soon!');
       return;
     }
-    Navigator.push(context, MaterialPageRoute(builder: screen));
+    openToolScreen(
+      context,
+      toolId: tool.id,
+      toolName: tool.title,
+      builder: screen,
+    );
   }
 
   Future<void> _openRandomTool() async {
