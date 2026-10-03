@@ -184,7 +184,7 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     _notify();
     await _stopCamera();
     if (!await _uploadPending()) {
-      _message = 'Saved on your phone. It will upload when you are online.';
+      _message = 'Saved on your phone. It will upload later.';
     }
   }
 
@@ -192,7 +192,8 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   Future<bool> _uploadPending() async {
     try {
       return await _repository.uploadPending();
-    } on Exception {
+    } on Exception catch (error) {
+      debugPrint('[PhotoOfTheDay] Upload failed, photos stay pending: $error');
       return false;
     }
   }
