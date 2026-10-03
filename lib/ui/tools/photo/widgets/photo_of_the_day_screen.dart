@@ -12,12 +12,10 @@ import 'shutter_button.dart';
 import 'viewfinder.dart';
 import 'week_strip.dart';
 
-/// Daily photo journal: one photo per day, and a strip showing which days of
-/// the week already have one.
+
 class PhotoOfTheDayScreen extends StatefulWidget {
   const PhotoOfTheDayScreen({super.key, this.viewModel});
 
-  /// Pass one in tests; otherwise the screen builds and disposes its own.
   final PhotoOfTheDayViewModel? viewModel;
 
   @override
@@ -54,9 +52,9 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
       _viewModel.onAppLifecycleChanged(state);
 
   void _onViewModelChanged() {
-    final message = _viewModel.errorMessage;
+    final message = _viewModel.message;
     if (message == null || !mounted) return;
-    _viewModel.clearError();
+    _viewModel.clearMessage();
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
@@ -114,11 +112,9 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
                         return Column(
                           children: [
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                24,
-                                12,
-                                24,
-                                12,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
                               ),
                               child: SizedBox(
                                 width: double.infinity,

@@ -22,15 +22,15 @@ class WeekStrip extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           for (var i = 0; i < 7; i++)
-            DayDot(label: _labels[i], state: states[i]),
+            _DayDot(label: _labels[i], state: states[i]),
         ],
       ),
     );
   }
 }
 
-class DayDot extends StatelessWidget {
-  const DayDot({super.key, required this.label, required this.state});
+class _DayDot extends StatelessWidget {
+  const _DayDot({required this.label, required this.state});
 
   final String label;
   final DayState state;
