@@ -1,3 +1,6 @@
+import 'breathing_music_model.dart';
+export 'breathing_music_model.dart';
+
 enum BreathingPattern {
   twoStep('2-step', 'assets/icons/ic_two_step.svg', false),
   threeStep('3-step', 'assets/icons/ic_three_step.svg', true),
@@ -49,6 +52,12 @@ class CustomBreathingState {
     this.phase = BreathingPhase.inhale,
     this.cycle = 1,
     this.progress = 0,
+    this.selectedTrack,
+    this.availableTracks = const [],
+    this.isMusicEnabled = true,
+    this.isOnline = true,
+    this.isLoadingMusic = false,
+    this.downloadingTrackId,
   });
 
   final BreathingPattern pattern;
@@ -60,6 +69,12 @@ class CustomBreathingState {
   final BreathingPhase phase;
   final int cycle;
   final double progress;
+  final BreathingMusicTrack? selectedTrack;
+  final List<BreathingMusicTrack> availableTracks;
+  final bool isMusicEnabled;
+  final bool isOnline;
+  final bool isLoadingMusic;
+  final String? downloadingTrackId;
 
   int secondsOf(BreathingStep step) {
     switch (step) {
@@ -101,6 +116,13 @@ class CustomBreathingState {
     BreathingPhase? phase,
     int? cycle,
     double? progress,
+    BreathingMusicTrack? selectedTrack,
+    List<BreathingMusicTrack>? availableTracks,
+    bool? isMusicEnabled,
+    bool? isOnline,
+    bool? isLoadingMusic,
+    String? downloadingTrackId,
+    bool clearDownloadingTrackId = false,
   }) {
     return CustomBreathingState(
       pattern: pattern ?? this.pattern,
@@ -112,6 +134,14 @@ class CustomBreathingState {
       phase: phase ?? this.phase,
       cycle: cycle ?? this.cycle,
       progress: progress ?? this.progress,
+      selectedTrack: selectedTrack ?? this.selectedTrack,
+      availableTracks: availableTracks ?? this.availableTracks,
+      isMusicEnabled: isMusicEnabled ?? this.isMusicEnabled,
+      isOnline: isOnline ?? this.isOnline,
+      isLoadingMusic: isLoadingMusic ?? this.isLoadingMusic,
+      downloadingTrackId: clearDownloadingTrackId
+          ? null
+          : (downloadingTrackId ?? this.downloadingTrackId),
     );
   }
 }

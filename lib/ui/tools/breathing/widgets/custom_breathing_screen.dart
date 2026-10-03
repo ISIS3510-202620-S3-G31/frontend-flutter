@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../view_model/custom_breathing_view_model.dart';
+import 'breathing_music_card.dart';
 import 'duration_pills.dart';
 import 'pattern_selector.dart';
 import 'session_controls.dart';
@@ -115,6 +116,12 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
                             child: DurationPills(
                               selectedMinutes: state.sessionMinutes,
                               onSelected: _viewModel.selectDuration,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8, bottom: 16),
+                            child: BreathingMusicCard(
+                              viewModel: _viewModel,
                             ),
                           ),
                         ],
