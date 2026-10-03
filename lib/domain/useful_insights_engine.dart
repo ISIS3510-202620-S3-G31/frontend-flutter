@@ -7,6 +7,8 @@ import '../data/models/tool_session_model.dart';
 ///
 /// Same rules and thresholds as the Kotlin app, so both say the same thing.
 /// Each rule returns null when there is not enough data to be sure.
+/// 
+/// 
 class UsefulInsightsEngine {
   UsefulInsightsEngine({DateTime Function()? now}) : _now = now ?? DateTime.now;
 
