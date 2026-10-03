@@ -11,13 +11,15 @@ class ToolRecommender {
 
   RecommendationStrategy _strategy = const DefaultStrategy();
 
-  /// The strategy used in the last recommendation.
+  /// The strategy that picked the last recommendation.
   RecommendationStrategy get strategy => _strategy;
 
   Recommendation? recommend(UserHistory history, List<ToolItem> tools) {
     _strategy = _strategyFor(history);
-    return _strategy.recommend(history, tools) ??
-        const DefaultStrategy().recommend(history, tools);
+    final recommendation = _strategy.recommend(history, tools);
+    if (recommendation != null) return recommendation;
+    _strategy = const DefaultStrategy();
+    return _strategy.recommend(history, tools);
   }
 
   RecommendationStrategy _strategyFor(UserHistory history) {

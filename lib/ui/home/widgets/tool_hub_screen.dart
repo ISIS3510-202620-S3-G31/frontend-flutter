@@ -137,7 +137,10 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
                 if (recommendation != null)
                   RecommendationSection(
                     recommendation: recommendation,
-                    onOpen: () => _openTool(recommendation.tool),
+                    onOpen: () {
+                      _viewModel.openRecommendation();
+                      _openTool(recommendation.tool);
+                    },
                   ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
