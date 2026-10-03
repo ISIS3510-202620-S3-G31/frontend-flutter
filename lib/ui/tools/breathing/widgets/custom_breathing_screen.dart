@@ -12,12 +12,10 @@ import 'session_controls.dart';
 import 'stepper_row.dart';
 import 'timer_card.dart';
 
-/// Breathing session with a rhythm countdown, pattern selector, steppers and
-/// session controls.
+/// Breathing session with a rhythm countdown, pattern selector, steppers and session controls.
 class CustomBreathingScreen extends StatefulWidget {
   const CustomBreathingScreen({super.key, this.viewModel, this.onBack});
 
-  /// Pass one in tests; otherwise the screen builds and disposes its own.
   final CustomBreathingViewModel? viewModel;
   final VoidCallback? onBack;
 
@@ -120,9 +118,7 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
                           ),
                           Padding(
                             padding: const EdgeInsets.only(top: 8, bottom: 16),
-                            child: BreathingMusicCard(
-                              viewModel: _viewModel,
-                            ),
+                            child: BreathingMusicCard(viewModel: _viewModel),
                           ),
                         ],
                       ),

@@ -17,7 +17,7 @@ class BreathingAudioStorageService {
     return dir;
   }
 
-  /// Gets the full local file path where a track with [trackId] should be stored.
+  /// Gets the full local file path where a track with trackid should be stored.
   Future<String> getFilePathForTrack(String trackId) async {
     final dir = await cacheDirectory;
     final sanitizedId = trackId.replaceAll(RegExp(r'[^\w\.-]'), '_');
