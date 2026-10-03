@@ -6,8 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/circle_icon_button.dart';
 
-/// Dark card that shows the camera preview or today's photo, with the date
-/// and the flash button on top.
+/// Dark card that shows the camera preview or today's photo, with the date and the flash button on top.
 class Viewfinder extends StatelessWidget {
   const Viewfinder({
     super.key,
