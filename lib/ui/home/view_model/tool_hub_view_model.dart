@@ -54,13 +54,16 @@ class ToolHubViewModel extends ChangeNotifier {
 
   Future<void> loadRecommendation() async {
     final now = _now();
+    final data = await _statsRepository.dataSince(
+      DateTime(now.year, now.month, now.day - 29),
+    );
+    final lastDay = now.subtract(const Duration(days: 1));
     final history = UserHistory(
-      recentCheckIns: await _statsRepository.checkInsSince(
-        now.subtract(const Duration(days: 1)),
-      ),
-      sessions: await _statsRepository.sessionsSince(
-        DateTime(now.year, now.month, now.day - 29),
-      ),
+      recentCheckIns: [
+        for (final checkIn in data.checkIns)
+          if (!checkIn.timestamp.isBefore(lastDay)) checkIn,
+      ],
+      sessions: data.sessions,
     );
     _recommendation = _recommender.recommend(history, _repository.allTools());
     if (!_disposed) notifyListeners();
