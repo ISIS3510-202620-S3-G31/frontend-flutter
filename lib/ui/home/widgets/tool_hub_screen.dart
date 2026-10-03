@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../data/models/tool_model.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
+import '../../stats/widgets/stats_screen.dart';
 import '../tool_routes.dart';
 import '../view_model/tool_hub_view_model.dart';
 import 'category_filter_bar.dart';
@@ -57,8 +58,6 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     switch (index) {
       case 1:
         _openRandomTool();
-      case 2:
-        _showMessage('Stats coming soon!');
       default:
         _viewModel.selectTab(index);
     }
@@ -88,73 +87,83 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
               selectedIndex: _viewModel.selectedTab,
               onTabSelected: _onTabSelected,
             ),
-            body: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  ToolHubHeader(
-                    onProfileTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ProfileScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  Expanded(
-                    child: ListView(
-                      padding: EdgeInsets.zero,
+            body: _viewModel.selectedTab == 2
+                ? StatsScreen(onOpenToolbox: () => _viewModel.selectTab(0))
+                : SafeArea(
+                    bottom: false,
+                    child: Column(
                       children: [
-                        CategoryFilterBar(
-                          selectedCategory: _viewModel.selectedCategory,
-                          onCategorySelected: _viewModel.selectCategory,
+                        ToolHubHeader(
+                          onProfileTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ProfileScreen(),
+                              ),
+                            );
+                          },
                         ),
-                        LeaveToChanceCard(onSurpriseMe: _openRandomTool),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Expanded(
+                          child: ListView(
+                            padding: EdgeInsets.zero,
                             children: [
-                              Text(
-                                _viewModel.listTitle,
-                                style: AppText.h3.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 18,
-                                  color: AppColors.text,
+                              CategoryFilterBar(
+                                selectedCategory: _viewModel.selectedCategory,
+                                onCategorySelected: _viewModel.selectCategory,
+                              ),
+                              LeaveToChanceCard(onSurpriseMe: _openRandomTool),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  24,
+                                  12,
+                                  24,
+                                  12,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _viewModel.listTitle,
+                                      style: AppText.h3.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 18,
+                                        color: AppColors.text,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${tools.length}',
+                                      style: AppText.body.copyWith(
+                                        color: AppColors.textMuted,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              Text(
-                                '${tools.length}',
-                                style: AppText.body.copyWith(
-                                  color: AppColors.textMuted,
-                                  fontSize: 15,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                ),
+                                child: Column(
+                                  children: [
+                                    for (var i = 0; i < tools.length; i++) ...[
+                                      if (i > 0) const SizedBox(height: 12),
+                                      ToolCard(
+                                        tool: tools[i],
+                                        onTap: () => _openTool(tools[i]),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
+                              const SizedBox(height: 24),
                             ],
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            children: [
-                              for (var i = 0; i < tools.length; i++) ...[
-                                if (i > 0) const SizedBox(height: 12),
-                                ToolCard(
-                                  tool: tools[i],
-                                  onTap: () => _openTool(tools[i]),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
           ),
         );
       },
