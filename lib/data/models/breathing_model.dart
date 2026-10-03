@@ -58,6 +58,8 @@ class CustomBreathingState {
     this.isOnline = true,
     this.isLoadingMusic = false,
     this.downloadingTrackId,
+    this.previewTrack,
+    this.isPreviewPlaying = false,
   });
 
   final BreathingPattern pattern;
@@ -75,6 +77,8 @@ class CustomBreathingState {
   final bool isOnline;
   final bool isLoadingMusic;
   final String? downloadingTrackId;
+  final BreathingMusicTrack? previewTrack;
+  final bool isPreviewPlaying;
 
   int secondsOf(BreathingStep step) {
     switch (step) {
@@ -123,6 +127,9 @@ class CustomBreathingState {
     bool? isLoadingMusic,
     String? downloadingTrackId,
     bool clearDownloadingTrackId = false,
+    BreathingMusicTrack? previewTrack,
+    bool clearPreviewTrack = false,
+    bool? isPreviewPlaying,
   }) {
     return CustomBreathingState(
       pattern: pattern ?? this.pattern,
@@ -142,6 +149,10 @@ class CustomBreathingState {
       downloadingTrackId: clearDownloadingTrackId
           ? null
           : (downloadingTrackId ?? this.downloadingTrackId),
+      previewTrack: clearPreviewTrack
+          ? null
+          : (previewTrack ?? this.previewTrack),
+      isPreviewPlaying: isPreviewPlaying ?? this.isPreviewPlaying,
     );
   }
 }

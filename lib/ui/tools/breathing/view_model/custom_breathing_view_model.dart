@@ -224,12 +224,70 @@ class CustomBreathingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Selects a new music track.
+  /// Selects a new music track for the breathing session.
   Future<void> selectTrack(BreathingMusicTrack track) async {
     _state = _state.copyWith(selectedTrack: track);
     await _repository.setSelectedTrackId(track.id);
 
     if (_state.isRunning && _state.isMusicEnabled) {
+      await _playMusic();
+    }
+
+    notifyListeners();
+  }
+
+  /// Plays or pauses an audio preview of [track].
+  Future<void> togglePreview(BreathingMusicTrack track) async {
+    if (_state.previewTrack?.id == track.id) {
+      if (_state.isPreviewPlaying) {
+        await _audioPlayer.pause();
+        _state = _state.copyWith(isPreviewPlaying: false);
+      } else {
+        await _audioPlayer.resume();
+        _state = _state.copyWith(isPreviewPlaying: true);
+      }
+      notifyListeners();
+      return;
+    }
+
+    // If offline and track not cached, inform the user
+    if (!_state.isOnline && !track.isCached) {
+      _message =
+          'Cannot preview "${track.title}" offline. Connect to the internet to stream and cache it.';
+      notifyListeners();
+      return;
+    }
+
+    _state = _state.copyWith(
+      previewTrack: track,
+      isPreviewPlaying: true,
+    );
+    notifyListeners();
+
+    try {
+      await _audioPlayer.playTrack(track, repository: _repository);
+    } catch (_) {
+      _state = _state.copyWith(
+        clearPreviewTrack: true,
+        isPreviewPlaying: false,
+      );
+      _message = 'Could not preview "${track.title}".';
+      notifyListeners();
+    }
+  }
+
+  /// Stops any currently playing music preview.
+  Future<void> stopPreview() async {
+    if (_state.previewTrack == null) return;
+
+    await _audioPlayer.stop();
+    _state = _state.copyWith(
+      clearPreviewTrack: true,
+      isPreviewPlaying: false,
+    );
+
+    // If breathing session is actively running, restore its music
+    if (_state.isRunning && _state.isMusicEnabled && _state.selectedTrack != null) {
       await _playMusic();
     }
 

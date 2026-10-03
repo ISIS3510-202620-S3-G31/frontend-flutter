@@ -32,7 +32,9 @@ class BreathingMusicCard extends StatelessWidget {
               isScrollControlled: true,
               backgroundColor: Colors.transparent,
               builder: (ctx) => BreathingMusicSheet(viewModel: viewModel),
-            );
+            ).whenComplete(() {
+              viewModel.stopPreview();
+            });
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

@@ -18,6 +18,8 @@ class BreathingMusicSheet extends StatelessWidget {
         final state = viewModel.state;
         final tracks = state.availableTracks;
         final selectedTrack = state.selectedTrack;
+        final previewTrack = state.previewTrack;
+        final isPreviewPlaying = state.isPreviewPlaying;
         final isOnline = state.isOnline;
 
         return DraggableScrollableSheet(
@@ -62,7 +64,7 @@ class BreathingMusicSheet extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Jamendo Ambient & Meditation',
+                              'Tap play to preview any track',
                               style: AppText.bodyMuted.copyWith(fontSize: 13),
                             ),
                           ],
@@ -101,22 +103,31 @@ class BreathingMusicSheet extends StatelessWidget {
                           )
                         : ListView.separated(
                             controller: scrollController,
-                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
                             itemCount: tracks.length,
                             separatorBuilder: (context, index) =>
                                 const SizedBox(height: 8),
                             itemBuilder: (context, index) {
                               final track = tracks[index];
                               final isSelected = selectedTrack?.id == track.id;
+                              final isPreviewing = previewTrack?.id == track.id;
                               final isDownloading =
                                   state.downloadingTrackId == track.id;
 
                               return _TrackTile(
                                 track: track,
                                 isSelected: isSelected,
+                                isPreviewing: isPreviewing,
+                                isPreviewPlaying:
+                                    isPreviewing && isPreviewPlaying,
                                 isDownloading: isDownloading,
                                 isOnline: isOnline,
-                                onSelect: () => viewModel.selectTrack(track),
+                                onSelect: () {
+                                  viewModel.selectTrack(track);
+                                  viewModel.togglePreview(track);
+                                },
+                                onTogglePreview: () =>
+                                    viewModel.togglePreview(track),
                                 onDownload: () =>
                                     viewModel.downloadTrack(track),
                                 onDeleteCache: () =>
@@ -126,12 +137,23 @@ class BreathingMusicSheet extends StatelessWidget {
                           ),
                   ),
 
+                  // Bottom Preview Bar (shows preview player when a song is previewed)
+                  if (previewTrack != null)
+                    _PreviewBottomBar(
+                      track: previewTrack,
+                      isPlaying: isPreviewPlaying,
+                      isSelected: selectedTrack?.id == previewTrack.id,
+                      onTogglePlay: () => viewModel.togglePreview(previewTrack),
+                      onSelectTrack: () => viewModel.selectTrack(previewTrack),
+                      onClose: viewModel.stopPreview,
+                    ),
+
                   // Footer with Refresh from Jamendo
                   if (isOnline)
                     SafeArea(
                       top: false,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.text,
@@ -161,22 +183,190 @@ class BreathingMusicSheet extends StatelessWidget {
   }
 }
 
+class _PreviewBottomBar extends StatelessWidget {
+  const _PreviewBottomBar({
+    required this.track,
+    required this.isPlaying,
+    required this.isSelected,
+    required this.onTogglePlay,
+    required this.onSelectTrack,
+    required this.onClose,
+  });
+
+  final BreathingMusicTrack track;
+  final bool isPlaying;
+  final bool isSelected;
+  final VoidCallback onTogglePlay;
+  final VoidCallback onSelectTrack;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.text,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Play / Pause preview button
+          IconButton(
+            tooltip: isPlaying ? 'Pause preview' : 'Resume preview',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+            icon: Icon(
+              isPlaying
+                  ? Icons.pause_circle_filled_rounded
+                  : Icons.play_circle_filled_rounded,
+              color: AppColors.background,
+              size: 36,
+            ),
+            onPressed: onTogglePlay,
+          ),
+          const SizedBox(width: 8),
+
+          // Preview info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.graphic_eq_rounded,
+                      size: 14,
+                      color: AppColors.secondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Previewing',
+                      style: AppText.body.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  track.title,
+                  style: AppText.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  track.artist,
+                  style: AppText.body.copyWith(
+                    color: AppColors.onDarkMuted,
+                    fontSize: 11,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Select for Session Button
+          if (!isSelected)
+            TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: onSelectTrack,
+              child: const Text(
+                'Use Track',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check, size: 12, color: AppColors.success),
+                  const SizedBox(width: 3),
+                  Text(
+                    'Selected',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(width: 4),
+
+          // Close preview button
+          IconButton(
+            tooltip: 'Stop preview',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            icon: Icon(
+              Icons.close_rounded,
+              color: AppColors.onDarkMuted,
+              size: 20,
+            ),
+            onPressed: onClose,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TrackTile extends StatelessWidget {
   const _TrackTile({
     required this.track,
     required this.isSelected,
+    required this.isPreviewing,
+    required this.isPreviewPlaying,
     required this.isDownloading,
     required this.isOnline,
     required this.onSelect,
+    required this.onTogglePreview,
     required this.onDownload,
     required this.onDeleteCache,
   });
 
   final BreathingMusicTrack track;
   final bool isSelected;
+  final bool isPreviewing;
+  final bool isPreviewPlaying;
   final bool isDownloading;
   final bool isOnline;
   final VoidCallback onSelect;
+  final VoidCallback onTogglePreview;
   final VoidCallback onDownload;
   final VoidCallback onDeleteCache;
 
@@ -191,12 +381,18 @@ class _TrackTile extends StatelessWidget {
       child: Material(
         color: isSelected
             ? AppColors.secondary.withValues(alpha: 0.12)
-            : AppColors.surfaceDim.withValues(alpha: 0.5),
+            : isPreviewing
+                ? AppColors.primary.withValues(alpha: 0.08)
+                : AppColors.surfaceDim.withValues(alpha: 0.5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: isSelected ? AppColors.secondary : Colors.transparent,
-            width: 1.5,
+            color: isSelected
+                ? AppColors.secondary
+                : isPreviewing
+                    ? AppColors.primary
+                    : Colors.transparent,
+            width: isSelected || isPreviewing ? 1.5 : 1.0,
           ),
         ),
         child: InkWell(
@@ -214,25 +410,54 @@ class _TrackTile extends StatelessWidget {
                   );
                 },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                // Radio / Active play indicator
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: isSelected
+                // Interactive Play / Preview button
+                Semantics(
+                  button: true,
+                  label: isPreviewPlaying
+                      ? 'Pause preview of ${track.title}'
+                      : 'Play preview of ${track.title}',
+                  child: Material(
+                    color: isPreviewPlaying
                         ? AppColors.secondary
-                        : AppColors.text.withValues(alpha: 0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isSelected
-                        ? Icons.play_arrow_rounded
-                        : Icons.music_note_rounded,
-                    color: isSelected ? Colors.white : AppColors.textMuted,
-                    size: 20,
+                        : isPreviewing
+                            ? AppColors.secondary.withValues(alpha: 0.7)
+                            : isSelected
+                                ? AppColors.secondary.withValues(alpha: 0.25)
+                                : AppColors.text.withValues(alpha: 0.08),
+                    shape: const CircleBorder(),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: canPlay
+                          ? onTogglePreview
+                          : () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Connect to the internet to preview this track.',
+                                  ),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Icon(
+                          isPreviewPlaying
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          color: isPreviewPlaying
+                              ? Colors.white
+                              : isSelected
+                                  ? AppColors.secondary
+                                  : AppColors.text,
+                          size: 24,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -242,16 +467,56 @@ class _TrackTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        track.title,
-                        style: AppText.body.copyWith(
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: canPlay ? AppColors.text : AppColors.textMuted,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              track.title,
+                              style: AppText.body.copyWith(
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                color: canPlay
+                                    ? AppColors.text
+                                    : AppColors.textMuted,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isPreviewPlaying) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.graphic_eq_rounded,
+                                    size: 11,
+                                    color: AppColors.secondary,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    'Preview',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.secondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Row(
@@ -268,6 +533,27 @@ class _TrackTile extends StatelessWidget {
                             Text(
                               ' • ${(track.duration ~/ 60)}:${(track.duration % 60).toString().padLeft(2, '0')}',
                               style: AppText.bodyMuted.copyWith(fontSize: 12),
+                            ),
+                          ],
+                          if (isSelected) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Active',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
                             ),
                           ],
                         ],
