@@ -4,21 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../data/models/breathing_model.dart';
+import '../../../../data/services/analytics_service.dart';
 
 const _minSeconds = 1;
 const _maxSeconds = 15;
 const _tick = Duration(milliseconds: 50);
 
 class CustomBreathingViewModel extends ChangeNotifier {
+  CustomBreathingViewModel({AnalyticsService? analytics})
+    : _analytics = analytics ?? AnalyticsService();
+
+  final AnalyticsService _analytics;
   CustomBreathingState _state = const CustomBreathingState();
   Timer? _timer;
-
 
   double _phaseElapsed = 0;
   String? _message;
 
   CustomBreathingState get state => _state;
   List<BreathingStep> get visibleSteps => _state.visibleSteps;
+  bool get isCompleted =>
+      _state.cycle > _state.totalCycles ||
+      (_state.progress >= 1.0 && !_state.isRunning);
 
   /// Message to show once in a snack bar.
   String? get message => _message;
@@ -83,6 +90,10 @@ class CustomBreathingViewModel extends ChangeNotifier {
     _timer?.cancel();
     _state = _state.copyWith(isRunning: false, progress: 1);
     _message = 'Breathing session complete! Well done.';
+    _analytics.completeToolSession(
+      toolId: 'breathing',
+      toolName: 'Custom Breathing',
+    );
     HapticFeedback.heavyImpact();
     notifyListeners();
   }

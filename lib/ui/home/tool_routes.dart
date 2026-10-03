@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/services/analytics_service.dart';
 import '../feedback/widgets/tool_feedback_screen.dart';
 import '../tools/breathing/widgets/custom_breathing_screen.dart';
 import '../tools/emotional_detective/widgets/emotional_detective_screen.dart';
@@ -26,10 +27,37 @@ Future<void> openToolScreen(
   required String toolId,
   required String toolName,
   required WidgetBuilder builder,
+  AnalyticsService? analyticsService,
 }) async {
+  final analytics = analyticsService ?? AnalyticsService();
   final startedAt = DateTime.now();
-  await Navigator.push(context, MaterialPageRoute(builder: builder));
+  await analytics.startToolSession(toolId: toolId, toolName: toolName);
+  if (!context.mounted) return;
+
+  final result = await Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: builder,
+      settings: RouteSettings(name: '/tools/$toolId'),
+    ),
+  );
+
   final seconds = DateTime.now().difference(startedAt).inSeconds;
+
+  if (result == true) {
+    await analytics.completeToolSession(
+      toolId: toolId,
+      toolName: toolName,
+      durationSeconds: seconds,
+    );
+  }
+
+  await analytics.endToolSession(
+    toolId: toolId,
+    toolName: toolName,
+    durationSeconds: seconds,
+  );
+
   if (!context.mounted || seconds < _minSecondsForFeedback) return;
   await Navigator.push(
     context,

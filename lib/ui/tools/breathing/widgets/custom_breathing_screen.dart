@@ -54,7 +54,7 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
 
   void _finishSession() {
     _viewModel.stop();
-    Navigator.maybePop(context);
+    Navigator.maybePop(context, _viewModel.isCompleted);
   }
 
   @override
