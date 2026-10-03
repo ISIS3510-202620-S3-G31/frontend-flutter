@@ -84,6 +84,10 @@ class _DayBar extends StatelessWidget {
           decoration: BoxDecoration(
             color:
                 mood?.emotion.color ?? AppColors.text.withValues(alpha: 0.08),
+            // Light colors (Success, Warning) need an edge on the beige card.
+            border: mood == null
+                ? null
+                : Border.all(color: AppColors.text.withValues(alpha: 0.15)),
             borderRadius: BorderRadius.circular(8),
           ),
         ),

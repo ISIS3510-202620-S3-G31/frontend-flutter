@@ -17,7 +17,7 @@ class ToolsFrequencyChart extends StatelessWidget {
     AppColors.primary,
     AppColors.secondary,
     AppColors.accent,
-    Color(0xFF6CC070),
+    AppColors.success,
   ];
 
   @override

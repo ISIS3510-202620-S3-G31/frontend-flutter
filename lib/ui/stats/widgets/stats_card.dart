@@ -24,7 +24,7 @@ class StatsCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.panel,
+        color: AppColors.surfaceDim,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
