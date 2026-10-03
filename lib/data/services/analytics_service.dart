@@ -55,10 +55,21 @@ class AnalyticsService {
     required String screenName,
     String? screenClass,
   }) async {
+    if (kDebugMode) {
+      debugPrint('[Analytics] 📱 Screen: $screenName');
+    }
     await _analytics.logScreenView(
       screenName: screenName,
       screenClass: screenClass,
     );
+  }
+
+  /// Explicitly logs 'app_open' to register an active session in GA4.
+  Future<void> logAppOpen() async {
+    if (kDebugMode) {
+      debugPrint('[Analytics] 🚀 App Open');
+    }
+    await _analytics.logAppOpen();
   }
 
   /// Starts tracking an activity session, logging the 'tool_start' event.

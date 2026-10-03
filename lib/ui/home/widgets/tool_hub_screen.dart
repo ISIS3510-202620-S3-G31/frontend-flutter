@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
+import '../../../data/services/analytics_service.dart';
+import '../../auth/widgets/profile_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../stats/widgets/stats_screen.dart';
@@ -12,7 +14,6 @@ import 'leave_to_chance_card.dart';
 import 'tool_card.dart';
 import 'tool_hub_header.dart';
 import 'toolbox_bottom_nav.dart';
-import '../../auth/widgets/profile_screen.dart';
 
 /// Toolbox: the home screen that lists every wellness tool.
 class ToolHubScreen extends StatefulWidget {
@@ -29,6 +30,12 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
   late final ToolHubViewModel _viewModel =
       widget.viewModel ?? ToolHubViewModel();
   late final bool _ownsViewModel = widget.viewModel == null;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService().logScreenView(screenName: 'ToolHub');
+  }
 
   @override
   void dispose() {
