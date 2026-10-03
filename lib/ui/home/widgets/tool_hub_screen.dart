@@ -11,6 +11,7 @@ import 'leave_to_chance_card.dart';
 import 'tool_card.dart';
 import 'tool_hub_header.dart';
 import 'toolbox_bottom_nav.dart';
+import '../../auth/widgets/profile_screen.dart';
 
 /// Toolbox: the home screen that lists every wellness tool.
 class ToolHubScreen extends StatefulWidget {
@@ -92,7 +93,14 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
               child: Column(
                 children: [
                   ToolHubHeader(
-                    onProfileTap: () => _showMessage('Profile coming soon!'),
+                    onProfileTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
+                      );
+                    },
                   ),
                   Expanded(
                     child: ListView(

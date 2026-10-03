@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'firebase_options.dart';
-import 'ui/home/widgets/tool_hub_screen.dart';
+import 'ui/auth/widgets/auth_gate.dart';
 import 'ui/core/theme/app_colors.dart';
 
 void main() async {
@@ -27,7 +27,7 @@ class MainApp extends StatelessWidget {
         colorSchemeSeed: AppColors.primary,
         scaffoldBackgroundColor: AppColors.background,
       ),
-      home: const ToolHubScreen(),
+      home: const AuthGate(),
     );
   }
 }
