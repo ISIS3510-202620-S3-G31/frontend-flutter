@@ -43,19 +43,11 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
       _showMessage('${tool.title} is coming soon!');
       return;
     }
-<<<<<<< HEAD
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => UsageFlowScreen(tool: tool, toolScreen: screen),
       ),
-=======
-    openToolScreen(
-      context,
-      toolId: tool.id,
-      toolName: tool.title,
-      builder: screen,
->>>>>>> b0ee98c145b1dd1018b7a270c7934e02bf9a26b8
     );
   }
 
