@@ -1,7 +1,6 @@
 import '../../data/models/tool_model.dart';
 
 /// Component: anything that can be part of a usage flow, from a single screen
-/// to the whole flow. Groups and single steps answer the same questions.
 abstract class FlowStep {
   const FlowStep(this.title);
 

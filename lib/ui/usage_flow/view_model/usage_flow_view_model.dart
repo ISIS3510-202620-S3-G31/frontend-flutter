@@ -11,7 +11,6 @@ class UsageFlowViewModel extends ChangeNotifier {
     : flow = UsageFlowTemplate.forTool(tool),
       _now = now ?? DateTime.now;
 
-  /// Leaving a tool sooner than this is a misclick, not a session.
   static const _minToolSeconds = 10;
 
   final ToolItem tool;
@@ -68,8 +67,7 @@ class UsageFlowViewModel extends ChangeNotifier {
     _toolStep.startedAt = _now();
   }
 
-  /// Called when the user comes back from the tool. A misclick keeps the
-  /// user on the tool step.
+
   void finishTool() {
     final startedAt = _toolStep.startedAt;
     if (currentStep is! ToolStep || startedAt == null) return;

@@ -1,7 +1,6 @@
 import 'flow_step.dart';
 
 /// Composite: a group of steps, like "Before the tool" or the whole flow.
-/// It answers by asking its children, so groups can hold other groups.
 class FlowGroup extends FlowStep {
   FlowGroup(super.title);
 

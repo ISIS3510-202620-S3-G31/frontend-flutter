@@ -13,8 +13,7 @@ import 'flow_progress.dart';
 import 'flow_summary.dart';
 import 'question_view.dart';
 
-/// Wraps a tool with a mood check before it, and a mood check and the tool
-/// feedback after it.
+
 class UsageFlowScreen extends StatefulWidget {
   const UsageFlowScreen({
     super.key,
