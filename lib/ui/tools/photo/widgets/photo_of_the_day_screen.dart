@@ -99,6 +99,8 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
                     subtitle: DateFormat(
                       'EEEE, MMMM d',
                     ).format(_viewModel.today),
+                    onBack: () =>
+                        Navigator.maybePop(context, _viewModel.isCompleted),
                   ),
                   WeekStrip(states: _viewModel.weekStates),
                   Expanded(

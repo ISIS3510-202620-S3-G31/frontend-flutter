@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../data/models/breathing_model.dart';
+import '../../../../data/services/analytics_service.dart';
 import '../../../../data/repositories/breathing_repository.dart';
 import '../../../../data/services/breathing_audio_player_service.dart';
 
@@ -16,10 +17,12 @@ class CustomBreathingViewModel extends ChangeNotifier {
   CustomBreathingViewModel({
     BreathingRepository? repository,
     BreathingAudioPlayerService? audioPlayer,
-  })  : _repository = repository ?? BreathingRepository(),
-        _ownsRepository = repository == null,
-        _audioPlayer = audioPlayer ?? BreathingAudioPlayerService(),
-        _ownsAudioPlayer = audioPlayer == null {
+    AnalyticsService? analytics,
+  }) : _repository = repository ?? BreathingRepository(),
+       _ownsRepository = repository == null,
+       _audioPlayer = audioPlayer ?? BreathingAudioPlayerService(),
+       _ownsAudioPlayer = audioPlayer == null,
+       _analytics = analytics ?? AnalyticsService() {
     _initMusic();
   }
 
@@ -27,18 +30,23 @@ class CustomBreathingViewModel extends ChangeNotifier {
   final bool _ownsRepository;
   final BreathingAudioPlayerService _audioPlayer;
   final bool _ownsAudioPlayer;
+  final AnalyticsService _analytics;
 
   CustomBreathingState _state = const CustomBreathingState();
   Timer? _timer;
   StreamSubscription<bool>? _connectivitySub;
   StreamSubscription<BreathingMusicTrack>? _trackCachedSub;
-  final Map<BreathingPattern, ({int inhale, int hold, int exhale})> _customTimings = {};
+  final Map<BreathingPattern, ({int inhale, int hold, int exhale})>
+  _customTimings = {};
 
   double _phaseElapsed = 0;
   String? _message;
 
   CustomBreathingState get state => _state;
   List<BreathingStep> get visibleSteps => _state.visibleSteps;
+  bool get isCompleted =>
+      _state.cycle > _state.totalCycles ||
+      (_state.progress >= 1.0 && !_state.isRunning);
 
   /// Message to show once in a snack bar.
   String? get message => _message;
@@ -112,9 +120,7 @@ class CustomBreathingViewModel extends ChangeNotifier {
       return;
     }
     _phaseElapsed = elapsed;
-    _state = _state.copyWith(
-      progress: (elapsed / duration).clamp(0.0, 1.0),
-    );
+    _state = _state.copyWith(progress: (elapsed / duration).clamp(0.0, 1.0));
 
     notifyListeners();
   }
@@ -140,11 +146,7 @@ class CustomBreathingViewModel extends ChangeNotifier {
     }
 
     _phaseElapsed = 0;
-    _state = _state.copyWith(
-      phase: next,
-      cycle: cycle,
-      progress: 0,
-    );
+    _state = _state.copyWith(phase: next, cycle: cycle, progress: 0);
     notifyListeners();
   }
 
@@ -153,6 +155,10 @@ class CustomBreathingViewModel extends ChangeNotifier {
     _audioPlayer.stop();
     _state = _state.copyWith(isRunning: false, progress: 1);
     _message = 'Breathing session complete! Well done.';
+    _analytics.completeToolSession(
+      toolId: 'breathing',
+      toolName: 'Custom Breathing',
+    );
     HapticFeedback.heavyImpact();
     notifyListeners();
   }
@@ -200,7 +206,8 @@ class CustomBreathingViewModel extends ChangeNotifier {
     try {
       await _audioPlayer.playTrack(track, repository: _repository);
     } on SocketException catch (_) {
-      _message = 'Track "${track.title}" is not cached for offline use. Connect to the internet to listen and cache it.';
+      _message =
+          'Track "${track.title}" is not cached for offline use. Connect to the internet to listen and cache it.';
       notifyListeners();
     } catch (e) {
       _message = 'Could not play audio track.';
@@ -259,10 +266,7 @@ class CustomBreathingViewModel extends ChangeNotifier {
       return;
     }
 
-    _state = _state.copyWith(
-      previewTrack: track,
-      isPreviewPlaying: true,
-    );
+    _state = _state.copyWith(previewTrack: track, isPreviewPlaying: true);
     notifyListeners();
 
     try {
@@ -282,13 +286,12 @@ class CustomBreathingViewModel extends ChangeNotifier {
     if (_state.previewTrack == null) return;
 
     await _audioPlayer.stop();
-    _state = _state.copyWith(
-      clearPreviewTrack: true,
-      isPreviewPlaying: false,
-    );
+    _state = _state.copyWith(clearPreviewTrack: true, isPreviewPlaying: false);
 
     // If breathing session is actively running, restore its music
-    if (_state.isRunning && _state.isMusicEnabled && _state.selectedTrack != null) {
+    if (_state.isRunning &&
+        _state.isMusicEnabled &&
+        _state.selectedTrack != null) {
       await _playMusic();
     }
 
@@ -321,7 +324,8 @@ class CustomBreathingViewModel extends ChangeNotifier {
       _message = '"${track.title}" downloaded and cached for offline use.';
     } catch (_) {
       _state = _state.copyWith(clearDownloadingTrackId: true);
-      _message = 'Failed to download "${track.title}". Check your internet connection.';
+      _message =
+          'Failed to download "${track.title}". Check your internet connection.';
     }
 
     notifyListeners();
@@ -359,10 +363,7 @@ class CustomBreathingViewModel extends ChangeNotifier {
 
     try {
       final tracks = await _repository.getTracks(refreshFromRemote: true);
-      _state = _state.copyWith(
-        availableTracks: tracks,
-        isLoadingMusic: false,
-      );
+      _state = _state.copyWith(availableTracks: tracks, isLoadingMusic: false);
     } catch (_) {
       _state = _state.copyWith(isLoadingMusic: false);
     }

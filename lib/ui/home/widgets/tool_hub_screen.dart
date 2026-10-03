@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
+import '../../../data/services/analytics_service.dart';
+import '../../auth/widgets/profile_screen.dart';
 import '../../check_in/daily_check_in_prompt.dart';
 import '../../check_in/widgets/mood_check_in_sheet.dart';
 import '../../core/theme/app_colors.dart';
@@ -16,7 +18,6 @@ import 'recommendation_section.dart';
 import 'tool_card.dart';
 import 'tool_hub_header.dart';
 import 'toolbox_bottom_nav.dart';
-import '../../auth/widgets/profile_screen.dart';
 
 /// Toolbox: the home screen that lists every wellness tool.
 class ToolHubScreen extends StatefulWidget {
@@ -40,6 +41,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     super.initState();
     _viewModel.loadRecommendation();
     _askForCheckIn();
+    AnalyticsService().logScreenView(screenName: 'ToolHub');
   }
 
   /// The first time the app opens each day, asks the user how they feel.

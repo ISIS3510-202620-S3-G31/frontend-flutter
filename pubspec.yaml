@@ -27,6 +27,7 @@ dependencies:
   # 13.x needs Android compileSdk 37; Flutter 3.44 projects compile against 36.
   permission_handler: ^12.0.1
   sqflite: ^2.4.4
+  firebase_analytics: ^12.6.0
 
 dev_dependencies:
   flutter_test:

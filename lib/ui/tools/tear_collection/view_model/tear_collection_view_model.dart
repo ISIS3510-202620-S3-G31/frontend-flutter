@@ -2,25 +2,32 @@ import 'package:flutter/material.dart';
 
 import '../../../../data/models/tear_model.dart';
 import '../../../../data/repositories/tear_repository.dart';
+import '../../../../data/services/analytics_service.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// ViewModel managing the Tear Collector feature state and business logic.
 class TearCollectionViewModel extends ChangeNotifier {
-  TearCollectionViewModel({TearRepository? repository})
-      : _repository = repository ?? TearRepository();
+  TearCollectionViewModel({
+    TearRepository? repository,
+    AnalyticsService? analytics,
+  }) : _repository = repository ?? TearRepository(),
+       _analytics = analytics ?? AnalyticsService();
 
   final TearRepository _repository;
+  final AnalyticsService _analytics;
 
   TearCollection _collection = const TearCollection();
   Tear? _selectedTear;
   bool _isLoading = false;
   String? _errorMessage;
   bool _disposed = false;
+  bool _hasLoggedTearThisSession = false;
+
+  bool get isCompleted => _hasLoggedTearThisSession;
 
   /// The aggregate tear collection state.
   TearCollection get tearCollection => _collection;
 
-  /// Alias for [tearCollection].
   TearCollection get collection => _collection;
 
   /// Total count of tears logged.
@@ -95,6 +102,12 @@ class TearCollectionViewModel extends ChangeNotifier {
       // Recalculate collection with newly added tear
       final updatedList = [savedTear, ..._collection.tears];
       _collection = TearCollection.fromTears(updatedList);
+      _hasLoggedTearThisSession = true;
+
+      _analytics.completeToolSession(
+        toolId: 'tear',
+        toolName: 'Tear Collection',
+      );
 
       _notify();
       return savedTear;
