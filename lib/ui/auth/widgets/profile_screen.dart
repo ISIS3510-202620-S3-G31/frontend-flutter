@@ -95,6 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ScreenHeader(
+                  showBack: false,
                   title: Text('Profile', style: AppText.h1),
                   subtitle: 'Your account & Firestore data',
                 ),

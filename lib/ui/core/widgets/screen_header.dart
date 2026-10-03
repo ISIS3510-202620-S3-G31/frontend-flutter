@@ -10,6 +10,7 @@ class ScreenHeader extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.onBack,
+    this.showBack = true,
   });
 
   /// Usually `Text(..., style: AppText.h1)`, or the Scream Tank wordmark.
@@ -19,18 +20,23 @@ class ScreenHeader extends StatelessWidget {
   /// Defaults to popping the current route.
   final VoidCallback? onBack;
 
+  /// False on screens shown as a tab, which have nothing to go back to.
+  final bool showBack;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
       child: Row(
         children: [
-          CircleIconButton(
-            asset: 'assets/icons/ic_chevron_left.svg',
-            semanticLabel: 'Back',
-            onPressed: onBack ?? () => Navigator.maybePop(context),
-          ),
-          const SizedBox(width: 12),
+          if (showBack) ...[
+            CircleIconButton(
+              asset: 'assets/icons/ic_chevron_left.svg',
+              semanticLabel: 'Back',
+              onPressed: onBack ?? () => Navigator.maybePop(context),
+            ),
+            const SizedBox(width: 12),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

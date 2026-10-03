@@ -41,7 +41,9 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     super.initState();
     _viewModel.loadRecommendation();
     _askForCheckIn();
-    AnalyticsService().logScreenView(screenName: 'ToolHub');
+    AnalyticsService().logScreenView(
+      screenName: _viewModel.selectedTab.screenName,
+    );
   }
 
   /// The first time the app opens each day, asks the user how they feel.
@@ -79,15 +81,6 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     _openTool(tool);
   }
 
-  void _onTabSelected(int index) {
-    switch (index) {
-      case 1:
-        _openRandomTool();
-      default:
-        _viewModel.selectTab(index);
-    }
-  }
-
   void _showMessage(String message, {int seconds = 2}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -102,102 +95,93 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
-        final tools = _viewModel.tools;
-        final recommendation = _viewModel.recommendation;
-
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark,
           child: Scaffold(
             backgroundColor: AppColors.background,
             bottomNavigationBar: ToolboxBottomNav(
-              selectedIndex: _viewModel.selectedTab,
-              onTabSelected: _onTabSelected,
+              selectedTab: _viewModel.selectedTab,
+              onTabSelected: _viewModel.selectTab,
             ),
-            body: _viewModel.selectedTab == 2
-                ? StatsScreen(onOpenToolbox: () => _viewModel.selectTab(0))
-                : SafeArea(
-                    bottom: false,
-                    child: Column(
-                      children: [
-                        ToolHubHeader(
-                          onProfileTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ProfileScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        Expanded(
-                          child: ListView(
-                            padding: EdgeInsets.zero,
-                            children: [
-                              CategoryFilterBar(
-                                selectedCategory: _viewModel.selectedCategory,
-                                onCategorySelected: _viewModel.selectCategory,
-                              ),
-                              LeaveToChanceCard(onSurpriseMe: _openRandomTool),
-                              if (recommendation != null)
-                                RecommendationSection(
-                                  recommendation: recommendation,
-                                  onOpen: () => _openTool(recommendation.tool),
-                                ),
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  24,
-                                  12,
-                                  24,
-                                  12,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      _viewModel.listTitle,
-                                      style: AppText.h3.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 18,
-                                        color: AppColors.text,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${tools.length}',
-                                      style: AppText.body.copyWith(
-                                        color: AppColors.textMuted,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                ),
-                                child: Column(
-                                  children: [
-                                    for (var i = 0; i < tools.length; i++) ...[
-                                      if (i > 0) const SizedBox(height: 12),
-                                      ToolCard(
-                                        tool: tools[i],
-                                        onTap: () => _openTool(tools[i]),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+            body: switch (_viewModel.selectedTab) {
+              HomeTab.stats => StatsScreen(
+                onOpenToolbox: () => _viewModel.selectTab(HomeTab.home),
+              ),
+              HomeTab.home => _buildHome(),
+              HomeTab.profile => const ProfileScreen(),
+            },
           ),
         );
       },
+    );
+  }
+
+  Widget _buildHome() {
+    final tools = _viewModel.tools;
+    final recommendation = _viewModel.recommendation;
+
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          const ToolHubHeader(),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                CategoryFilterBar(
+                  selectedCategory: _viewModel.selectedCategory,
+                  onCategorySelected: _viewModel.selectCategory,
+                ),
+                LeaveToChanceCard(onSurpriseMe: _openRandomTool),
+                if (recommendation != null)
+                  RecommendationSection(
+                    recommendation: recommendation,
+                    onOpen: () => _openTool(recommendation.tool),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _viewModel.listTitle,
+                        style: AppText.h3.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      Text(
+                        '${tools.length}',
+                        style: AppText.body.copyWith(
+                          color: AppColors.textMuted,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < tools.length; i++) ...[
+                        if (i > 0) const SizedBox(height: 12),
+                        ToolCard(
+                          tool: tools[i],
+                          onTap: () => _openTool(tools[i]),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
