@@ -152,8 +152,7 @@ class EmotionalDetectiveViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Handles back navigation. Returns `true` if handled internally within the
-  /// detective flow, or `false` if the parent navigator should pop.
+  /// Handles back navigation. Returns `true` if handled internally within the detective flow, or `false` if the parent navigator should pop.
   bool handleBack() {
     switch (_detective.stage) {
       case DetectiveStage.intro:
