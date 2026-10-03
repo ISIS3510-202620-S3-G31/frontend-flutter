@@ -10,6 +10,7 @@ import '../tool_routes.dart';
 import '../view_model/tool_hub_view_model.dart';
 import 'category_filter_bar.dart';
 import 'leave_to_chance_card.dart';
+import 'recommendation_section.dart';
 import 'tool_card.dart';
 import 'tool_hub_header.dart';
 import 'toolbox_bottom_nav.dart';
@@ -30,6 +31,12 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
   late final ToolHubViewModel _viewModel =
       widget.viewModel ?? ToolHubViewModel();
   late final bool _ownsViewModel = widget.viewModel == null;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel.loadRecommendation();
+  }
 
   @override
   void dispose() {
@@ -84,6 +91,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
       listenable: _viewModel,
       builder: (context, _) {
         final tools = _viewModel.tools;
+        final recommendation = _viewModel.recommendation;
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark,
@@ -118,6 +126,11 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
                                 onCategorySelected: _viewModel.selectCategory,
                               ),
                               LeaveToChanceCard(onSurpriseMe: _openRandomTool),
+                              if (recommendation != null)
+                                RecommendationSection(
+                                  recommendation: recommendation,
+                                  onOpen: () => _openTool(recommendation.tool),
+                                ),
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(
                                   24,
