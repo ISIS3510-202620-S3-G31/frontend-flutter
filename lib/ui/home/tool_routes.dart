@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../feedback/widgets/tool_feedback_screen.dart';
 import '../tools/breathing/widgets/custom_breathing_screen.dart';
 import '../tools/emotional_detective/widgets/emotional_detective_screen.dart';
 import '../tools/photo/widgets/photo_of_the_day_screen.dart';
@@ -15,6 +16,33 @@ const Map<String, WidgetBuilder> toolScreens = {
   'tear': _tearScreen,
   'detective': _detectiveScreen,
 };
+
+/// Leaving a tool sooner than this is a misclick, not a session worth rating.
+const _minSecondsForFeedback = 10;
+
+/// Opens a tool and, once the user comes back from it, asks how it went.
+Future<void> openToolScreen(
+  BuildContext context, {
+  required String toolId,
+  required String toolName,
+  required WidgetBuilder builder,
+}) async {
+  final startedAt = DateTime.now();
+  await Navigator.push(context, MaterialPageRoute(builder: builder));
+  final seconds = DateTime.now().difference(startedAt).inSeconds;
+  if (!context.mounted || seconds < _minSecondsForFeedback) return;
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ToolFeedbackScreen(
+        toolId: toolId,
+        toolName: toolName,
+        startedAt: startedAt,
+        durationSeconds: seconds,
+      ),
+    ),
+  );
+}
 
 Widget _photoScreen(BuildContext context) => const PhotoOfTheDayScreen();
 Widget _breathingScreen(BuildContext context) => const CustomBreathingScreen();

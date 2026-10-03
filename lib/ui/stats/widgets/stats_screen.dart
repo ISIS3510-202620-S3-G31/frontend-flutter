@@ -52,7 +52,12 @@ class _StatsScreenState extends State<StatsScreen> {
           _showMessage('This tool is coming soon!');
           return;
         }
-        Navigator.push(context, MaterialPageRoute(builder: screen));
+        openToolScreen(
+          context,
+          toolId: toolId,
+          toolName: _viewModel.toolNameOf(toolId),
+          builder: screen,
+        );
       case OpenToolbox():
         widget.onOpenToolbox();
       case OpenCheckIn():
@@ -99,6 +104,10 @@ class _StatsScreenState extends State<StatsScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                   children: [
+                    if (_viewModel.isSample && !_viewModel.loading) ...[
+                      const _SampleDataNotice(),
+                      const SizedBox(height: 16),
+                    ],
                     Row(
                       children: [
                         Expanded(
@@ -138,9 +147,7 @@ class _StatsScreenState extends State<StatsScreen> {
                       title: 'Tools Frequency',
                       subtitle: 'Historical distribution by % of tool usage',
                       icon: Icons.pie_chart,
-                      child: ToolsFrequencyChart(
-                        shares: _viewModel.toolShares,
-                      ),
+                      child: ToolsFrequencyChart(shares: _viewModel.toolShares),
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -173,6 +180,36 @@ class _StatsScreenState extends State<StatsScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// Tells the user these numbers are an example until they answer their first
+/// tool feedback.
+class _SampleDataNotice extends StatelessWidget {
+  const _SampleDataNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceDim.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, size: 20, color: AppColors.text),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Sample data. Finish a tool and answer its feedback to see your '
+              'own numbers here.',
+              style: AppText.bodyMuted.copyWith(fontSize: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
