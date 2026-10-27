@@ -38,6 +38,16 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
   late final bool _ownsViewModel = widget.viewModel == null;
 
   @override
+  void initState() {
+    super.initState();
+    // Tapping the tool is already the decision to use it, so a Start screen in
+    // between is only friction.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _viewModel.currentStep is ToolStep) _openTool();
+    });
+  }
+
+  @override
   void dispose() {
     if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
@@ -51,6 +61,9 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
     );
     if (!mounted) return;
     _viewModel.finishTool();
+    // Under the minimum duration the session is not worth rating, so the flow
+    // closes instead of asking the user to start the tool again.
+    if (_viewModel.currentStep is ToolStep) Navigator.pop(context);
   }
 
   Future<void> _openFeedback() async {
