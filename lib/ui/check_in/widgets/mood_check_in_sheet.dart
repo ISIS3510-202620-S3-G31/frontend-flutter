@@ -93,7 +93,9 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  Text('Check-in', style: AppText.h1),
+                  const SizedBox(height: 16),
                   _EmotionGrid(
                     selected: selected,
                     onSelected: _viewModel.toggleEmotion,

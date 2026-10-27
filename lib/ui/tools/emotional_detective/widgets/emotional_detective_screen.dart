@@ -238,7 +238,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
                     ),
                     child: const Icon(
                       Icons.search_rounded,
-                      color: Colors.white,
+                      color: AppColors.background,
                       size: 24,
                     ),
                   ),
@@ -342,8 +342,9 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
 
           // Bottom action button
           FilledButton(
-            onPressed:
-                _viewModel.canContinue ? _viewModel.continueInvestigation : null,
+            onPressed: _viewModel.canContinue
+                ? _viewModel.continueInvestigation
+                : null,
             style: _primaryButtonStyle,
             child: const Text('Continue Investigation'),
           ),
