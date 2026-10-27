@@ -210,7 +210,7 @@ class _PreviewBottomBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
+            color: AppColors.text.withValues(alpha: 0.18),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -262,7 +262,7 @@ class _PreviewBottomBar extends StatelessWidget {
                   track.title,
                   style: AppText.body.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: AppColors.background,
                     fontSize: 13,
                   ),
                   maxLines: 1,
@@ -286,7 +286,7 @@ class _PreviewBottomBar extends StatelessWidget {
             TextButton(
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.secondary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.background,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 6,
@@ -307,7 +307,7 @@ class _PreviewBottomBar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: AppColors.background.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -451,7 +451,7 @@ class _TrackTile extends StatelessWidget {
                               ? Icons.pause_rounded
                               : Icons.play_arrow_rounded,
                           color: isPreviewPlaying
-                              ? Colors.white
+                              ? AppColors.background
                               : isSelected
                               ? AppColors.secondary
                               : AppColors.text,

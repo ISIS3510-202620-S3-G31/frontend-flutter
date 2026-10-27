@@ -85,7 +85,6 @@ class _StatsScreenState extends State<StatsScreen> {
       child: ListenableBuilder(
         listenable: _viewModel,
         builder: (context, _) {
-          final topFeeling = _viewModel.topFeeling;
           return Column(
             children: [
               Padding(
@@ -107,117 +106,190 @@ class _StatsScreenState extends State<StatsScreen> {
                   ],
                 ),
               ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                  children: [
-                    if (_viewModel.isSample && !_viewModel.loading) ...[
-                      const _SampleDataNotice(),
-                      const SizedBox(height: 16),
-                    ],
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SummaryCard(
-                            badge: Text(
-                              topFeeling?.emoji ?? '🙂',
-                              style: const TextStyle(fontSize: 20),
-                            ),
-                            badgeColor: topFeeling?.color ?? AppColors.text,
-                            label: 'Top Feeling',
-                            value: topFeeling?.label ?? 'None yet',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SummaryCard(
-                            badge: const Icon(
-                              Icons.check_circle,
-                              color: AppColors.primary,
-                            ),
-                            badgeColor: AppColors.primary,
-                            label: 'Check-ins',
-                            value: '${_viewModel.weekCheckIns}',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    StatsCard(
-                      title: 'Weekly Emotion Journey',
-                      subtitle: 'Dominant emotion per day and its intensity',
-                      icon: Icons.calendar_today_outlined,
-                      child: WeeklyEmotionChart(days: _viewModel.week),
-                    ),
-                    const SizedBox(height: 16),
-                    StatsCard(
-                      title: 'Tools Frequency',
-                      subtitle: 'Historical distribution by % of tool usage',
-                      icon: Icons.pie_chart,
-                      child: ToolsFrequencyChart(shares: _viewModel.toolShares),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Useful Insights',
-                      style: AppText.h3.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Patterns found in your own history',
-                      style: AppText.bodyMuted.copyWith(fontSize: 12),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_viewModel.insights.isEmpty && !_viewModel.loading)
-                      Text(
-                        'Keep checking in and using your tools. Insights '
-                        'show up after a few days.',
-                        style: AppText.bodyMuted,
-                      ),
-                    for (final insight in _viewModel.insights)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: InsightCard(
-                          insight: insight,
-                          onAction: _onInsightAction,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              Expanded(child: _body()),
             ],
           );
         },
       ),
     );
   }
+
+  Widget _body() {
+    if (_viewModel.loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+    if (_viewModel.isEmpty) {
+      return _EmptyStats(
+        onCheckIn: _openCheckIn,
+        onOpenToolbox: widget.onOpenToolbox,
+      );
+    }
+    final topFeeling = _viewModel.topFeeling;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: SummaryCard(
+                badge: Text(
+                  topFeeling?.emoji ?? '🙂',
+                  style: const TextStyle(fontSize: 20),
+                ),
+                badgeColor: topFeeling?.color ?? AppColors.text,
+                label: 'Top Feeling',
+                value: topFeeling?.label ?? 'None yet',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SummaryCard(
+                badge: const Icon(Icons.check_circle, color: AppColors.primary),
+                badgeColor: AppColors.primary,
+                label: 'Check-ins',
+                value: '${_viewModel.weekCheckIns}',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        StatsCard(
+          title: 'Weekly Emotion Journey',
+          subtitle: 'Dominant emotion per day and its intensity',
+          icon: Icons.calendar_today_outlined,
+          child: WeeklyEmotionChart(days: _viewModel.week),
+        ),
+        const SizedBox(height: 16),
+        StatsCard(
+          title: 'Tools Frequency',
+          subtitle: 'Historical distribution by % of tool usage',
+          icon: Icons.pie_chart,
+          child: ToolsFrequencyChart(shares: _viewModel.toolShares),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Useful Insights',
+          style: AppText.h3.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Patterns found in your own history',
+          style: AppText.bodyMuted.copyWith(fontSize: 12),
+        ),
+        const SizedBox(height: 12),
+        if (_viewModel.insights.isEmpty)
+          Text(
+            'Keep checking in and using your tools. Insights '
+            'show up after a few days.',
+            style: AppText.bodyMuted,
+          ),
+        for (final insight in _viewModel.insights)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: InsightCard(insight: insight, onAction: _onInsightAction),
+          ),
+      ],
+    );
+  }
 }
 
-/// Tells the user these numbers are an example until they answer their first
-/// tool feedback.
-class _SampleDataNotice extends StatelessWidget {
-  const _SampleDataNotice();
+/// Shown while the user has nothing recorded yet: no charts, no made up
+/// numbers, just the two ways to start filling them.
+class _EmptyStats extends StatelessWidget {
+  const _EmptyStats({required this.onCheckIn, required this.onOpenToolbox});
+
+  final VoidCallback onCheckIn;
+  final VoidCallback onOpenToolbox;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceDim.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline, size: 20, color: AppColors.text),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Sample data. Finish a tool and answer its feedback to see your '
-              'own numbers here.',
-              style: AppText.bodyMuted.copyWith(fontSize: 12),
-            ),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.panel,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.surfaceDim, width: 1.5),
           ),
-        ],
-      ),
+          child: Column(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.surfaceDim,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.insights_outlined,
+                  size: 30,
+                  color: AppColors.text,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Nothing to show yet',
+                style: AppText.h3.copyWith(fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your stats are built from your own check-ins and the tools '
+                'you finish. Start with either one and they will show up here.',
+                style: AppText.bodyMuted,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton(
+                  onPressed: onCheckIn,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.text,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Check in now',
+                    style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: onOpenToolbox,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.text,
+                    side: const BorderSide(
+                      color: AppColors.surfaceDim,
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  child: Text(
+                    'Explore the tools',
+                    style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

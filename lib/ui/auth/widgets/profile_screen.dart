@@ -62,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.background,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -131,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           user.name.characters.first
                                               .toUpperCase(),
                                           style: AppText.h1.copyWith(
-                                            color: Colors.white,
+                                            color: AppColors.background,
                                             fontSize: 36,
                                             fontWeight: FontWeight.w700,
                                           ),
@@ -141,7 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           width: 44,
                                           height: 44,
                                           colorFilter: const ColorFilter.mode(
-                                            Colors.white,
+                                            AppColors.background,
                                             BlendMode.srcIn,
                                           ),
                                         ),

@@ -42,7 +42,7 @@ class StatsViewModel extends ChangeNotifier {
   final UsefulInsightsEngine _insightsEngine;
 
   bool _loading = true;
-  bool _isSample = true;
+  bool _isEmpty = true;
   bool _disposed = false;
   Emotion? _topFeeling;
   int _weekCheckIns = 0;
@@ -52,8 +52,9 @@ class StatsViewModel extends ChangeNotifier {
 
   bool get loading => _loading;
 
-  /// True while these numbers are the sample history, not the user's own.
-  bool get isSample => _isSample;
+  /// True while the user has no check-ins and no finished tools, so there is
+  /// nothing to chart yet.
+  bool get isEmpty => _isEmpty;
 
   /// Title of a tool, to show it the same way the toolbox does.
   String toolNameOf(String toolId) {
@@ -92,7 +93,7 @@ class StatsViewModel extends ChangeNotifier {
     final data = await _repository.dataSince(monthAgo);
     final checkIns = data.checkIns;
     final sessions = data.sessions;
-    _isSample = data.isSample;
+    _isEmpty = data.isEmpty;
     final toolNames = {
       for (final tool in _toolRepository.allTools()) tool.id: tool.title,
     };

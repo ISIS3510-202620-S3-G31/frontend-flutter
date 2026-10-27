@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../data/models/check_in_model.dart';
 import '../../core/theme/app_colors.dart';
@@ -77,46 +76,30 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
           listenable: _viewModel,
           builder: (context, _) {
             final selected = _viewModel.emotions;
-            final mood = _viewModel.mood;
             return SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(child: Text('Mood Check-In', style: AppText.h1)),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        icon: const Icon(Icons.close),
-                        color: AppColors.text,
-                        tooltip: 'Close',
+                  // Standard grabber: says the sheet can be dragged away, so
+                  // it replaces the close button and its tooltip.
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceDim,
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                    ],
+                    ),
                   ),
-                  Text(
-                    DateFormat('EEEE, MMMM d').format(DateTime.now()),
-                    style: AppText.bodyMuted,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'How are you feeling?',
-                    style: AppText.h3.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text('Pick one or more.', style: AppText.bodyMuted),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
+                  Text('Check-in', style: AppText.h1),
+                  const SizedBox(height: 16),
                   _EmotionGrid(
                     selected: selected,
                     onSelected: _viewModel.toggleEmotion,
                   ),
-                  if (mood != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      'You feel: ${mood.name}',
-                      style: AppText.body.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ],
                   const SizedBox(height: 20),
                   _IntensitySlider(
                     value: _viewModel.intensity,
@@ -128,13 +111,15 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                     maxLines: 3,
                     maxLength: CheckInViewModel.maxNoteLength,
                     style: AppText.body,
+                    cursorColor: AppColors.primary,
                     onChanged: _viewModel.setNote,
                     decoration: InputDecoration(
-                      hintText: 'Add a note about your day (optional)',
+                      hintText: 'Add a note (optional)',
                       hintStyle: AppText.bodyMuted,
                       filled: true,
                       fillColor: AppColors.panel,
-                      counterStyle: AppText.bodyMuted.copyWith(fontSize: 12),
+                      // The limit is enforced anyway; the counter was noise.
+                      counterText: '',
                       contentPadding: const EdgeInsets.all(14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -142,7 +127,7 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   FilledButton(
                     onPressed: _viewModel.canSave ? _viewModel.save : null,
                     style: FilledButton.styleFrom(
@@ -272,7 +257,17 @@ class _IntensitySlider extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('How strong is it?', style: AppText.bodyMuted),
+        Row(
+          children: [
+            Expanded(
+              child: Text('How strong is it?', style: AppText.bodyMuted),
+            ),
+            Text(
+              '$value/5',
+              style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             trackHeight: 8,
@@ -280,6 +275,10 @@ class _IntensitySlider extends StatelessWidget {
             inactiveTrackColor: AppColors.surfaceDim,
             thumbColor: color,
             overlayColor: color.withValues(alpha: 0.15),
+            // Material paints these from the generated scheme, which turns
+            // them white. The palette has no white.
+            activeTickMarkColor: AppColors.text.withValues(alpha: 0.25),
+            inactiveTickMarkColor: AppColors.text.withValues(alpha: 0.15),
             showValueIndicator: ShowValueIndicator.never,
           ),
           child: Slider(
@@ -288,17 +287,6 @@ class _IntensitySlider extends StatelessWidget {
             max: 5,
             divisions: 4,
             onChanged: (picked) => onChanged(picked.round()),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Barely', style: AppText.bodyMuted),
-              Text('In the middle', style: AppText.bodyMuted),
-              Text('A lot', style: AppText.bodyMuted),
-            ],
           ),
         ),
       ],
