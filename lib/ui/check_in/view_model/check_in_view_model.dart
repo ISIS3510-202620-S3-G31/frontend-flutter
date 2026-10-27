@@ -2,18 +2,32 @@ import 'package:flutter/foundation.dart';
 
 import '../../../data/models/check_in_model.dart';
 import '../../../data/repositories/check_in_repository.dart';
+import '../../../data/services/microphone_service.dart';
+import '../../../data/services/network/network_connectivity_service.dart';
+import '../../../data/services/speech_recognition_service.dart';
 import '../../../domain/mood/mood.dart';
 import '../../../domain/mood/mood_template.dart';
 
 class CheckInViewModel extends ChangeNotifier {
-  CheckInViewModel({CheckInRepository? repository, DateTime Function()? now})
-    : _repository = repository ?? CheckInRepository(),
-      _now = now ?? DateTime.now;
+  CheckInViewModel({
+    CheckInRepository? repository,
+    DateTime Function()? now,
+    SpeechRecognitionService? speech,
+    MicrophoneService? microphone,
+    NetworkConnectivityService? network,
+  }) : _repository = repository ?? CheckInRepository(),
+       _now = now ?? DateTime.now,
+       _speech = speech ?? SpeechRecognitionService(),
+       _microphone = microphone ?? const MicrophoneService(),
+       _network = network ?? NetworkConnectivityService();
 
   static const maxNoteLength = 500;
 
   final CheckInRepository _repository;
   final DateTime Function() _now;
+  final SpeechRecognitionService _speech;
+  final MicrophoneService _microphone;
+  final NetworkConnectivityService _network;
 
   final Set<Emotion> _emotions = {};
   int _intensity = 3;
@@ -22,6 +36,20 @@ class CheckInViewModel extends ChangeNotifier {
   bool _saved = false;
   String? _message;
   bool _disposed = false;
+
+  bool _canDictate = false;
+  bool _isListening = false;
+  String? _dictationMessage;
+
+  /// Where the dictated words start in [_note] and how many of them there are.
+  /// Each result replaces that stretch, so the rest of the note is never
+  /// touched and the user keeps whatever they typed by hand.
+  int _spanStart = 0;
+  int _spanLength = 0;
+
+  /// Whether the current attempt started without a connection, which decides
+  /// what a failure means.
+  bool _offline = false;
 
   Set<Emotion> get emotions => Set.unmodifiable(_emotions);
 
@@ -43,6 +71,86 @@ class CheckInViewModel extends ChangeNotifier {
 
   bool get canSave => _emotions.isNotEmpty && !_saving;
 
+  /// True once the phone has reported a working recognizer. The button stays
+  /// hidden until then, so it is never offered where it cannot work.
+  bool get canDictate => _canDictate;
+
+  bool get isListening => _isListening;
+
+  /// Shown under the note field when dictation could not run.
+  String? get dictationMessage => _dictationMessage;
+
+  /// Where the caret belongs after a dictated update: right after the words.
+  int get noteCaret => _spanStart + _spanLength;
+
+  /// Asks the phone whether it can recognize speech at all.
+  Future<void> prepareDictation() async {
+    final available = await _speech.initialize(
+      onError: _onSpeechError,
+      onStatus: _onSpeechStatus,
+    );
+    _canDictate = available;
+    _notify();
+  }
+
+  /// Starts dictating at [at], the caret position in the note, or stops when
+  /// already listening.
+  Future<void> toggleDictation({required int at}) async {
+    if (_isListening) {
+      await _speech.stop();
+      return;
+    }
+    if (!_canDictate) return;
+
+    _dictationMessage = null;
+    if (await _microphone.requestPermission() != MicPermission.granted) {
+      _dictationMessage = 'Allow the microphone to dictate your note.';
+      _notify();
+      return;
+    }
+
+    _spanStart = at.clamp(0, _note.length);
+    _spanLength = 0;
+    _offline = !await _network.checkOnline();
+    try {
+      // Offline the recognizer has to run on the phone, which not every phone
+      // can do. Trying is the only way to find out.
+      await _speech.listen(onWords: _onWords, preferOnDevice: _offline);
+    } on Exception {
+      _failDictation();
+    }
+  }
+
+  void _onWords(String words, bool isFinal) {
+    final before = _note.substring(0, _spanStart);
+    final after = _note.substring(_spanStart + _spanLength);
+    final merged = '$before$words$after';
+    _note = merged.length > maxNoteLength
+        ? merged.substring(0, maxNoteLength)
+        : merged;
+    _spanLength = _note.length - before.length - after.length;
+    if (isFinal) _spanStart = _spanStart + _spanLength;
+    if (isFinal) _spanLength = 0;
+    _notify();
+  }
+
+  void _onSpeechStatus(bool isListening) {
+    _isListening = isListening;
+    _notify();
+  }
+
+  void _onSpeechError(String error) => _failDictation();
+
+  /// The recognizer reports a failed offline attempt as an error rather than
+  /// an exception, so both paths end here.
+  void _failDictation() {
+    _isListening = false;
+    _dictationMessage = _offline
+        ? 'Dictation needs an internet connection on this phone.'
+        : 'Dictation stopped. Try again or type your note.';
+    _notify();
+  }
+
   void toggleEmotion(Emotion emotion) {
     if (!_emotions.remove(emotion)) _emotions.add(emotion);
     notifyListeners();
@@ -55,6 +163,9 @@ class CheckInViewModel extends ChangeNotifier {
 
   void setNote(String value) {
     _note = value;
+    // Typing moves the text under the dictated stretch, so the next dictation
+    // starts from the caret the widget reports instead of a stale span.
+    if (!_isListening) _spanLength = 0;
     notifyListeners();
   }
 

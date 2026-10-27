@@ -36,21 +36,44 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
       widget.viewModel ?? CheckInViewModel();
   late final bool _ownsViewModel = widget.viewModel == null;
 
+  final _noteController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _viewModel.addListener(_onViewModelChanged);
+    _viewModel.prepareDictation();
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+    _noteController.dispose();
     if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
   }
 
+  /// Hands the recognizer the caret, so the words land where the user left it.
+  void _toggleDictation() {
+    final selection = _noteController.selection;
+    final caret = selection.isValid
+        ? selection.baseOffset
+        : _noteController.text.length;
+    _viewModel.toggleDictation(at: caret);
+  }
+
   void _onViewModelChanged() {
     if (!mounted) return;
+    // Only the dictation moves the note behind the field's back; when the user
+    // types, the two already agree and this does nothing.
+    if (_noteController.text != _viewModel.note) {
+      _noteController.value = TextEditingValue(
+        text: _viewModel.note,
+        selection: TextSelection.collapsed(
+          offset: _viewModel.noteCaret.clamp(0, _viewModel.note.length),
+        ),
+      );
+    }
     final message = _viewModel.message;
     if (message != null) {
       _viewModel.clearMessage();
@@ -108,6 +131,7 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                   ),
                   const SizedBox(height: 16),
                   TextField(
+                    controller: _noteController,
                     maxLines: 3,
                     maxLength: CheckInViewModel.maxNoteLength,
                     style: AppText.body,
@@ -116,11 +140,20 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                     decoration: InputDecoration(
                       hintText: 'Add a note (optional)',
                       hintStyle: AppText.bodyMuted,
+                      helperText: _viewModel.dictationMessage,
+                      helperStyle: AppText.bodyMuted.copyWith(fontSize: 12),
+                      helperMaxLines: 2,
                       filled: true,
                       fillColor: AppColors.panel,
                       // The limit is enforced anyway; the counter was noise.
                       counterText: '',
                       contentPadding: const EdgeInsets.all(14),
+                      suffixIcon: _viewModel.canDictate
+                          ? _DictateButton(
+                              isListening: _viewModel.isListening,
+                              onPressed: _toggleDictation,
+                            )
+                          : null,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -156,6 +189,28 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Starts and stops the dictation. Its state follows the recognizer, which
+/// stops on its own after a pause.
+class _DictateButton extends StatelessWidget {
+  const _DictateButton({required this.isListening, required this.onPressed});
+
+  final bool isListening;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: isListening ? 'Stop dictating' : 'Dictate your note',
+      icon: Icon(
+        isListening ? Icons.mic : Icons.mic_none,
+        color: isListening ? AppColors.accent : AppColors.textMuted,
+        size: 22,
       ),
     );
   }

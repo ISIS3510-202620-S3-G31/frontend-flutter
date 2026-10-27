@@ -1,34 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend_flutter/data/models/check_in_model.dart';
-import 'package:frontend_flutter/data/repositories/check_in_repository.dart';
 import 'package:frontend_flutter/ui/check_in/view_model/check_in_view_model.dart';
 import 'package:frontend_flutter/ui/check_in/widgets/mood_check_in_sheet.dart';
 
-/// Keeps what the sheet saves, so no Firebase is needed.
-class FakeCheckInRepository implements CheckInRepository {
-  CheckIn? saved;
-
-  @override
-  Future<void> save(CheckIn checkIn) async => saved = checkIn;
-
-  @override
-  Future<CheckIn?> todaysCheckIn() async => saved;
-
-  @override
-  Future<List<CheckIn>> since(DateTime from) async => [?saved];
-}
+import 'fakes.dart';
 
 void main() {
   late FakeCheckInRepository repository;
 
-  Future<void> show(WidgetTester tester) async {
+  Future<void> show(WidgetTester tester, {bool canDictate = false}) async {
     repository = FakeCheckInRepository();
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: MoodCheckInSheet(
-            viewModel: CheckInViewModel(repository: repository),
+            viewModel: CheckInViewModel(
+              repository: repository,
+              speech: FakeSpeechRecognitionService(available: canDictate),
+              microphone: FakeMicrophoneService(),
+              network: FakeNetworkConnectivityService(),
+            ),
           ),
         ),
       ),
@@ -82,5 +74,22 @@ void main() {
     expect(repository.saved?.emotions, [Emotion.sadness]);
     expect(repository.saved?.intensity, 3);
     expect(repository.saved?.note, 'A long day.');
+  });
+
+  testWidgets('the mic button is hidden when the phone cannot dictate', (
+    tester,
+  ) async {
+    await show(tester);
+
+    expect(find.byIcon(Icons.mic_none), findsNothing);
+    expect(find.byIcon(Icons.mic), findsNothing);
+  });
+
+  testWidgets('the mic button shows when the phone can dictate', (
+    tester,
+  ) async {
+    await show(tester, canDictate: true);
+
+    expect(find.byIcon(Icons.mic_none), findsOneWidget);
   });
 }

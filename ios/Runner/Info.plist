@@ -30,6 +30,8 @@
 	<string>The camera is used to take your photo of the day.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>The microphone measures how loud you scream to fill the Scream Tank.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Speech recognition writes your check-in note while you speak.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Pick today's photo from your gallery.</string>
 	<key>UIApplicationSceneManifest</key>
