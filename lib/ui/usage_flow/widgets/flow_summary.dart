@@ -5,18 +5,19 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import 'flow_button.dart';
 
-/// Last screen: how strong the emotion was before and after the tool.
+/// Last screen of the flow. Shows the before/after scores only when the flow
+/// included mood checks; the default one does not.
 class FlowSummary extends StatelessWidget {
   const FlowSummary({
     super.key,
-    required this.before,
-    required this.after,
+    this.before,
+    this.after,
     required this.message,
     required this.onDone,
   });
 
-  final int before;
-  final int after;
+  final int? before;
+  final int? after;
   final String message;
   final VoidCallback onDone;
 
@@ -29,18 +30,16 @@ class FlowSummary extends StatelessWidget {
         Text('Well done', style: AppText.h2),
         const SizedBox(height: 4),
         Text(message, style: AppText.bodyMuted, textAlign: TextAlign.center),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(
-              child: _Score(label: 'Before', value: before),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _Score(label: 'After', value: after),
-            ),
-          ],
-        ),
+        if (before != null && after != null) ...[
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: _Score(label: 'Before', value: before!)),
+              const SizedBox(width: 12),
+              Expanded(child: _Score(label: 'After', value: after!)),
+            ],
+          ),
+        ],
         const SizedBox(height: 32),
         FlowButton(label: 'Back to tools', onPressed: onDone),
       ],
