@@ -134,8 +134,8 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
       onPressed: _openFeedback,
     ),
     null => FlowSummary(
-      before: _viewModel.intensityBefore!,
-      after: _viewModel.intensityAfter!,
+      before: _viewModel.intensityBefore,
+      after: _viewModel.intensityAfter,
       message: _viewModel.summary,
       onDone: () => Navigator.pop(context),
     ),

@@ -43,13 +43,16 @@ class UsageFlowViewModel extends ChangeNotifier {
   DateTime get toolStartedAt => _toolStep.startedAt ?? _now();
   int get toolSeconds => _toolStep.durationSeconds;
 
-  int? get intensityBefore => _moodChecks.first.intensity;
-  int? get intensityAfter => _moodChecks.last.intensity;
+  /// Null unless the flow includes mood checks, which the default one does not.
+  int? get intensityBefore => _moodChecks.firstOrNull?.intensity;
+  int? get intensityAfter => _moodChecks.lastOrNull?.intensity;
 
   String get summary {
     final before = intensityBefore;
     final after = intensityAfter;
-    if (before == null || after == null) return '';
+    if (before == null || after == null) {
+      return 'Thanks for taking a moment for yourself.';
+    }
     if (after < before) return 'You feel lighter than when you started.';
     if (after == before) return 'Same as before, and that is okay.';
     return 'Thanks for being honest. Another tool might fit better next time.';

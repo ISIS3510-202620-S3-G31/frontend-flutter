@@ -3,15 +3,9 @@ import 'flow_group.dart';
 import 'flow_step.dart';
 
 abstract final class UsageFlowTemplate {
+  /// How the user feels is asked once a day in the check-in, not around every
+  /// tool, so the flow is the tool itself plus one short feedback.
   static FlowGroup forTool(ToolItem tool) => FlowGroup('Use ${tool.title}')
-    ..add(
-      FlowGroup('Before the tool')
-        ..add(MoodCheckStep('How strong is what you feel right now?')),
-    )
     ..add(ToolStep(tool))
-    ..add(
-      FlowGroup('After the tool')
-        ..add(MoodCheckStep('And now, how strong is it?'))
-        ..add(FeedbackStep()),
-    );
+    ..add(FlowGroup('After the tool')..add(FeedbackStep()));
 }
