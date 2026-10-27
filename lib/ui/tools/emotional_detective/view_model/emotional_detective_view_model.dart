@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../data/models/emotional_detective_model.dart';
 import '../../../../data/repositories/emotional_detective_repository.dart';
+import '../../../../data/services/analytics_service.dart';
 
 export '../../../../data/models/emotional_detective_model.dart';
 
@@ -10,6 +11,7 @@ export '../../../../data/models/emotional_detective_model.dart';
 class EmotionalDetectiveViewModel extends ChangeNotifier {
   EmotionalDetectiveViewModel({
     EmotionalDetectiveRepository? repository,
+    AnalyticsService? analytics,
     EmotionalDetective? initialDetective,
     DetectiveStage initialStage = DetectiveStage.intro,
     int initialQuestionIndex = 0,
@@ -18,6 +20,7 @@ class EmotionalDetectiveViewModel extends ChangeNotifier {
     this.customRecommendation,
     this.customRecommendedTool,
   }) : _repository = repository ?? const EmotionalDetectiveRepository(),
+       _analytics = analytics ?? AnalyticsService(),
        _currentQuestionIndex = initialQuestionIndex {
     if (initialDetective != null) {
       _detective = initialDetective;
@@ -53,6 +56,7 @@ class EmotionalDetectiveViewModel extends ChangeNotifier {
   }
 
   final EmotionalDetectiveRepository _repository;
+  final AnalyticsService _analytics;
   late EmotionalDetective _detective;
   int _currentQuestionIndex;
   bool _isSaving = false;
@@ -65,6 +69,7 @@ class EmotionalDetectiveViewModel extends ChangeNotifier {
 
   EmotionalDetective get detective => _detective;
   DetectiveStage get stage => _detective.stage;
+  bool get isCompleted => _detective.stage == DetectiveStage.summary;
   Question get currentQuestion => _detective.currentQuestion;
   int get currentQuestionIndex => _currentQuestionIndex;
   int get currentClueNumber => _currentQuestionIndex + 1;
@@ -98,6 +103,11 @@ class EmotionalDetectiveViewModel extends ChangeNotifier {
 
   void startInvestigation() {
     _detective = _detective.copyWith(stage: DetectiveStage.clues);
+    _analytics.logToolStep(
+      toolId: 'detective',
+      stepName: 'clues_started',
+      stepIndex: 0,
+    );
     notifyListeners();
   }
 
@@ -127,14 +137,22 @@ class EmotionalDetectiveViewModel extends ChangeNotifier {
       _detective = _detective.copyWith(
         currentQuestion: _detective.questions[_currentQuestionIndex],
       );
+      _analytics.logToolStep(
+        toolId: 'detective',
+        stepName: 'clue_${_currentQuestionIndex + 1}',
+        stepIndex: _currentQuestionIndex + 1,
+      );
     } else {
       _detective = _detective.copyWith(stage: DetectiveStage.summary);
+      _analytics.completeToolSession(
+        toolId: 'detective',
+        toolName: 'Emotional Detective',
+      );
     }
     notifyListeners();
   }
 
-  /// Handles back navigation. Returns `true` if handled internally within the
-  /// detective flow, or `false` if the parent navigator should pop.
+  /// Handles back navigation. Returns `true` if handled internally within the detective flow, or `false` if the parent navigator should pop.
   bool handleBack() {
     switch (_detective.stage) {
       case DetectiveStage.intro:
@@ -203,6 +221,10 @@ class EmotionalDetectiveViewModel extends ChangeNotifier {
     notifyListeners();
     try {
       await _repository.saveInvestigation(_detective);
+      _analytics.completeToolSession(
+        toolId: 'detective',
+        toolName: 'Emotional Detective',
+      );
       _isSaving = false;
       notifyListeners();
       return true;

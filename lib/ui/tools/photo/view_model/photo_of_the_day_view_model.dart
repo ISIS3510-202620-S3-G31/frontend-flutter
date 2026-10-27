@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../data/models/photo_model.dart';
 import '../../../../data/repositories/photo_repository.dart';
+import '../../../../data/services/analytics_service.dart';
 import '../../../../data/services/camera_service.dart';
 
 enum DayState { done, today, future }
@@ -13,11 +15,14 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   PhotoOfTheDayViewModel({
     PhotoRepository? repository,
     CameraService? cameraService,
+    AnalyticsService? analytics,
   }) : _repository = repository ?? PhotoRepository(),
-       _cameraService = cameraService ?? const CameraService();
+       _cameraService = cameraService ?? const CameraService(),
+       _analytics = analytics ?? AnalyticsService();
 
   final PhotoRepository _repository;
   final CameraService _cameraService;
+  final AnalyticsService _analytics;
 
   final DateTime today = DateUtils.dateOnly(DateTime.now());
 
@@ -27,11 +32,12 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   bool _startingCamera = false;
   bool _restartOnResume = false;
   bool _disposed = false;
+  StreamSubscription<bool>? _onlineChanges;
 
   bool _cameraFailed = false;
   bool _flashOn = false;
   bool _busy = false;
-  String? _errorMessage;
+  String? _message;
 
   DailyPhoto? _todayPhoto;
   Set<DateTime> _daysWithPhoto = {};
@@ -40,10 +46,10 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   bool get cameraFailed => _cameraFailed;
   bool get flashOn => _flashOn;
   File? get todayPhoto => _todayPhoto?.file;
-  String? get errorMessage => _errorMessage;
+  String? get message => _message;
 
-  /// One photo a day: the controls turn off once today's photo exists.
   bool get canShoot => _todayPhoto == null && !_busy;
+  bool get isCompleted => _todayPhoto != null;
 
   bool get canSwitchCamera => _cameras.length > 1;
 
@@ -66,6 +72,10 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     _todayPhoto = await _repository.photoOf(today);
     _daysWithPhoto = await _repository.daysWithPhoto(week);
     _notify();
+    _onlineChanges ??= _repository.onlineChanges.listen((online) {
+      if (online) _uploadPending();
+    });
+    _uploadPending();
     await startCamera();
   }
 
@@ -151,7 +161,7 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     try {
       await _save(await _cameraService.takePicture(controller));
     } on Exception {
-      _errorMessage = 'Could not take the photo. Try again.';
+      _message = 'Could not take the photo. Try again.';
     } finally {
       _busy = false;
       _notify();
@@ -166,7 +176,7 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
       final picked = await _cameraService.pickFromGallery();
       if (picked != null) await _save(picked);
     } on Exception {
-      _errorMessage = 'Could not open the gallery.';
+      _message = 'Could not open the gallery.';
     } finally {
       _busy = false;
       _notify();
@@ -178,9 +188,26 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     _daysWithPhoto = {..._daysWithPhoto, today};
     _notify();
     await _stopCamera();
+    _analytics.completeToolSession(
+      toolId: 'photo',
+      toolName: 'Photo of the Day',
+    );
+    if (!await _uploadPending()) {
+      _message = 'Saved on your phone. It will upload later.';
+    }
   }
 
-  void clearError() => _errorMessage = null;
+  /// Returns false if nothing could be uploaded; the photos stay pending.
+  Future<bool> _uploadPending() async {
+    try {
+      return await _repository.uploadPending();
+    } on Exception catch (error) {
+      debugPrint('[PhotoOfTheDay] Upload failed, photos stay pending: $error');
+      return false;
+    }
+  }
+
+  void clearMessage() => _message = null;
 
   void _notify() {
     if (!_disposed) notifyListeners();
@@ -189,6 +216,7 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _onlineChanges?.cancel();
     _controller?.dispose();
     super.dispose();
   }

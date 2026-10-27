@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 
-/// 84x84 shutter: a 3 px ring with a 66x66 orange disc inside.
-/// Shrinks to 94% while pressed.
+/// Round shutter button that shrinks a little while it is pressed.
 class ShutterButton extends StatefulWidget {
   const ShutterButton({super.key, required this.onPressed});
 

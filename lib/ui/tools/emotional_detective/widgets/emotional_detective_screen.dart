@@ -63,7 +63,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
 
   void _onBack() {
     if (!_viewModel.handleBack()) {
-      Navigator.maybePop(context);
+      Navigator.maybePop(context, _viewModel.isCompleted);
     }
   }
 
@@ -463,7 +463,7 @@ class _EmotionalDetectiveScreenState extends State<EmotionalDetectiveScreen> {
             onPressed: () async {
               await _viewModel.saveToInsights();
               if (mounted) {
-                Navigator.maybePop(context);
+                Navigator.maybePop(context, true);
               }
             },
             child: Text(

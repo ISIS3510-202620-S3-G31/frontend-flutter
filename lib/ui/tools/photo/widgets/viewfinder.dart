@@ -6,19 +6,16 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/circle_icon_button.dart';
 
-/// Dark rounded card that holds the camera preview or today's photo.
-///
-/// Layers, bottom to top: [content] (or the dark fill), rule-of-thirds grid,
-/// the "Frame your moment today" prompt, and the date pill + flash button.
+/// Dark card that shows the camera preview or today's photo, with the date and the flash button on top.
 class Viewfinder extends StatelessWidget {
   const Viewfinder({
     super.key,
     required this.date,
     required this.flashOn,
     required this.onFlash,
+    required this.hint,
     this.content,
     this.showGrid = true,
-    this.hint = 'One photo a day, one new memory',
   });
 
   final DateTime date;
@@ -107,9 +104,7 @@ class _Prompt extends StatelessWidget {
           child: Text(
             hint,
             textAlign: TextAlign.center,
-            style: AppText.body.copyWith(
-              color: AppColors.background.withValues(alpha: 0.7),
-            ),
+            style: AppText.body.copyWith(color: AppColors.onDarkMuted),
           ),
         ),
       ],
