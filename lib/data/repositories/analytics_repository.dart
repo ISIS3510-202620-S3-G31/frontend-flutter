@@ -12,7 +12,7 @@ class _ActiveSession {
   int get secondsSinceStart => DateTime.now().difference(startedAt).inSeconds;
 }
 
-/// The app's analytics: toolbox sessions as GA4 events plus their outcome in Firestore, so abandonment can be measured (business question #9).
+/// The app's analytics: toolbox sessions as events in Firestore plus their outcome in the session documents, so abandonment can be measured (business question #9).
 class AnalyticsRepository {
   factory AnalyticsRepository({
     AnalyticsService? analytics,
