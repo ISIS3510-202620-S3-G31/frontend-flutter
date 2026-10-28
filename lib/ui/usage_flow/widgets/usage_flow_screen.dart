@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
+import '../../../data/services/analytics_service.dart';
 import '../../../domain/usage_flow/flow_step.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
@@ -54,10 +55,26 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
   }
 
   Future<void> _openTool() async {
+    if (_viewModel.currentStep is! ToolStep) return;
     _viewModel.startTool();
+    final analytics = AnalyticsService();
+    await analytics.startToolSession(
+      toolId: widget.tool.id,
+      toolName: widget.tool.title,
+    );
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(builder: widget.toolScreen),
+    );
+    final seconds = DateTime.now()
+        .difference(_viewModel.toolStartedAt)
+        .inSeconds;
+    await analytics.endToolSession(
+      toolId: widget.tool.id,
+      toolName: widget.tool.title,
+      durationSeconds: seconds,
+      exitReason: 'left_tool',
     );
     if (!mounted) return;
     _viewModel.finishTool();

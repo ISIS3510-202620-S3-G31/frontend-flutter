@@ -56,6 +56,7 @@ Future<void> openToolScreen(
     toolId: toolId,
     toolName: toolName,
     durationSeconds: seconds,
+    exitReason: 'left_tool',
   );
 
   if (!context.mounted || seconds < _minSecondsForFeedback) return;

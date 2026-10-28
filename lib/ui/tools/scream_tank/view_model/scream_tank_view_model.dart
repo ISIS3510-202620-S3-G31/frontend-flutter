@@ -73,6 +73,11 @@ class ScreamTankViewModel extends ChangeNotifier {
         _setError('The microphone stopped working.');
       },
     );
+    _analytics.logToolStep(
+      toolId: 'scream',
+      stepName: 'mic_started',
+      stepIndex: 0,
+    );
     _notify();
   }
 
@@ -95,6 +100,7 @@ class ScreamTankViewModel extends ChangeNotifier {
     if (isFull) {
       HapticFeedback.heavyImpact();
       stopListening();
+      _analytics.logToolStep(toolId: 'scream', stepName: 'tank_full', stepIndex: 1);
       _analytics.completeToolSession(
         toolId: 'scream',
         toolName: 'Scream Tank',

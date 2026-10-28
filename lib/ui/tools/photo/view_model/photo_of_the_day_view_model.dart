@@ -188,6 +188,11 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     _daysWithPhoto = {..._daysWithPhoto, today};
     _notify();
     await _stopCamera();
+    _analytics.logToolStep(
+      toolId: 'photo',
+      stepName: 'photo_captured',
+      stepIndex: _daysWithPhoto.length,
+    );
     _analytics.completeToolSession(
       toolId: 'photo',
       toolName: 'Photo of the Day',

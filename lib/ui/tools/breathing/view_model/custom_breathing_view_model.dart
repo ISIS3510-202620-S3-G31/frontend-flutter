@@ -101,6 +101,11 @@ class CustomBreathingViewModel extends ChangeNotifier {
   }
 
   void start() {
+    _analytics.logToolStep(
+      toolId: 'breathing',
+      stepName: 'session_started',
+      stepIndex: 0,
+    );
     _startTimer();
   }
 
@@ -155,6 +160,11 @@ class CustomBreathingViewModel extends ChangeNotifier {
     _audioPlayer.stop();
     _state = _state.copyWith(isRunning: false, progress: 1);
     _message = 'Breathing session complete! Well done.';
+    _analytics.logToolStep(
+      toolId: 'breathing',
+      stepName: 'session_complete',
+      stepIndex: _state.totalCycles,
+    );
     _analytics.completeToolSession(
       toolId: 'breathing',
       toolName: 'Custom Breathing',

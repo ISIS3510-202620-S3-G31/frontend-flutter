@@ -104,6 +104,11 @@ class TearCollectionViewModel extends ChangeNotifier {
       _collection = TearCollection.fromTears(updatedList);
       _hasLoggedTearThisSession = true;
 
+      _analytics.logToolStep(
+        toolId: 'tear',
+        stepName: 'tear_logged',
+        stepIndex: _collection.totalTearsLogged,
+      );
       _analytics.completeToolSession(
         toolId: 'tear',
         toolName: 'Tear Collection',
