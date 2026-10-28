@@ -5,6 +5,7 @@ import '../../check_in/widgets/mood_check_in_sheet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/circle_icon_button.dart';
+import '../../feedback/widgets/tool_feedback_screen.dart';
 import '../../home/tool_routes.dart';
 import '../view_model/stats_view_model.dart';
 import 'emotion_style.dart';
@@ -14,8 +15,10 @@ import 'summary_card.dart';
 import 'tools_frequency_chart.dart';
 import 'weekly_emotion_chart.dart';
 
-/// Stats tab: how the week went, which tools were used most and what the app
-/// learned from the user's history.
+/// Leaving a tool sooner than this is a misclick, not a session worth rating.
+const _minSecondsForFeedback = 10;
+
+/// Stats tab: how the week went, which tools were used most and what the app learned from the user's history.
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key, required this.onOpenToolbox, this.viewModel});
 
@@ -53,17 +56,58 @@ class _StatsScreenState extends State<StatsScreen> {
           _showMessage('This tool is coming soon!');
           return;
         }
-        openToolScreen(
-          context,
-          toolId: toolId,
-          toolName: _viewModel.toolNameOf(toolId),
-          builder: screen,
-        );
+        _openTool(toolId, screen);
       case OpenToolbox():
         widget.onOpenToolbox();
       case OpenCheckIn():
         _openCheckIn();
     }
+  }
+
+  /// Opens a tool from an insight and, once the user comes back from it, asks how it went. The session is logged through the view model.
+  Future<void> _openTool(String toolId, WidgetBuilder builder) async {
+    final toolName = _viewModel.toolNameOf(toolId);
+    final startedAt = DateTime.now();
+    await _viewModel.startToolSession(toolId: toolId, toolName: toolName);
+    if (!mounted) return;
+
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: builder,
+        settings: RouteSettings(name: '/tools/$toolId'),
+      ),
+    );
+
+    final seconds = DateTime.now().difference(startedAt).inSeconds;
+
+    if (result == true) {
+      await _viewModel.completeToolSession(
+        toolId: toolId,
+        toolName: toolName,
+        durationSeconds: seconds,
+      );
+    }
+
+    await _viewModel.endToolSession(
+      toolId: toolId,
+      toolName: toolName,
+      durationSeconds: seconds,
+      exitReason: 'left_tool',
+    );
+
+    if (!mounted || seconds < _minSecondsForFeedback) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ToolFeedbackScreen(
+          toolId: toolId,
+          toolName: toolName,
+          startedAt: startedAt,
+          durationSeconds: seconds,
+        ),
+      ),
+    );
   }
 
   /// A new check-in changes the numbers, so the screen reloads after it.
@@ -195,8 +239,7 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 }
 
-/// Shown while the user has nothing recorded yet: no charts, no made up
-/// numbers, just the two ways to start filling them.
+/// Shown while the user has nothing recorded yet: no charts, no made up  numbers, just the two ways to start filling them.
 class _EmptyStats extends StatelessWidget {
   const _EmptyStats({required this.onCheckIn, required this.onOpenToolbox});
 

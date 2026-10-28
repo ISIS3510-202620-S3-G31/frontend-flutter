@@ -1,21 +1,27 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/models/tool_model.dart';
+import '../../../data/repositories/analytics_repository.dart';
 import '../../../domain/usage_flow/flow_group.dart';
 import '../../../domain/usage_flow/flow_step.dart';
 import '../../../domain/usage_flow/usage_flow_template.dart';
 
 /// Walks the user through the usage flow of one tool, one step at a time.
 class UsageFlowViewModel extends ChangeNotifier {
-  UsageFlowViewModel({required this.tool, DateTime Function()? now})
-    : flow = UsageFlowTemplate.forTool(tool),
-      _now = now ?? DateTime.now;
+  UsageFlowViewModel({
+    required this.tool,
+    DateTime Function()? now,
+    AnalyticsRepository? analytics,
+  }) : flow = UsageFlowTemplate.forTool(tool),
+       _now = now ?? DateTime.now,
+       _analytics = analytics ?? AnalyticsRepository();
 
   static const _minToolSeconds = 10;
 
   final ToolItem tool;
   final FlowGroup flow;
   final DateTime Function() _now;
+  final AnalyticsRepository _analytics;
   late final List<SingleStep> _steps = flow.steps;
   late final ToolStep _toolStep = _steps.whereType<ToolStep>().first;
   late final List<MoodCheckStep> _moodChecks = _steps
@@ -65,16 +71,29 @@ class UsageFlowViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void startTool() {
+  /// Opens the tool: remembers when it started and begins its analytics
+  /// session, so completion and abandonment can be measured.
+  Future<void> startTool() async {
     if (currentStep is! ToolStep) return;
     _toolStep.startedAt = _now();
+    await _analytics.startToolSession(
+      toolId: tool.id,
+      toolName: tool.title,
+    );
   }
 
-
-  void finishTool() {
+  /// Closes the tool's analytics session, then marks the flow step done when
+  /// the user stayed long enough for the session to count.
+  Future<void> finishTool() async {
     final startedAt = _toolStep.startedAt;
     if (currentStep is! ToolStep || startedAt == null) return;
     final seconds = _now().difference(startedAt).inSeconds;
+    await _analytics.endToolSession(
+      toolId: tool.id,
+      toolName: tool.title,
+      durationSeconds: seconds,
+      exitReason: 'left_tool',
+    );
     if (seconds < _minToolSeconds) return;
     _toolStep
       ..durationSeconds = seconds

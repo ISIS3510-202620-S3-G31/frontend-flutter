@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../../../data/models/tear_model.dart';
+import '../../../../data/repositories/analytics_repository.dart';
 import '../../../../data/repositories/tear_repository.dart';
-import '../../../../data/services/analytics_service.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// ViewModel managing the Tear Collector feature state and business logic.
 class TearCollectionViewModel extends ChangeNotifier {
   TearCollectionViewModel({
     TearRepository? repository,
-    AnalyticsService? analytics,
+    AnalyticsRepository? analytics,
   }) : _repository = repository ?? TearRepository(),
-       _analytics = analytics ?? AnalyticsService();
+       _analytics = analytics ?? AnalyticsRepository();
 
   final TearRepository _repository;
-  final AnalyticsService _analytics;
+  final AnalyticsRepository _analytics;
 
   TearCollection _collection = const TearCollection();
   Tear? _selectedTear;

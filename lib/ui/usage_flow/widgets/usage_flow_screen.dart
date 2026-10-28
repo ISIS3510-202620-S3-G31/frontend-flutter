@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
-import '../../../data/services/analytics_service.dart';
 import '../../../domain/usage_flow/flow_step.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
@@ -13,7 +12,6 @@ import 'action_step_view.dart';
 import 'flow_progress.dart';
 import 'flow_summary.dart';
 import 'question_view.dart';
-
 
 class UsageFlowScreen extends StatefulWidget {
   const UsageFlowScreen({
@@ -41,8 +39,7 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
   @override
   void initState() {
     super.initState();
-    // Tapping the tool is already the decision to use it, so a Start screen in
-    // between is only friction.
+    // Tapping the tool is already the decision to use it, so a Start screen in between is only friction.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _viewModel.currentStep is ToolStep) _openTool();
     });
@@ -55,29 +52,14 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
   }
 
   Future<void> _openTool() async {
-    if (_viewModel.currentStep is! ToolStep) return;
-    _viewModel.startTool();
-    final analytics = AnalyticsService();
-    await analytics.startToolSession(
-      toolId: widget.tool.id,
-      toolName: widget.tool.title,
-    );
+    await _viewModel.startTool();
     if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(builder: widget.toolScreen),
     );
-    final seconds = DateTime.now()
-        .difference(_viewModel.toolStartedAt)
-        .inSeconds;
-    await analytics.endToolSession(
-      toolId: widget.tool.id,
-      toolName: widget.tool.title,
-      durationSeconds: seconds,
-      exitReason: 'left_tool',
-    );
+    await _viewModel.finishTool();
     if (!mounted) return;
-    _viewModel.finishTool();
     // Under the minimum duration the session is not worth rating, so the flow
     // closes instead of asking the user to start the tool again.
     if (_viewModel.currentStep is ToolStep) Navigator.pop(context);

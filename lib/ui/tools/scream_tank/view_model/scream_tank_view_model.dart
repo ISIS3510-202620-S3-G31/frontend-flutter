@@ -4,19 +4,19 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../data/services/analytics_service.dart';
+import '../../../../data/repositories/analytics_repository.dart';
 import '../../../../data/services/microphone_service.dart';
 import '../../../../utils/noise_level.dart';
 
 class ScreamTankViewModel extends ChangeNotifier {
   ScreamTankViewModel({
     MicrophoneService? microphone,
-    AnalyticsService? analytics,
+    AnalyticsRepository? analytics,
   }) : _microphone = microphone ?? const MicrophoneService(),
-       _analytics = analytics ?? AnalyticsService();
+       _analytics = analytics ?? AnalyticsRepository();
 
   final MicrophoneService _microphone;
-  final AnalyticsService _analytics;
+  final AnalyticsRepository _analytics;
 
   /// Seconds of screaming at full level needed to fill the tank.
   static const _secondsToFill = 20.0;

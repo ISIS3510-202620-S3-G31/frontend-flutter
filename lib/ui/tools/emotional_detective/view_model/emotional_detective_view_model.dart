@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../data/models/emotional_detective_model.dart';
+import '../../../../data/repositories/analytics_repository.dart';
 import '../../../../data/repositories/emotional_detective_repository.dart';
-import '../../../../data/services/analytics_service.dart';
 
 export '../../../../data/models/emotional_detective_model.dart';
 
@@ -11,7 +11,7 @@ export '../../../../data/models/emotional_detective_model.dart';
 class EmotionalDetectiveViewModel extends ChangeNotifier {
   EmotionalDetectiveViewModel({
     EmotionalDetectiveRepository? repository,
-    AnalyticsService? analytics,
+    AnalyticsRepository? analytics,
     EmotionalDetective? initialDetective,
     DetectiveStage initialStage = DetectiveStage.intro,
     int initialQuestionIndex = 0,
@@ -20,7 +20,7 @@ class EmotionalDetectiveViewModel extends ChangeNotifier {
     this.customRecommendation,
     this.customRecommendedTool,
   }) : _repository = repository ?? const EmotionalDetectiveRepository(),
-       _analytics = analytics ?? AnalyticsService(),
+       _analytics = analytics ?? AnalyticsRepository(),
        _currentQuestionIndex = initialQuestionIndex {
     if (initialDetective != null) {
       _detective = initialDetective;
@@ -56,7 +56,7 @@ class EmotionalDetectiveViewModel extends ChangeNotifier {
   }
 
   final EmotionalDetectiveRepository _repository;
-  final AnalyticsService _analytics;
+  final AnalyticsRepository _analytics;
   late EmotionalDetective _detective;
   int _currentQuestionIndex;
   bool _isSaving = false;

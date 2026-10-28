@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../data/models/breathing_model.dart';
-import '../../../../data/services/analytics_service.dart';
+import '../../../../data/repositories/analytics_repository.dart';
 import '../../../../data/repositories/breathing_repository.dart';
 import '../../../../data/services/breathing_audio_player_service.dart';
 
@@ -17,12 +17,12 @@ class CustomBreathingViewModel extends ChangeNotifier {
   CustomBreathingViewModel({
     BreathingRepository? repository,
     BreathingAudioPlayerService? audioPlayer,
-    AnalyticsService? analytics,
+    AnalyticsRepository? analytics,
   }) : _repository = repository ?? BreathingRepository(),
        _ownsRepository = repository == null,
        _audioPlayer = audioPlayer ?? BreathingAudioPlayerService(),
        _ownsAudioPlayer = audioPlayer == null,
-       _analytics = analytics ?? AnalyticsService() {
+       _analytics = analytics ?? AnalyticsRepository() {
     _initMusic();
   }
 
@@ -30,7 +30,7 @@ class CustomBreathingViewModel extends ChangeNotifier {
   final bool _ownsRepository;
   final BreathingAudioPlayerService _audioPlayer;
   final bool _ownsAudioPlayer;
-  final AnalyticsService _analytics;
+  final AnalyticsRepository _analytics;
 
   CustomBreathingState _state = const CustomBreathingState();
   Timer? _timer;
