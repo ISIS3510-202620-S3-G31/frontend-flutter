@@ -9,7 +9,6 @@ import 'breathing_music_card.dart';
 import 'duration_pills.dart';
 import 'pattern_selector.dart';
 import 'session_controls.dart';
-import 'stepper_row.dart';
 import 'timer_card.dart';
 
 /// Breathing session with a rhythm countdown, pattern selector, steppers and session controls.
@@ -62,7 +61,6 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
       listenable: _viewModel,
       builder: (context, _) {
         final state = _viewModel.state;
-        final steps = _viewModel.visibleSteps;
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark,
@@ -87,28 +85,13 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
                       child: Column(
                         children: [
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: PatternSelector(
-                              selected: state.pattern,
-                              onSelected: _viewModel.selectPattern,
-                            ),
+                            padding: const EdgeInsets.only(top: 8, bottom: 16),
+                            child: BreathingMusicCard(viewModel: _viewModel),
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: TimerCard(state: state),
                           ),
-                          for (var i = 0; i < steps.length; i++)
-                            Padding(
-                              padding: EdgeInsets.only(top: i == 0 ? 0 : 10),
-                              child: StepperRow(
-                                label: steps[i].label,
-                                seconds: state.secondsOf(steps[i]),
-                                onDecrease: () =>
-                                    _viewModel.changeStep(steps[i], -1),
-                                onIncrease: () =>
-                                    _viewModel.changeStep(steps[i], 1),
-                              ),
-                            ),
                           Padding(
                             padding: const EdgeInsets.only(top: 10, bottom: 8),
                             child: DurationPills(
@@ -117,8 +100,11 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.only(top: 8, bottom: 16),
-                            child: BreathingMusicCard(viewModel: _viewModel),
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: PatternSelector(
+                              selected: state.pattern,
+                              onSelected: _viewModel.selectPattern,
+                            ),
                           ),
                         ],
                       ),
