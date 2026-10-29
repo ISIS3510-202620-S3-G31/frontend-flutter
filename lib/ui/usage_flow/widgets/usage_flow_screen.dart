@@ -13,7 +13,6 @@ import 'flow_progress.dart';
 import 'flow_summary.dart';
 import 'question_view.dart';
 
-
 class UsageFlowScreen extends StatefulWidget {
   const UsageFlowScreen({
     super.key,
@@ -40,8 +39,7 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
   @override
   void initState() {
     super.initState();
-    // Tapping the tool is already the decision to use it, so a Start screen in
-    // between is only friction.
+    // Tapping the tool is already the decision to use it, so a Start screen in between is only friction.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _viewModel.currentStep is ToolStep) _openTool();
     });
@@ -54,13 +52,14 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
   }
 
   Future<void> _openTool() async {
-    _viewModel.startTool();
+    await _viewModel.startTool();
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(builder: widget.toolScreen),
     );
+    await _viewModel.finishTool();
     if (!mounted) return;
-    _viewModel.finishTool();
     // Under the minimum duration the session is not worth rating, so the flow
     // closes instead of asking the user to start the tool again.
     if (_viewModel.currentStep is ToolStep) Navigator.pop(context);

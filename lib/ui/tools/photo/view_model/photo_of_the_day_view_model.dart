@@ -5,8 +5,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../data/models/photo_model.dart';
+import '../../../../data/repositories/analytics_repository.dart';
 import '../../../../data/repositories/photo_repository.dart';
-import '../../../../data/services/analytics_service.dart';
 import '../../../../data/services/camera_service.dart';
 
 enum DayState { done, today, future }
@@ -15,14 +15,14 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   PhotoOfTheDayViewModel({
     PhotoRepository? repository,
     CameraService? cameraService,
-    AnalyticsService? analytics,
+    AnalyticsRepository? analytics,
   }) : _repository = repository ?? PhotoRepository(),
        _cameraService = cameraService ?? const CameraService(),
-       _analytics = analytics ?? AnalyticsService();
+       _analytics = analytics ?? AnalyticsRepository();
 
   final PhotoRepository _repository;
   final CameraService _cameraService;
-  final AnalyticsService _analytics;
+  final AnalyticsRepository _analytics;
 
   final DateTime today = DateUtils.dateOnly(DateTime.now());
 
@@ -188,6 +188,11 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     _daysWithPhoto = {..._daysWithPhoto, today};
     _notify();
     await _stopCamera();
+    _analytics.logToolStep(
+      toolId: 'photo',
+      stepName: 'photo_captured',
+      stepIndex: _daysWithPhoto.length,
+    );
     _analytics.completeToolSession(
       toolId: 'photo',
       toolName: 'Photo of the Day',
