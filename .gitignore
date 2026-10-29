@@ -46,3 +46,7 @@ app.*.map.json
 
 # Firebase service account keys, never commit these
 *-firebase-adminsdk-*.json
+
+
+#VibeWise
+.vibe-wise/
