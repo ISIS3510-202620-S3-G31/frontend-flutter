@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- google_fonts downloads the fonts on first launch (debug builds already have it). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Context-aware recommendations only need the city, so the app never asks
+         for ACCESS_FINE_LOCATION or for location in the background. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:label="frontend_flutter"
