@@ -12,13 +12,12 @@ import '../../usage_flow/widgets/usage_flow_screen.dart';
 import '../tool_routes.dart';
 import '../view_model/tool_hub_view_model.dart';
 import 'category_filter_bar.dart';
-import 'leave_to_chance_card.dart';
-import 'recommendation_section.dart';
+import 'home_screen.dart';
 import 'tool_card.dart';
 import 'tool_hub_header.dart';
 import 'toolbox_bottom_nav.dart';
 
-/// Toolbox: the home screen that lists every wellness tool.
+/// Shell holding the four tabs of the bottom bar.
 class ToolHubScreen extends StatefulWidget {
   const ToolHubScreen({super.key, this.viewModel});
 
@@ -39,6 +38,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
   void initState() {
     super.initState();
     _viewModel.loadRecommendation();
+    _viewModel.loadUserName();
     _askForCheckIn();
     _viewModel.logScreenView();
   }
@@ -102,9 +102,14 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
             ),
             body: switch (_viewModel.selectedTab) {
               HomeTab.stats => StatsScreen(
-                onOpenToolbox: () => _viewModel.selectTab(HomeTab.home),
+                onOpenToolbox: () => _viewModel.selectTab(HomeTab.tools),
               ),
-              HomeTab.home => _buildHome(),
+              HomeTab.home => HomeScreen(
+                viewModel: _viewModel,
+                onOpenRecommendation: _openRecommendation,
+                onSurpriseMe: _openRandomTool,
+              ),
+              HomeTab.tools => _buildTools(),
               HomeTab.profile => const ProfileScreen(),
             },
           ),
@@ -113,9 +118,15 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     );
   }
 
-  Widget _buildHome() {
-    final tools = _viewModel.tools;
+  void _openRecommendation() {
     final recommendation = _viewModel.recommendation;
+    if (recommendation == null) return;
+    _viewModel.openRecommendation();
+    _openTool(recommendation.tool);
+  }
+
+  Widget _buildTools() {
+    final tools = _viewModel.tools;
 
     return SafeArea(
       bottom: false,
@@ -130,15 +141,6 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
                   selectedCategory: _viewModel.selectedCategory,
                   onCategorySelected: _viewModel.selectCategory,
                 ),
-                LeaveToChanceCard(onSurpriseMe: _openRandomTool),
-                if (recommendation != null)
-                  RecommendationSection(
-                    recommendation: recommendation,
-                    onOpen: () {
-                      _viewModel.openRecommendation();
-                      _openTool(recommendation.tool);
-                    },
-                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
                   child: Row(
