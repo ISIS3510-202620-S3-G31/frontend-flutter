@@ -19,7 +19,7 @@ class ToolHubHeader extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Pick a tool \u2014 or let chance pick for you.',
+            'Pick the one you need right now.',
             style: AppText.bodyMuted,
           ),
         ],
