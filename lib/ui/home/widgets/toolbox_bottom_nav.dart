@@ -5,7 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../view_model/tool_hub_view_model.dart';
 
-/// Bottom navigation bar with the Stats, Home and Profile tabs.
+/// Bottom navigation bar with the Stats, Home, Tools and Profile tabs.
 class ToolboxBottomNav extends StatelessWidget {
   const ToolboxBottomNav({
     super.key,
@@ -34,7 +34,7 @@ class ToolboxBottomNav extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _NavItem(
                 iconAsset: 'assets/icons/ic_stats.svg',
@@ -43,10 +43,16 @@ class ToolboxBottomNav extends StatelessWidget {
                 onTap: () => onTabSelected(HomeTab.stats),
               ),
               _NavItem(
-                iconAsset: 'assets/icons/ic_tools.svg',
+                iconAsset: 'assets/icons/ic_home.svg',
                 label: 'Home',
                 isSelected: selectedTab == HomeTab.home,
                 onTap: () => onTabSelected(HomeTab.home),
+              ),
+              _NavItem(
+                iconAsset: 'assets/icons/ic_tools.svg',
+                label: 'Tools',
+                isSelected: selectedTab == HomeTab.tools,
+                onTap: () => onTabSelected(HomeTab.tools),
               ),
               _NavItem(
                 iconAsset: 'assets/icons/ic_profile.svg',
@@ -81,12 +87,12 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 64,
+              width: 56,
               height: 32,
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.secondary : Colors.transparent,

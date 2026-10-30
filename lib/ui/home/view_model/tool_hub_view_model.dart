@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../data/models/recommendation_model.dart';
 import '../../../data/models/tool_model.dart';
 import '../../../data/repositories/analytics_repository.dart';
+import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/recommendation_log_repository.dart';
 import '../../../data/repositories/stats_repository.dart';
 import '../../../data/repositories/tool_repository.dart';
@@ -16,7 +17,8 @@ import '../../../domain/recommendation/tool_recommender.dart';
 /// The tabs of the bottom bar, from left to right.
 enum HomeTab {
   stats('Stats'),
-  home('ToolHub'),
+  home('Home'),
+  tools('ToolHub'),
   profile('Profile');
 
   const HomeTab(this.screenName);
@@ -32,14 +34,15 @@ class ToolHubViewModel extends ChangeNotifier {
     ToolRecommender? recommender,
     AnalyticsRepository? analytics,
     RecommendationLogRepository? recommendationLog,
-    Set<String>? openableToolIds,
+    AuthRepository? auth,
+    this._openableToolIds,
     DateTime Function()? now,
   }) : _repository = repository ?? const ToolRepository(),
        _statsRepository = statsRepository ?? StatsRepository(),
        _recommender = recommender ?? ToolRecommender(),
        _analytics = analytics ?? AnalyticsRepository(),
        _recommendationLog = recommendationLog ?? RecommendationLogRepository(),
-       _openableToolIds = openableToolIds,
+       _auth = auth ?? AuthRepository(),
        _now = now ?? DateTime.now;
 
   final ToolRepository _repository;
@@ -47,7 +50,7 @@ class ToolHubViewModel extends ChangeNotifier {
   final ToolRecommender _recommender;
   final AnalyticsRepository _analytics;
   final RecommendationLogRepository _recommendationLog;
-
+  final AuthRepository _auth;
   final Set<String>? _openableToolIds;
   final DateTime Function() _now;
 
@@ -58,6 +61,7 @@ class ToolHubViewModel extends ChangeNotifier {
   String? _recommendationLogId;
   bool _recommendationOpened = false;
   int _loads = 0;
+  String? _userName;
   bool _disposed = false;
 
   ToolCategory get selectedCategory => _selectedCategory;
@@ -65,6 +69,9 @@ class ToolHubViewModel extends ChangeNotifier {
 
   /// Null until [loadRecommendation] finishes.
   Recommendation? get recommendation => _recommendation;
+
+  /// Null until [loadUserName] finishes, and when the profile cannot be read.
+  String? get userName => _userName;
 
   List<ToolItem> get tools => _repository.toolsIn(_selectedCategory);
 
@@ -95,9 +102,19 @@ class ToolHubViewModel extends ChangeNotifier {
 
   ToolItem randomTool() => _repository.randomTool();
 
+  /// The greeting is the only thing the name is used for, so a failed read
+  /// just leaves it out instead of blocking the screen.
+  Future<void> loadUserName() async {
+    try {
+      _userName = (await _auth.getCurrentUserProfile())?.name;
+    } on Exception {
+      _userName = null;
+    }
+    if (_disposed) return;
+    notifyListeners();
+  }
 
   Future<void> loadRecommendation() async {
-
     final load = ++_loads;
     final now = _now();
     final data = await _statsRepository.dataSince(
@@ -132,7 +149,6 @@ class ToolHubViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-
   void openRecommendation() {
     final id = _recommendationLogId;
     final recommendation = _recommendation;
@@ -140,7 +156,6 @@ class ToolHubViewModel extends ChangeNotifier {
     _recommendationOpened = true;
     _recommendationLog.logOpened(id, toolId: recommendation.tool.id);
   }
-
 
   List<ToolItem> _openableTools() {
     final openable = _openableToolIds;
@@ -151,7 +166,6 @@ class ToolHubViewModel extends ChangeNotifier {
         if (openable.contains(tool.id)) tool,
     ];
   }
-
 
   bool _isOnScreen(Recommendation recommendation, String strategy) {
     final current = _recommendation;

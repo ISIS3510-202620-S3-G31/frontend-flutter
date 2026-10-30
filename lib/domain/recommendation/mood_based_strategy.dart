@@ -9,12 +9,12 @@ class MoodBasedStrategy implements RecommendationStrategy {
 
   /// Tools that fit each emotion, best first.
   static const _toolsFor = {
-    Emotion.anger: ['scream', 'tear'],
-    Emotion.disgust: ['tear', 'scream'],
-    Emotion.fear: ['breathing', 'detective'],
-    Emotion.sadness: ['detective', 'breathing'],
+    Emotion.anger: ['scream', 'breathing'],
+    Emotion.disgust: ['scream', 'photo'],
+    Emotion.fear: ['breathing', 'scream'],
+    Emotion.sadness: ['breathing', 'photo'],
     Emotion.happiness: ['photo'],
-    Emotion.surprise: ['photo', 'detective'],
+    Emotion.surprise: ['photo', 'breathing'],
   };
 
   @override
