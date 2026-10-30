@@ -30,17 +30,36 @@ class ToolHubScreen extends StatefulWidget {
 
 class _ToolHubScreenState extends State<ToolHubScreen> {
   late final ToolHubViewModel _viewModel =
-      widget.viewModel ?? ToolHubViewModel();
+      widget.viewModel ??
+      ToolHubViewModel(openableToolIds: toolScreens.keys.toSet());
   late final bool _ownsViewModel = widget.viewModel == null;
   final _checkInPrompt = DailyCheckInPrompt();
+  bool _homeStarted = false;
 
   @override
   void initState() {
     super.initState();
-    _viewModel.loadRecommendation();
     _viewModel.loadUserName();
-    _askForCheckIn();
     _viewModel.logScreenView();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Right after creating an account, Register is still open on top of the
+    // home for a moment. A check-in opened then landed above Register and was
+    // closed together with it, so the home waits until it is on top;
+    // isCurrentOf calls this method again when that changes.
+    if (!_homeStarted && (ModalRoute.isCurrentOf(context) ?? true)) {
+      _homeStarted = true;
+      _startHome();
+    }
+  }
+
+  Future<void> _startHome() async {
+    await _askForCheckIn();
+    if (!mounted) return;
+    await _viewModel.loadRecommendation();
   }
 
   /// The first time the app opens each day, asks the user how they feel.
