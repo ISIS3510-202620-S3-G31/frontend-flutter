@@ -1,22 +1,14 @@
-import 'dart:async';
-
 import '../models/check_in_model.dart';
 import '../services/auth_service.dart';
 import '../services/remote/check_in_firestore_service.dart';
-import '../services/remote/sheets_live_service.dart';
 
 class CheckInRepository {
-  CheckInRepository({
-    CheckInFirestoreService? service,
-    AuthService? auth,
-    SheetsLiveService? sheets,
-  }) : _service = service ?? CheckInFirestoreService(),
-       _auth = auth ?? AuthService(),
-       _sheets = sheets ?? SheetsLiveService();
+  CheckInRepository({CheckInFirestoreService? service, AuthService? auth})
+    : _service = service ?? CheckInFirestoreService(),
+      _auth = auth ?? AuthService();
 
   final CheckInFirestoreService _service;
   final AuthService _auth;
-  final SheetsLiveService _sheets;
 
   /// What the user answered today, or null when they have not answered yet.
   Future<CheckIn?> todaysCheckIn() async {
@@ -33,7 +25,6 @@ class CheckInRepository {
       throw const AuthException('Sign in to save your check-in.');
     }
     await _service.save(userId, checkIn);
-    unawaited(_sheets.pushCheckIn(userId, checkIn));
   }
 
   /// Every check-in since [from]. Empty when nobody is signed in.
