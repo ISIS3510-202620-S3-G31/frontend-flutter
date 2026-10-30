@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../data/models/recommendation_model.dart';
@@ -30,12 +32,14 @@ class ToolHubViewModel extends ChangeNotifier {
     ToolRecommender? recommender,
     AnalyticsRepository? analytics,
     RecommendationLogRepository? recommendationLog,
+    Set<String>? openableToolIds,
     DateTime Function()? now,
   }) : _repository = repository ?? const ToolRepository(),
        _statsRepository = statsRepository ?? StatsRepository(),
        _recommender = recommender ?? ToolRecommender(),
        _analytics = analytics ?? AnalyticsRepository(),
        _recommendationLog = recommendationLog ?? RecommendationLogRepository(),
+       _openableToolIds = openableToolIds,
        _now = now ?? DateTime.now;
 
   final ToolRepository _repository;
@@ -43,12 +47,17 @@ class ToolHubViewModel extends ChangeNotifier {
   final ToolRecommender _recommender;
   final AnalyticsRepository _analytics;
   final RecommendationLogRepository _recommendationLog;
+
+  final Set<String>? _openableToolIds;
   final DateTime Function() _now;
 
   ToolCategory _selectedCategory = ToolCategory.all;
   HomeTab _selectedTab = HomeTab.home;
   Recommendation? _recommendation;
+  String? _strategy;
   String? _recommendationLogId;
+  bool _recommendationOpened = false;
+  int _loads = 0;
   bool _disposed = false;
 
   ToolCategory get selectedCategory => _selectedCategory;
@@ -81,15 +90,21 @@ class ToolHubViewModel extends ChangeNotifier {
     _selectedTab = tab;
     notifyListeners();
     _analytics.logScreenView(screenName: tab.screenName);
+    if (tab == HomeTab.home) unawaited(loadRecommendation());
   }
 
   ToolItem randomTool() => _repository.randomTool();
 
+
   Future<void> loadRecommendation() async {
+
+    final load = ++_loads;
     final now = _now();
     final data = await _statsRepository.dataSince(
       DateTime(now.year, now.month, now.day - 29),
     );
+    if (_disposed || load != _loads) return;
+
     final lastDay = now.subtract(const Duration(days: 1));
     final history = UserHistory(
       recentCheckIns: [
@@ -98,24 +113,52 @@ class ToolHubViewModel extends ChangeNotifier {
       ],
       sessions: data.sessions,
     );
-    _recommendation = _recommender.recommend(history, _repository.allTools());
-    if (_disposed) return;
-    final recommendation = _recommendation;
-    if (recommendation != null) {
-      // BQ3: saves which tool the home recommended and with which strategy.
+    final recommendation = _recommender.recommend(history, _openableTools());
+    final strategy = _strategyName();
+
+    if (recommendation == null) {
+      _recommendation = null;
+      _strategy = null;
+      _recommendationLogId = null;
+    } else if (!_isOnScreen(recommendation, strategy)) {
+      _recommendation = recommendation;
+      _strategy = strategy;
       _recommendationLogId = _recommendationLog.logShown(
         recommendation,
-        strategy: _strategyName(),
-        shownAt: now,
+        strategy: strategy,
       );
+      _recommendationOpened = false;
     }
     notifyListeners();
   }
 
-  /// BQ3: the user tapped the recommended tool.
+
   void openRecommendation() {
     final id = _recommendationLogId;
-    if (id != null) _recommendationLog.logOpened(id, _now());
+    final recommendation = _recommendation;
+    if (id == null || recommendation == null || _recommendationOpened) return;
+    _recommendationOpened = true;
+    _recommendationLog.logOpened(id, toolId: recommendation.tool.id);
+  }
+
+
+  List<ToolItem> _openableTools() {
+    final openable = _openableToolIds;
+    final tools = _repository.allTools();
+    if (openable == null) return tools;
+    return [
+      for (final tool in tools)
+        if (openable.contains(tool.id)) tool,
+    ];
+  }
+
+
+  bool _isOnScreen(Recommendation recommendation, String strategy) {
+    final current = _recommendation;
+    return current != null &&
+        current.tool.id == recommendation.tool.id &&
+        current.reason == recommendation.reason &&
+        _strategy == strategy;
   }
 
   String _strategyName() => switch (_recommender.strategy) {

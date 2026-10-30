@@ -5,7 +5,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import 'tool_card.dart';
 
-
 class RecommendationSection extends StatelessWidget {
   const RecommendationSection({
     super.key,
@@ -19,7 +18,7 @@ class RecommendationSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

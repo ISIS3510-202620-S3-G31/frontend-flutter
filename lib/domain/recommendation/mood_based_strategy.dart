@@ -43,6 +43,7 @@ class MoodBasedStrategy implements RecommendationStrategy {
     return Recommendation(
       tool: tool,
       reason: 'You felt ${emotion.label.toLowerCase()} in your last check-in.',
+      emotion: emotion,
     );
   }
 }
