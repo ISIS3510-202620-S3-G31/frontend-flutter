@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../data/models/check_in_model.dart';
 import '../../../data/models/insight_model.dart';
 import '../../../data/models/tool_session_model.dart';
+import '../../../data/repositories/analytics_repository.dart';
 import '../../../data/repositories/stats_repository.dart';
 import '../../../data/repositories/tool_repository.dart';
 import '../../../domain/useful_insights_engine.dart';
@@ -27,6 +28,7 @@ class StatsViewModel extends ChangeNotifier {
   StatsViewModel({
     StatsRepository? repository,
     ToolRepository? toolRepository,
+    this.analytics,
     DateTime Function()? now,
   }) : _repository = repository ?? StatsRepository(),
        _toolRepository = toolRepository ?? const ToolRepository(),
@@ -40,6 +42,12 @@ class StatsViewModel extends ChangeNotifier {
   final ToolRepository _toolRepository;
   final DateTime Function() _now;
   final UsefulInsightsEngine _insightsEngine;
+
+  /// Analytics of the sessions opened from an insight; the shared repository
+  /// is created on first use, so plain view model tests never touch Firebase.
+  final AnalyticsRepository? analytics;
+
+  AnalyticsRepository get _analyticsRepo => analytics ?? AnalyticsRepository();
 
   bool _loading = true;
   bool _isEmpty = true;
@@ -63,6 +71,36 @@ class StatsViewModel extends ChangeNotifier {
     }
     return toolId;
   }
+
+  /// Begins the analytics session of a tool opened from an insight.
+  Future<void> startToolSession({
+    required String toolId,
+    required String toolName,
+  }) => _analyticsRepo.startToolSession(toolId: toolId, toolName: toolName);
+
+  /// Marks that session as completed when the tool reported success.
+  Future<void> completeToolSession({
+    required String toolId,
+    required String toolName,
+    int? durationSeconds,
+  }) => _analyticsRepo.completeToolSession(
+    toolId: toolId,
+    toolName: toolName,
+    durationSeconds: durationSeconds,
+  );
+
+  /// Closes the session when the user comes back from the tool.
+  Future<void> endToolSession({
+    required String toolId,
+    required String toolName,
+    int? durationSeconds,
+    String? exitReason,
+  }) => _analyticsRepo.endToolSession(
+    toolId: toolId,
+    toolName: toolName,
+    durationSeconds: durationSeconds,
+    exitReason: exitReason,
+  );
 
   /// Most frequent emotion in this week's check-ins, or null if there are none.
   Emotion? get topFeeling => _topFeeling;

@@ -32,6 +32,8 @@
 	<string>The microphone measures how loud you scream to fill the Scream Tank.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Speech recognition writes your check-in note while you speak.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your approximate location lets Ark suggest tools that fit the weather around you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Pick today's photo from your gallery.</string>
 	<key>UIApplicationSceneManifest</key>

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../data/models/recommendation_model.dart';
 import '../../../data/models/tool_model.dart';
+import '../../../data/repositories/analytics_repository.dart';
 import '../../../data/repositories/recommendation_log_repository.dart';
 import '../../../data/repositories/stats_repository.dart';
 import '../../../data/repositories/tool_repository.dart';
-import '../../../data/services/analytics_service.dart';
 import '../../../domain/recommendation/frequency_based_strategy.dart';
 import '../../../domain/recommendation/mood_based_strategy.dart';
 import '../../../domain/recommendation/recommendation_strategy.dart';
@@ -28,20 +28,20 @@ class ToolHubViewModel extends ChangeNotifier {
     ToolRepository? repository,
     StatsRepository? statsRepository,
     ToolRecommender? recommender,
-    AnalyticsService? analytics,
+    AnalyticsRepository? analytics,
     RecommendationLogRepository? recommendationLog,
     DateTime Function()? now,
   }) : _repository = repository ?? const ToolRepository(),
        _statsRepository = statsRepository ?? StatsRepository(),
        _recommender = recommender ?? ToolRecommender(),
-       _analytics = analytics ?? AnalyticsService(),
+       _analytics = analytics ?? AnalyticsRepository(),
        _recommendationLog = recommendationLog ?? RecommendationLogRepository(),
        _now = now ?? DateTime.now;
 
   final ToolRepository _repository;
   final StatsRepository _statsRepository;
   final ToolRecommender _recommender;
-  final AnalyticsService _analytics;
+  final AnalyticsRepository _analytics;
   final RecommendationLogRepository _recommendationLog;
   final DateTime Function() _now;
 
@@ -66,6 +66,12 @@ class ToolHubViewModel extends ChangeNotifier {
   void selectCategory(ToolCategory category) {
     _selectedCategory = category;
     notifyListeners();
+  }
+
+  /// Tabs are not routes, so the navigator observer never sees them; the screen
+  /// view of the tab shown first is logged here, the rest in [selectTab].
+  void logScreenView() {
+    _analytics.logScreenView(screenName: _selectedTab.screenName);
   }
 
   /// Tabs are not routes, so the navigator observer never sees them; the

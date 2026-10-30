@@ -18,6 +18,11 @@ class AuthTextField extends StatelessWidget {
     this.textInputAction,
     this.inputFormatters,
     this.onFieldSubmitted,
+    this.onChanged,
+    this.errorText,
+    this.helperText,
+    this.readOnly = false,
+    this.onTap,
   });
 
   final String label;
@@ -31,6 +36,18 @@ class AuthTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onFieldSubmitted;
+  final ValueChanged<String>? onChanged;
+
+  /// Message shown under the field while the user types. Takes over from
+  /// [helperText] and paints the field in the error colour.
+  final String? errorText;
+
+  /// The rule of the field, shown while there is nothing to complain about.
+  final String? helperText;
+
+  /// For fields filled from a picker instead of the keyboard.
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -55,11 +72,19 @@ class AuthTextField extends StatelessWidget {
           inputFormatters: inputFormatters,
           validator: validator,
           onFieldSubmitted: onFieldSubmitted,
+          onChanged: onChanged,
+          readOnly: readOnly,
+          onTap: onTap,
           style: AppText.body.copyWith(color: AppColors.text, fontSize: 15),
           cursorColor: AppColors.primary,
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: AppText.bodyMuted.copyWith(fontSize: 14),
+            errorText: errorText,
+            helperText: helperText,
+            helperStyle: AppText.bodyMuted.copyWith(fontSize: 12),
+            helperMaxLines: 2,
+            errorMaxLines: 2,
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             filled: true,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
-import '../../../data/services/analytics_service.dart';
 import '../../auth/widgets/profile_screen.dart';
 import '../../check_in/daily_check_in_prompt.dart';
 import '../../check_in/widgets/mood_check_in_sheet.dart';
@@ -41,9 +40,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     super.initState();
     _viewModel.loadRecommendation();
     _askForCheckIn();
-    AnalyticsService().logScreenView(
-      screenName: _viewModel.selectedTab.screenName,
-    );
+    _viewModel.logScreenView();
   }
 
   /// The first time the app opens each day, asks the user how they feel.
