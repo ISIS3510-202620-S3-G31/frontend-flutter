@@ -8,8 +8,6 @@ import '../services/remote/weather_service.dart';
 enum WeatherOutcome {
   ready,
 
-
-
   noLocation,
 
   /// No connection: asking again when it comes back should work.
@@ -37,13 +35,12 @@ class WeatherReading {
   String toString() => 'WeatherReading(${outcome.name}, $weather, $location)';
 }
 
-
 /// The weather where the user is, from the phone's location and the weather
 /// API.
 ///
-/// Create it once and reuse it: it is not a singleton and every instance opens
-/// its own HTTP client, so one made per read would pile them up. [dispose]
-/// releases that client.
+/// Create it once and reuse it: it is not a singleton, and every read spawns
+/// its own isolate with its own HTTP client, so one made per read would pile
+/// them up. [dispose] releases whatever the fetcher holds.
 class WeatherRepository {
   WeatherRepository({
     LocationService? location,
@@ -146,6 +143,6 @@ class WeatherRepository {
   Future<LocationAvailability> ensureLocationAvailable() =>
       _location.ensureAvailable();
 
-  /// Releases the HTTP client behind this repository.
+  /// Releases whatever the fetcher behind this repository holds.
   void dispose() => _service.close();
 }

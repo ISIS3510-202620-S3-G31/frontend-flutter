@@ -29,7 +29,8 @@ class ToolHubScreen extends StatefulWidget {
   State<ToolHubScreen> createState() => _ToolHubScreenState();
 }
 
-class _ToolHubScreenState extends State<ToolHubScreen> {
+class _ToolHubScreenState extends State<ToolHubScreen>
+    with WidgetsBindingObserver {
   late final ToolHubViewModel _viewModel =
       widget.viewModel ??
       ToolHubViewModel(openableToolIds: toolScreens.keys.toSet());
@@ -40,6 +41,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _viewModel.loadUserName();
     _viewModel.loadLastRecommendation();
     _viewModel.watchConnection();
@@ -54,9 +56,15 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
 
     if (!_homeStarted && (ModalRoute.isCurrentOf(context) ?? true)) {
       _homeStarted = true;
+      // The weather is re-read on a timer only while this screen is visible.
+      _viewModel.startWeatherPolling();
       _startHome();
     }
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) =>
+      _viewModel.onAppLifecycleChanged(state);
 
   Future<void> _startHome() async {
     await _askForCheckIn();
@@ -72,6 +80,10 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // The screen is gone, so the weather timer stops with it; dispose() of an
+    // owned view model cancels it as well.
+    _viewModel.stopWeatherPolling();
     if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
   }

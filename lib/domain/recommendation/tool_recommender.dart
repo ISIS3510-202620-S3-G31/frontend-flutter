@@ -36,8 +36,8 @@ class ToolRecommender {
     return null;
   }
 
-  /// The recommendation for the weather where the user is, or null when the
-  /// weather has no opinion (mild weather) or could not be read.
+  /// The recommendation for the weather where the user is — always a pick
+  /// once the weather is known — or null when it could not be read.
   Recommendation? weatherRecommendation(
     UserHistory history,
     List<ToolItem> tools,
