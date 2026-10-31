@@ -3,8 +3,9 @@ import '../../data/models/tool_model.dart';
 import 'recommendation_strategy.dart';
 
 /// Picks a tool for the weather where the user is right now: rain and cold call
-/// for staying in, sun for going out. Mild weather has no opinion and returns
-/// null, so no weather recommendation is shown.
+/// for staying in, sun for going out, and mild weather falls back to a calm
+/// pick — so there is always a weather recommendation once the weather is
+/// known. Null only when the weather could not be read at all.
 class WeatherBasedStrategy implements RecommendationStrategy {
   const WeatherBasedStrategy();
 
@@ -31,7 +32,10 @@ class WeatherBasedStrategy implements RecommendationStrategy {
           "It's ${weather.roundedTemperature}°C and sunny where you are — "
           'perfect for a photo of the day.';
     } else {
-      return null;
+      toolId = 'breathing';
+      reason =
+          "It's ${weather.roundedTemperature}°C and mild where you are — "
+          'a good moment for a calm breath.';
     }
 
     final tool = tools.where((tool) => tool.id == toolId).firstOrNull;

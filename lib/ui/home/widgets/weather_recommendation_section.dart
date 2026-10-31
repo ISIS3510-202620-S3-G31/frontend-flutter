@@ -5,9 +5,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import 'recommendation_section.dart';
 
-/// The weather-based pick of the home screen, in its own section apart from
-/// the personal one in [RecommendationSection]: what the weather where the
-/// user is calls for. Shows nothing when the weather has no opinion or could
+/// The weather-based pick of the home screen, in its own permanent section
+/// apart from the personal one in [RecommendationSection]: what the weather
+/// where the user is calls for. Shows nothing only when the weather could
 /// not be read.
 class WeatherRecommendationSection extends StatelessWidget {
   const WeatherRecommendationSection({
@@ -16,8 +16,8 @@ class WeatherRecommendationSection extends StatelessWidget {
     required this.onOpen,
   });
 
-  /// The weather-based recommendation. Null when the weather has no opinion
-  /// or could not be read.
+  /// The weather-based recommendation. Null when the weather could not be
+  /// read.
   final Recommendation? weatherRecommendation;
 
   final VoidCallback onOpen;

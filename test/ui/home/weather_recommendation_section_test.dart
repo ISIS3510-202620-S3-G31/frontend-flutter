@@ -58,7 +58,7 @@ void main() {
     expect(find.text("Today's Recommendations"), findsNothing);
   });
 
-  testWidgets('shows nothing when the weather has no opinion', (tester) async {
+  testWidgets('shows nothing when there is no weather recommendation', (tester) async {
     await show(tester);
 
     expect(find.byType(RecommendationCard), findsNothing);

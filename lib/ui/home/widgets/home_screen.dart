@@ -81,13 +81,12 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 28),
-                if (viewModel.weatherRecommendation != null) ...[
-                  WeatherRecommendationSection(
-                    weatherRecommendation: viewModel.weatherRecommendation,
-                    onOpen: onOpenWeatherRecommendation,
-                  ),
+                WeatherRecommendationSection(
+                  weatherRecommendation: viewModel.weatherRecommendation,
+                  onOpen: onOpenWeatherRecommendation,
+                ),
+                if (viewModel.weatherRecommendation != null)
                   const SizedBox(height: 28),
-                ],
                 RecommendationSection(
                   recommendation: viewModel.recommendation,
                   lastRecommendation: viewModel.lastRecommendation,

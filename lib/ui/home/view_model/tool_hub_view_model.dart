@@ -115,7 +115,7 @@ class ToolHubViewModel extends ChangeNotifier {
 
   /// The weather-based recommendation, shown in its own section on the home
   /// screen. Null until [loadRecommendation] finishes, and when the weather
-  /// has no opinion or could not be read.
+  /// could not be read.
   Recommendation? get weatherRecommendation => _weatherRecommendation;
 
   WeatherReading? get weatherReading => _weatherReading;
@@ -373,7 +373,7 @@ class ToolHubViewModel extends ChangeNotifier {
   }
 
   /// What the weather recommendation keys on — rain, cold, clear sun, or
-  /// nothing — in the order [WeatherBasedStrategy] checks them. The exact
+  /// mild — in the order [WeatherBasedStrategy] checks them. The exact
   /// temperature is not part of it, so a tick that only moves the thermometer
   /// does not rebuild the card.
   String? _conditionKey(Weather? weather) {

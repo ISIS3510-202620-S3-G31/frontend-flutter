@@ -100,7 +100,7 @@ Weather weatherAt({
 /// Clear and sunny, so the weather strategy picks the photo tool.
 Weather get sunny => weatherAt(tempC: 20);
 
-/// Mild and cloudy, so the weather strategy has no opinion.
+/// Mild and cloudy, so the weather strategy falls back to the calm pick.
 Weather get mild => weatherAt(tempC: 20, code: 2);
 
 ToolHubViewModel viewModel(
@@ -160,7 +160,7 @@ void main() {
     },
   );
 
-  testWidgets('no weather section when the weather has no opinion', (
+  testWidgets('mild weather still gets a permanent weather pick', (
     tester,
   ) async {
     final vm = viewModel(
@@ -169,8 +169,9 @@ void main() {
 
     await showHome(tester, vm);
 
-    expect(find.text('Weather pick'), findsNothing);
-    expect(find.text('BECAUSE OF THE WEATHER'), findsNothing);
+    expect(vm.weatherRecommendation?.tool.id, 'breathing');
+    expect(find.text('Weather pick'), findsOneWidget);
+    expect(find.text('BECAUSE OF THE WEATHER'), findsOneWidget);
     expect(find.text("Today's Recommendations"), findsOneWidget);
   });
 
