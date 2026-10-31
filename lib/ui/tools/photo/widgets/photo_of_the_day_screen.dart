@@ -65,25 +65,28 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
-        final photo = _viewModel.todayPhoto;
+        final photo = _viewModel.shownPhoto;
         final camera = _viewModel.cameraController;
         final canShoot = _viewModel.canShoot;
+        final onCamera = _viewModel.mode == PhotoViewMode.camera;
 
         final Widget? content = photo != null
-            ? Image.file(photo, fit: BoxFit.cover)
-            : camera != null
+            ? Image.file(photo, fit: BoxFit.cover, key: ValueKey(photo.path))
+            : _viewModel.loadingDay
+            ? const Center(child: CircularProgressIndicator())
+            : camera != null && onCamera
             ? _CameraFill(controller: camera)
             : null;
 
         final viewfinder = Viewfinder(
-          date: _viewModel.today,
+          date: _viewModel.selectedDay,
           content: content,
-          showGrid: photo == null,
-          hint: _viewModel.cameraFailed
-              ? 'Camera not available. Tap to try again, or use the gallery.'
-              : 'One photo a day, one new memory',
+          showGrid: onCamera,
+          hint: _hintFor(_viewModel),
           flashOn: _viewModel.flashOn,
-          onFlash: camera != null ? _viewModel.toggleFlash : null,
+          onFlash: camera != null && onCamera
+              ? _viewModel.toggleFlash
+              : null,
         );
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -102,7 +105,12 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
                     onBack: () =>
                         Navigator.maybePop(context, _viewModel.isCompleted),
                   ),
-                  WeekStrip(states: _viewModel.weekStates),
+                  WeekStrip(
+                    states: _viewModel.weekStates,
+                    selectedIndex: _viewModel.selectedDayIndex,
+                    onDaySelected: (index) =>
+                        _viewModel.selectDay(_viewModel.week[index]),
+                  ),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -121,7 +129,10 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
                               child: SizedBox(
                                 width: double.infinity,
                                 height: cardHeight,
-                                child: _viewModel.cameraFailed && photo == null
+                                child:
+                                    _viewModel.cameraFailed &&
+                                        photo == null &&
+                                        onCamera
                                     ? GestureDetector(
                                         onTap: _viewModel.startCamera,
                                         child: viewfinder,
@@ -134,34 +145,45 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 40,
                                 ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    CircleIconButton(
-                                      asset: 'assets/icons/ic_gallery.svg',
-                                      semanticLabel: 'Pick from gallery',
-                                      onPressed: canShoot
-                                          ? _viewModel.pickFromGallery
-                                          : null,
-                                    ),
-                                    ShutterButton(
-                                      onPressed: canShoot && camera != null
-                                          ? _viewModel.takePhoto
-                                          : null,
-                                    ),
-                                    CircleIconButton(
-                                      asset: 'assets/icons/ic_flip_camera.svg',
-                                      semanticLabel: 'Switch camera',
-                                      onPressed:
-                                          canShoot &&
-                                              camera != null &&
-                                              _viewModel.canSwitchCamera
-                                          ? _viewModel.flipCamera
-                                          : null,
-                                    ),
-                                  ],
-                                ),
+                                child: switch (_viewModel.mode) {
+                                  PhotoViewMode.review => _ReviewControls(
+                                    busy: _viewModel.isBusy,
+                                    onRetake: _viewModel.retakePhoto,
+                                    onKeep: _viewModel.confirmPhoto,
+                                  ),
+                                  PhotoViewMode.otherDay => _OtherDayControls(
+                                    onBack: _viewModel.showToday,
+                                  ),
+                                  _ => Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      CircleIconButton(
+                                        asset: 'assets/icons/ic_gallery.svg',
+                                        semanticLabel: 'Pick from gallery',
+                                        onPressed: canShoot
+                                            ? _viewModel.pickFromGallery
+                                            : null,
+                                      ),
+                                      ShutterButton(
+                                        onPressed: canShoot && camera != null
+                                            ? _viewModel.takePhoto
+                                            : null,
+                                      ),
+                                      CircleIconButton(
+                                        asset:
+                                            'assets/icons/ic_flip_camera.svg',
+                                        semanticLabel: 'Switch camera',
+                                        onPressed:
+                                            canShoot &&
+                                                camera != null &&
+                                                _viewModel.canSwitchCamera
+                                            ? _viewModel.flipCamera
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
+                                },
                               ),
                             ),
                           ],
@@ -176,6 +198,87 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
           ),
         );
       },
+    );
+  }
+}
+
+/// What the card says when there is no image on it yet.
+String _hintFor(PhotoOfTheDayViewModel viewModel) {
+  if (!viewModel.isShowingToday) return 'Nothing saved for this day.';
+  if (viewModel.cameraFailed) {
+    return 'Camera not available. Tap to try again, or use the gallery.';
+  }
+  return 'One photo a day, one new memory';
+}
+
+/// Keep it or take it again. Nothing has been written yet, so neither choice
+/// undoes anything.
+class _ReviewControls extends StatelessWidget {
+  const _ReviewControls({
+    required this.busy,
+    required this.onRetake,
+    required this.onKeep,
+  });
+
+  final bool busy;
+  final VoidCallback onRetake;
+  final VoidCallback onKeep;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        TextButton(
+          onPressed: busy ? null : onRetake,
+          child: Text(
+            'Retake',
+            style: AppText.body.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.text,
+            ),
+          ),
+        ),
+        FilledButton(
+          onPressed: busy ? null : onKeep,
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.text,
+            shape: const StadiumBorder(),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+          ),
+          child: Text(
+            busy ? 'Saving...' : 'Keep this one',
+            style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// An old day cannot be retaken, so the only way out is back to today.
+class _OtherDayControls extends StatelessWidget {
+  const _OtherDayControls({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: FilledButton(
+        onPressed: onBack,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.secondary,
+          foregroundColor: AppColors.text,
+          shape: const StadiumBorder(),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+        ),
+        child: Text(
+          'Back to today',
+          style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ),
     );
   }
 }

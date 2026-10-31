@@ -36,13 +36,23 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
       widget.viewModel ?? UsageFlowViewModel(tool: widget.tool);
   late final bool _ownsViewModel = widget.viewModel == null;
 
+  /// True from the moment this screen is built until the tool is on top.
+  ///
+  /// Tapping the tool is already the decision to use it, so a Start screen in
+  /// between is only friction. The push needs a frame to happen, and painting
+  /// the Start step in that frame is what made it flash; while this is true
+  /// the screen stays blank instead.
+  late final bool _opensToolOnArrival = _viewModel.currentStep is ToolStep;
+  late bool _openingTool = _opensToolOnArrival;
+
   @override
   void initState() {
     super.initState();
-    // Tapping the tool is already the decision to use it, so a Start screen in between is only friction.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _viewModel.currentStep is ToolStep) _openTool();
-    });
+    if (_opensToolOnArrival) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openTool();
+      });
+    }
   }
 
   @override
@@ -58,6 +68,8 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
       context,
       MaterialPageRoute(builder: widget.toolScreen),
     );
+    // Back from the tool: whatever comes next is worth showing.
+    if (mounted) setState(() => _openingTool = false);
     await _viewModel.finishTool();
     if (!mounted) return;
     // Under the minimum duration the session is not worth rating, so the flow
@@ -83,6 +95,9 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_openingTool) {
+      return const ColoredBox(color: AppColors.background);
+    }
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
