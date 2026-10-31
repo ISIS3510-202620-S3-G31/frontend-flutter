@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart' show XFile;
 import 'package:frontend_flutter/data/services/auth_service.dart';
 import 'package:frontend_flutter/data/services/connectivity_service.dart';
 import 'package:frontend_flutter/data/services/local/photo_dao.dart';
 import 'package:frontend_flutter/data/services/local/photo_storage_service.dart';
+import 'package:frontend_flutter/data/services/photo_compressor.dart';
 import 'package:frontend_flutter/data/services/remote/photo_remote_service.dart';
 import 'package:intl/intl.dart';
 
@@ -108,9 +110,9 @@ class FakeRemote extends PhotoRemoteService {
   Object? failure;
 
   @override
-  Future<void> upload(String userId, DateTime day, File file) async {
+  Future<void> upload(String userId, DateTime day, Uint8List photo) async {
     uploads.add('$userId/${dayFormat.format(day)}');
-    stored['$userId/${dayFormat.format(day)}'] = await file.readAsString();
+    stored['$userId/${dayFormat.format(day)}'] = String.fromCharCodes(photo);
   }
 
   @override
@@ -147,4 +149,20 @@ class FakeConnectivity extends ConnectivityService {
 
   @override
   Future<bool> isOnline() async => online;
+}
+
+/// Stands in for the isolate: tags the copy so a test can tell it from the
+/// original, or fails the way an unreadable file does.
+class FakeCompressor extends PhotoCompressor {
+  final compressed = <String>[];
+  Object? failure;
+
+  @override
+  Future<Uint8List> compress(String path) async {
+    final failure = this.failure;
+    if (failure != null) throw failure;
+    compressed.add(path);
+    final original = await File(path).readAsString();
+    return Uint8List.fromList('small($original)'.codeUnits);
+  }
 }

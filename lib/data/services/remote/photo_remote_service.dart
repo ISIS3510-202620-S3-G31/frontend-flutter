@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -35,11 +35,14 @@ class PhotoRemoteService {
       _customFirestore ?? FirebaseFirestore.instance;
 
   /// Uploading the same day again replaces it, so a retry never duplicates.
-  Future<void> upload(String userId, DateTime day, File file) async {
+  ///
+  /// Takes the bytes rather than a file: what goes up is a compressed copy
+  /// that only exists in memory, while the original stays on the phone.
+  Future<void> upload(String userId, DateTime day, Uint8List photo) async {
     final name = _dayFormat.format(day);
     final image = _storage.ref('users/$userId/photos/$name.jpg');
     // The storage rules only accept files that say they are images.
-    await image.putFile(file, SettableMetadata(contentType: 'image/jpeg'));
+    await image.putData(photo, SettableMetadata(contentType: 'image/jpeg'));
     await _firestore.doc('users/$userId/photos/$name').set({
       'day': name,
       'storagePath': image.fullPath,
