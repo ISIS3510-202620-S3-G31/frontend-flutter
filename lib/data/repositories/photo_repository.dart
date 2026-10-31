@@ -28,35 +28,40 @@ class PhotoRepository {
 
   bool _uploading = false;
 
+
   Future<DailyPhoto?> photoOf(DateTime day) async {
-    final file = await _storage.photoFor(day);
+    final userId = _auth.currentUserId;
+    if (userId == null) return null;
+    final file = await _storage.photoFor(userId, day);
     return file == null ? null : DailyPhoto(day: day, file: file);
   }
 
   Future<Set<DateTime>> daysWithPhoto(List<DateTime> days) async {
-    final saved = await _dao.daysBetween(days.first, days.last);
+    final userId = _auth.currentUserId;
+    if (userId == null) return <DateTime>{};
+    final saved = await _dao.daysBetween(userId, days.first, days.last);
     // Photos taken before the local table existed have a file but no row.
     for (final day in days) {
-      if (!saved.contains(day) && await _storage.photoFor(day) != null) {
-        await _dao.insert(day);
+      if (!saved.contains(day) &&
+          await _storage.photoFor(userId, day) != null) {
+        await _dao.insert(userId, day);
         saved.add(day);
       }
     }
     return saved;
   }
 
-  /// Saves on the phone first, so taking a photo never needs internet.
   Future<DailyPhoto> savePhoto(DateTime day, XFile photo) async {
-    final file = await _storage.save(day, photo);
-    await _dao.insert(day);
+    final userId = _auth.currentUserId;
+    if (userId == null) {
+      throw StateError('Only a signed-in user can save a photo.');
+    }
+    final file = await _storage.save(userId, day, photo);
+    await _dao.insert(userId, day);
     return DailyPhoto(day: day, file: file);
   }
 
-  /// Uploads the photos that are only on the phone. Returns false when there
-  /// is no internet, so they stay pending for later.
-  ///
-  /// A photo is marked as uploaded only after Firebase confirms it; if an
-  /// upload fails, that photo and the ones after it stay pending.
+
   Future<bool> uploadPending() async {
     if (!await _connectivity.isOnline()) return false;
     final userId = _auth.currentUserId;
@@ -64,11 +69,11 @@ class PhotoRepository {
     if (userId == null || _uploading) return true;
     _uploading = true;
     try {
-      for (final day in await _dao.notSyncedDays()) {
-        final file = await _storage.photoFor(day);
+      for (final day in await _dao.notSyncedDays(userId)) {
+        final file = await _storage.photoFor(userId, day);
         if (file == null) continue;
         await _remote.upload(userId, day, file);
-        await _dao.markSynced(day);
+        await _dao.markSynced(userId, day);
       }
     } finally {
       _uploading = false;

@@ -132,10 +132,12 @@ class ToolHubViewModel extends ChangeNotifier {
 
   ToolItem randomTool() => _repository.randomTool();
 
- 
+  /// The greeting is the only thing the name is used for, so a failed read
+  /// just leaves it out instead of blocking the screen.
   Future<void> loadUserName() async {
     try {
-      _userName = (await _auth.getCurrentUserProfile())?.name;
+      final name = (await _auth.getCurrentUserProfile())?.name.trim();
+      _userName = name == null || name.isEmpty ? null : name;
     } on Exception {
       _userName = null;
     }
