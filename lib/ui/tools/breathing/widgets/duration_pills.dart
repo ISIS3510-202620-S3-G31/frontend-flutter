@@ -16,18 +16,24 @@ class DurationPills extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[];
-    for (final minutes in sessionDurations) {
-      if (children.isNotEmpty) children.add(const SizedBox(width: 8));
-      children.add(
-        _DurationPill(
-          minutes: minutes,
-          selected: minutes == selectedMinutes,
-          onTap: () => onSelected(minutes),
-        ),
-      );
-    }
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: children);
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.all(4),
+      decoration: const ShapeDecoration(
+        shape: StadiumBorder(side: BorderSide(color: AppColors.secondary)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final minutes in sessionDurations)
+            _DurationPill(
+              minutes: minutes,
+              selected: minutes == selectedMinutes,
+              onTap: () => onSelected(minutes),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -47,22 +53,18 @@ class _DurationPill extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
+      label: '$minutes minute session',
+      excludeSemantics: true,
       child: Material(
-        color: selected ? AppColors.secondary : AppColors.surfaceDim,
+        color: selected ? AppColors.secondary : AppColors.background,
         shape: const StadiumBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: SizedBox(
-            height: 40,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Center(
-                child: Text(
-                  '$minutes min',
-                  style: AppText.body.copyWith(fontWeight: FontWeight.w500),
-                ),
-              ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Center(
+              child: Text('$minutes min', style: AppText.body),
             ),
           ),
         ),

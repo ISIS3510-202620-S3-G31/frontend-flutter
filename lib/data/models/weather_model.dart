@@ -62,7 +62,6 @@ class Weather {
 
   int get roundedTemperature => temperatureC.round();
 
-  /// A short label for the WMO weather code, for showing the weather.
   String get conditionLabel => switch (weatherCode) {
     0 => 'Clear sky',
     1 => 'Mainly clear',

@@ -12,6 +12,7 @@ import '../../../data/repositories/stats_repository.dart';
 import '../../../data/repositories/tool_repository.dart';
 import '../../../data/repositories/weather_repository.dart';
 import '../../../data/services/location_service.dart';
+import '../../../domain/context/weather_suggestion.dart';
 import '../../../domain/recommendation/frequency_based_strategy.dart';
 import '../../../domain/recommendation/mood_based_strategy.dart';
 import '../../../domain/recommendation/recommendation_strategy.dart';
@@ -75,6 +76,9 @@ class ToolHubViewModel extends ChangeNotifier {
   bool _weatherRecommendationOpened = false;
   int _loads = 0;
   String? _userName;
+  WeatherSuggestion? _weatherSuggestion;
+  StreamSubscription<bool>? _waitingForConnection;
+  bool _weatherRetried = false;
   WeatherReading? _weatherReading;
   bool _recommendationLoading = false;
   bool _disposed = false;
@@ -86,21 +90,17 @@ class ToolHubViewModel extends ChangeNotifier {
   /// [loadRecommendation] finishes.
   Recommendation? get recommendation => _recommendation;
 
-  /// The weather-based recommendation, shown next to [recommendation]. Null
-  /// until [loadRecommendation] finishes, and when the weather has no opinion
-  /// or could not be read.
+  WeatherSuggestion? get weatherSuggestion => _weatherSuggestion;
+
+
   Recommendation? get weatherRecommendation => _weatherRecommendation;
 
-  /// The last weather read, null until [loadRecommendation] finishes. Carries
-  /// the outcome, so the screen can tell current weather, last known weather
-  /// and a refused location apart.
   WeatherReading? get weatherReading => _weatherReading;
 
-  /// True while [loadRecommendation] is in flight, so the screen can show
-  /// that the recommendations — the weather read included — are still loading.
+
   bool get isRecommendationLoading => _recommendationLoading;
 
-  /// Null until [loadUserName] finishes, and when the profile cannot be read.
+
   String? get userName => _userName;
 
   List<ToolItem> get tools => _repository.toolsIn(_selectedCategory);
@@ -132,6 +132,8 @@ class ToolHubViewModel extends ChangeNotifier {
 
   ToolItem randomTool() => _repository.randomTool();
 
+  /// The greeting is the only thing the name is used for, so a failed read
+  /// just leaves it out instead of blocking the screen.
   Future<void> loadUserName() async {
     try {
       final name = (await _auth.getCurrentUserProfile())?.name.trim();
@@ -154,8 +156,6 @@ class ToolHubViewModel extends ChangeNotifier {
       );
       if (_disposed || load != _loads) return;
 
-      // The weather feeds its own recommendation; a failure here must not
-      // cost the personal one, so it degrades to no weather at all.
       WeatherReading? reading;
       try {
         reading = await _weather.currentWeather();
@@ -233,6 +233,32 @@ class ToolHubViewModel extends ChangeNotifier {
     if (id == null || recommendation == null || _recommendationOpened) return;
     _recommendationOpened = true;
     _recommendationLog.logOpened(id, toolId: recommendation.tool.id);
+  }
+
+  Future<void> loadWeatherSuggestion() async {
+    final reading = await _weather.currentWeather();
+    if (_disposed) return;
+
+    final weather = reading.weather;
+    _weatherSuggestion = weather == null
+        ? null
+        : WeatherSuggestion.forWeather(weather, _openableTools());
+    debugPrint('[ContextAware] ${reading.outcome.name}: $weather');
+    notifyListeners();
+
+    if (reading.outcome == WeatherOutcome.offline) _retryWhenOnline();
+  }
+
+  /// Asks again the first time the phone reports a connection. Only once:
+  /// a phone on Wi-Fi without internet reports a connection right away, and
+  /// retrying every time would loop.
+  void _retryWhenOnline() {
+    if (_weatherRetried) return;
+    _weatherRetried = true;
+    _waitingForConnection = _weather.onlineChanges
+        .where((online) => online)
+        .take(1)
+        .listen((_) => unawaited(loadWeatherSuggestion()));
   }
 
   void openWeatherRecommendation() {
@@ -313,6 +339,7 @@ class ToolHubViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _waitingForConnection?.cancel();
     _weather.dispose();
     super.dispose();
   }

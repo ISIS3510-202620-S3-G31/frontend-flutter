@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../data/models/breathing_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../view_model/custom_breathing_view_model.dart';
-import 'breathing_music_card.dart';
+import 'breathing_circle.dart';
+import 'breathing_music_sheet.dart';
+import 'breathing_round_button.dart';
+import 'custom_rhythm_sheet.dart';
 import 'duration_pills.dart';
 import 'pattern_selector.dart';
 import 'session_controls.dart';
-import 'timer_card.dart';
 
-/// Breathing session with a rhythm countdown, pattern selector, steppers and session controls.
 class CustomBreathingScreen extends StatefulWidget {
   const CustomBreathingScreen({super.key, this.viewModel, this.onBack});
 
@@ -55,12 +57,54 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
     Navigator.maybePop(context, _viewModel.isCompleted);
   }
 
+  /// After the last cycle, play starts a new session from the beginning.
+  void _toggleRunning() {
+    if (_viewModel.isCompleted) _viewModel.resetSession();
+    _viewModel.toggleRunning();
+  }
+
+  /// The tracks sheet made by the team (Jamendo, cache, preview, download).
+  void _openMusic() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BreathingMusicSheet(viewModel: _viewModel),
+    ).whenComplete(() {
+      _viewModel.stopPreview();
+    });
+  }
+
+  /// Choosing Custom the first time opens the sheet to set the rhythm.
+  void _selectPattern(BreathingPattern pattern) {
+    _viewModel.selectPattern(pattern);
+    if (pattern.isCustom && !_viewModel.isCustomConfigured) {
+      _editCustomRhythm();
+    }
+  }
+
+  void _editCustomRhythm() {
+    final state = _viewModel.state;
+    showCustomRhythmSheet(
+      context,
+      inhale: state.inhaleSeconds,
+      hold: state.holdSeconds,
+      exhale: state.exhaleSeconds,
+      onDone: (inhale, hold, exhale) => _viewModel.saveCustomRhythm(
+        inhale: inhale,
+        hold: hold,
+        exhale: exhale,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
         final state = _viewModel.state;
+        final isReady = _viewModel.isReady;
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark,
@@ -71,60 +115,122 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
                 children: [
                   ScreenHeader(
                     title: Text(
-                      'Custom breathing',
-                      style: AppText.breathingTitle,
+                      'Custom Breathing',
+                      style: AppText.h1,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: 'Build your own rhythm',
                     onBack: widget.onBack,
                   ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: SizedBox(
+                      height: 48,
+                      child: Row(
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8, bottom: 16),
-                            child: BreathingMusicCard(viewModel: _viewModel),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: TimerCard(state: state),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10, bottom: 8),
-                            child: DurationPills(
-                              selectedMinutes: state.sessionMinutes,
-                              onSelected: _viewModel.selectDuration,
+                          Expanded(
+                            child: Center(
+                              child: isReady
+                                  ? PatternSelector(
+                                      selected: state.pattern,
+                                      onSelected: _selectPattern,
+                                      onEditCustom: _editCustomRhythm,
+                                    )
+                                  : _CyclesText(
+                                      count: _viewModel.completedCycles,
+                                    ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: PatternSelector(
-                              selected: state.pattern,
-                              onSelected: _viewModel.selectPattern,
-                            ),
-                          ),
+                          const SizedBox(width: 12),
+                          _MusicButton(state: state, onPressed: _openMusic),
                         ],
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(40, 8, 40, 24),
-                    child: SessionControls(
-                      isRunning: state.isRunning,
-                      onReset: _viewModel.resetSession,
-                      onToggleRunning: _viewModel.toggleRunning,
-                      onFinish: _finishSession,
+                  Expanded(
+                    child: Center(
+                      // On short phones everything shrinks instead of overflowing.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            BreathingCircle(
+                              state: state,
+                              isReady: isReady,
+                              isCompleted: _viewModel.isCompleted,
+                            ),
+                            if (isReady) ...[
+                              const SizedBox(height: 24),
+                              DurationPills(
+                                selectedMinutes: state.sessionMinutes,
+                                onSelected: _viewModel.selectDuration,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
+                  SessionControls(
+                    isRunning: state.isRunning,
+                    isReady: isReady,
+                    canReset: _viewModel.canReset,
+                    onReset: _viewModel.resetSession,
+                    onToggleRunning: _toggleRunning,
+                    onFinish: _finishSession,
+                  ),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// "N cycles" from the first finished cycle; nothing before it.
+class _CyclesText extends StatelessWidget {
+  const _CyclesText({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    if (count == 0) return const SizedBox.shrink();
+    return Text(count == 1 ? '1 cycle' : '$count cycles', style: AppText.h3);
+  }
+}
+
+
+class _MusicButton extends StatelessWidget {
+  const _MusicButton({required this.state, required this.onPressed});
+
+  final CustomBreathingState state;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final playing =
+        state.isMusicEnabled && state.isRunning && state.selectedTrack != null;
+
+    return BreathingRoundButton(
+      filled: playing,
+      icon: Icon(
+        playing
+            ? Icons.graphic_eq
+            : state.isMusicEnabled
+            ? Icons.music_note
+            : Icons.music_off,
+        color: AppColors.text,
+        size: 22,
+      ),
+      semanticLabel: playing
+          ? 'Ambient music playing, choose track'
+          : 'Ambient music',
+      onPressed: onPressed,
     );
   }
 }
