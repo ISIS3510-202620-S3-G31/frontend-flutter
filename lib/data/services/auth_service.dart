@@ -88,6 +88,11 @@ class AuthService {
     return _sessionProfile(user);
   }
 
+  UserModel? currentSessionProfile() {
+    final user = _auth.currentUser;
+    return user == null ? null : _sessionProfile(user);
+  }
+
   /// Registers a new user with Firebase Auth and saves their profile in Firestore.
   Future<UserModel> signUp({
     required String email,

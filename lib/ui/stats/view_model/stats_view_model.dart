@@ -129,6 +129,9 @@ class StatsViewModel extends ChangeNotifier {
     final monthAgo = DateTime(now.year, now.month, now.day - 29);
 
     final data = await _repository.dataSince(monthAgo);
+    // Measured to decide on compute(): a month of history is worked out in a
+    // fraction of a millisecond, less than starting an isolate would cost.
+    final aggregation = Stopwatch()..start();
     final checkIns = data.checkIns;
     final sessions = data.sessions;
     _isEmpty = data.isEmpty;
@@ -151,6 +154,12 @@ class StatsViewModel extends ChangeNotifier {
         .generate(checkIns: checkIns, sessions: sessions, toolNames: toolNames)
         .take(_maxInsightsShown)
         .toList();
+    if (kDebugMode) {
+      debugPrint(
+        '[Stats] Charts worked out in ${aggregation.elapsedMicroseconds} µs '
+        'from ${checkIns.length} check-ins and ${sessions.length} sessions',
+      );
+    }
   }
 
   DayMood? _moodOf(List<CheckIn> checkIns, DateTime day) {

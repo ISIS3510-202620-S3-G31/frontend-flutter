@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/check_in_model.dart';
 import '../models/tool_feedback_model.dart';
 import '../models/tool_session_model.dart';
@@ -11,8 +13,6 @@ class StatsData {
   final List<CheckIn> checkIns;
   final List<ToolSession> sessions;
 
-  /// True while the user has recorded nothing, so the screen can say so
-  /// instead of drawing charts with no numbers behind them.
   bool get isEmpty => checkIns.isEmpty && sessions.isEmpty;
 }
 
@@ -24,10 +24,18 @@ class StatsRepository {
   final FeedbackRepository _feedback;
   final CheckInRepository _checkIns;
 
-  /// The user's own history since [from].
+
   Future<StatsData> dataSince(DateTime from) async {
-    final feedback = await _orEmpty(_feedback.since(from));
-    final checkIns = await _orEmpty(_checkIns.since(from));
+    final watch = Stopwatch()..start();
+    final feedbackRead = _orEmpty(_feedback.since(from));
+    final checkInsRead = _orEmpty(_checkIns.since(from));
+    await Future.wait([feedbackRead, checkInsRead]);
+    // Both are done by now, so these awaits only hand over the lists.
+    final feedback = await feedbackRead;
+    final checkIns = await checkInsRead;
+    if (kDebugMode) {
+      debugPrint('[Stats] Both reads took ${watch.elapsedMilliseconds} ms');
+    }
     return StatsData(
       checkIns: checkIns,
       sessions: [for (final one in feedback) _sessionOf(one)],

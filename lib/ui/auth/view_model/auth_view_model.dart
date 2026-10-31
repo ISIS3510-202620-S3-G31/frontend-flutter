@@ -46,14 +46,23 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  /// Refreshes the currently active user profile from Firestore.
-  Future<void> loadProfile() async {
+  /// Loads the signed-in user's profile. A valid cached copy is shown at once,
+  /// with no spinner; [refresh] (pull-to-refresh) always reads Firestore.
+  Future<void> loadProfile({bool refresh = false}) async {
+    final cached = refresh ? null : _repository.cachedCurrentUserProfile;
+    if (cached != null) {
+      _currentUser = cached;
+      _errorMessage = null;
+      _notify();
+      return;
+    }
+
     _isLoading = true;
     _errorMessage = null;
     _notify();
 
     try {
-      _currentUser = await _repository.getCurrentUserProfile();
+      _currentUser = await _repository.getCurrentUserProfile(refresh: refresh);
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -108,8 +117,6 @@ class AuthViewModel extends ChangeNotifier {
     _errorMessage = null;
     _notify();
 
-    // The cached photos are filed under this id, and Firebase forgets it the
-    // moment the sign-out goes through.
     final userId = _repository.currentUserId;
 
     try {
