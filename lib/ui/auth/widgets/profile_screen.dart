@@ -37,7 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.panel,
+        backgroundColor: AppColors.background,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Sign Out',
@@ -121,7 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   color: AppColors.secondary,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: AppColors.panel,
+                                    color: AppColors.background,
                                     width: 3,
                                   ),
                                 ),
@@ -171,7 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: AppColors.panel,
+                                color: AppColors.surfaceDim,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: AppColors.surfaceDim,
@@ -189,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const Divider(
                                     height: 24,
-                                    color: AppColors.surfaceDim,
+                                    color: AppColors.background,
                                   ),
                                   _ProfileInfoRow(
                                     icon: Icons.cake_outlined,
@@ -200,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   const Divider(
                                     height: 24,
-                                    color: AppColors.surfaceDim,
+                                    color: AppColors.background,
                                   ),
                                   _ProfileInfoRow(
                                     icon: Icons.email_outlined,

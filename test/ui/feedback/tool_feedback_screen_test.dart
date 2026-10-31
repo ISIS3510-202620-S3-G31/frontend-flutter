@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend_flutter/data/models/tool_feedback_model.dart';
 import 'package:frontend_flutter/data/repositories/feedback_repository.dart';
-import 'package:frontend_flutter/ui/core/theme/app_colors.dart';
 import 'package:frontend_flutter/ui/feedback/view_model/tool_feedback_view_model.dart';
 import 'package:frontend_flutter/ui/feedback/widgets/tool_feedback_screen.dart';
 
@@ -76,19 +75,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.saved.single.comment, 'Loved it');
-  });
-
-  testWidgets('no card uses the cream panel, which is not in the palette', (
-    tester,
-  ) async {
-    await show(tester);
-
-    final panels = tester
-        .widgetList<Container>(find.byType(Container))
-        .map((box) => box.decoration)
-        .whereType<BoxDecoration>()
-        .where((box) => box.color == AppColors.panel);
-    expect(panels, isEmpty);
   });
 
   test('a saved feedback carries no mood nor tags', () {

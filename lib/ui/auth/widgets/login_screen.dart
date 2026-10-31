@@ -97,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 88,
                           height: 88,
                           decoration: BoxDecoration(
-                            color: AppColors.panel,
+                            color: AppColors.surfaceDim,
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: AppColors.surfaceDim,
@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppColors.panel,
+                          color: AppColors.surfaceDim,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: AppColors.surfaceDim,

@@ -30,7 +30,7 @@ abstract final class AppTheme {
       surfaceTintColor: Colors.transparent,
     ),
     dialogTheme: const DialogThemeData(
-      backgroundColor: AppColors.panel,
+      backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
     ),
   );
@@ -48,29 +48,29 @@ abstract final class AppTheme {
 
     secondary: AppColors.secondary,
     onSecondary: AppColors.background,
-    secondaryContainer: AppColors.panel,
+    secondaryContainer: AppColors.background,
     onSecondaryContainer: AppColors.text,
 
     tertiary: AppColors.accent,
     onTertiary: AppColors.background,
-    tertiaryContainer: AppColors.panel,
+    tertiaryContainer: AppColors.background,
     onTertiaryContainer: AppColors.text,
 
     error: AppColors.error,
     onError: AppColors.background,
-    errorContainer: AppColors.panel,
+    errorContainer: AppColors.background,
     onErrorContainer: AppColors.error,
 
     surface: AppColors.background,
     onSurface: AppColors.text,
     onSurfaceVariant: AppColors.textMuted,
-    surfaceContainerLowest: AppColors.panel,
-    surfaceContainerLow: AppColors.panel,
+    surfaceContainerLowest: AppColors.background,
+    surfaceContainerLow: AppColors.background,
     surfaceContainer: AppColors.background,
     surfaceContainerHigh: AppColors.surfaceDim,
     surfaceContainerHighest: AppColors.surfaceDim,
     surfaceDim: AppColors.surfaceDim,
-    surfaceBright: AppColors.panel,
+    surfaceBright: AppColors.background,
 
     outline: AppColors.surfaceDim,
     outlineVariant: AppColors.surfaceDim,

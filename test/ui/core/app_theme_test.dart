@@ -6,8 +6,8 @@ import 'package:frontend_flutter/ui/core/theme/app_colors.dart';
 import 'package:frontend_flutter/ui/core/theme/app_theme.dart';
 
 void main() {
-  /// The palette of the design wiki (MS6 §2.3), plus the two warm surfaces
-  /// derived from the background.
+  /// The palette of the design wiki (MS6 §2.3), plus the warm surface derived
+  /// from the background for cards.
   final palette = <int>{
     for (final color in [
       AppColors.primary,
@@ -18,7 +18,6 @@ void main() {
       AppColors.success,
       AppColors.warning,
       AppColors.error,
-      AppColors.panel,
       AppColors.surfaceDim,
     ])
       color.toARGB32() & 0xFFFFFF,
