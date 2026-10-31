@@ -38,12 +38,7 @@ class WeatherReading {
 }
 
 
-/// The weather where the user is, from the phone's location and the weather
-/// API.
-///
-/// Create it once and reuse it: it is not a singleton and every instance opens
-/// its own HTTP client, so one made per read would pile them up. [dispose]
-/// releases that client.
+
 class WeatherRepository {
   WeatherRepository({
     LocationService? location,

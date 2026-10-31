@@ -92,21 +92,15 @@ class ToolHubViewModel extends ChangeNotifier {
 
   WeatherSuggestion? get weatherSuggestion => _weatherSuggestion;
 
-  /// The weather-based recommendation, shown next to [recommendation]. Null
-  /// until [loadRecommendation] finishes, and when the weather has no opinion
-  /// or could not be read.
+
   Recommendation? get weatherRecommendation => _weatherRecommendation;
 
-  /// The last weather read, null until [loadRecommendation] finishes. Carries
-  /// the outcome, so the screen can tell current weather, last known weather
-  /// and a refused location apart.
   WeatherReading? get weatherReading => _weatherReading;
 
-  /// True while [loadRecommendation] is in flight, so the screen can show
-  /// that the recommendations — the weather read included — are still loading.
+
   bool get isRecommendationLoading => _recommendationLoading;
 
-  /// Null until [loadUserName] finishes, and when the profile cannot be read.
+
   String? get userName => _userName;
 
   List<ToolItem> get tools => _repository.toolsIn(_selectedCategory);
@@ -138,8 +132,7 @@ class ToolHubViewModel extends ChangeNotifier {
 
   ToolItem randomTool() => _repository.randomTool();
 
-  /// The greeting is the only thing the name is used for, so a failed read
-  /// just leaves it out instead of blocking the screen.
+ 
   Future<void> loadUserName() async {
     try {
       _userName = (await _auth.getCurrentUserProfile())?.name;
@@ -161,8 +154,6 @@ class ToolHubViewModel extends ChangeNotifier {
       );
       if (_disposed || load != _loads) return;
 
-      // The weather feeds its own recommendation; a failure here must not
-      // cost the personal one, so it degrades to no weather at all.
       WeatherReading? reading;
       try {
         reading = await _weather.currentWeather();
