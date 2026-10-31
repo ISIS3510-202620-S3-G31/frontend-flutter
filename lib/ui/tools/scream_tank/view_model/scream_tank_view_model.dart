@@ -40,7 +40,7 @@ class ScreamTankViewModel extends ChangeNotifier {
   /// The loudest the (smoothed) mic has been in this session, for analytics.
   double _peakDb = 0;
 
-  /// Seconds screamed at or above the goal. Pausing keeps them.
+  /// Seconds screamed, each one counted by how loud it was. Pausing keeps them.
   double _loudSeconds = 0;
   String? _errorMessage;
   bool _canOpenSettings = false;
@@ -108,7 +108,7 @@ class ScreamTankViewModel extends ChangeNotifier {
     final smoothing = 1 - math.exp(-dt / _smoothingSeconds);
     _db += (db - _db) * smoothing;
     _peakDb = math.max(_peakDb, _db);
-    if (_goal.isLoudEnough(_db)) _loudSeconds += dt;
+    _loudSeconds += _goal.fillRateOf(_db) * dt;
     _notify();
 
 
