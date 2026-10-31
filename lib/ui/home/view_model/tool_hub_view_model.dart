@@ -7,6 +7,7 @@ import '../../../data/models/tool_model.dart';
 import '../../../data/models/weather_model.dart';
 import '../../../data/repositories/analytics_repository.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/last_recommendation_repository.dart';
 import '../../../data/repositories/recommendation_log_repository.dart';
 import '../../../data/repositories/stats_repository.dart';
 import '../../../data/repositories/tool_repository.dart';
@@ -40,6 +41,7 @@ class ToolHubViewModel extends ChangeNotifier {
     RecommendationLogRepository? recommendationLog,
     AuthRepository? auth,
     WeatherRepository? weather,
+    LastRecommendationRepository? lastRecommendations,
     this._openableToolIds,
     DateTime Function()? now,
   }) : _repository = repository ?? const ToolRepository(),
@@ -51,6 +53,8 @@ class ToolHubViewModel extends ChangeNotifier {
        // One repository for the whole view model: each instance opens its own
        // HTTP client, so making one per load would pile them up.
        _weather = weather ?? WeatherRepository(),
+       _lastRecommendations =
+           lastRecommendations ?? LastRecommendationRepository(),
        _now = now ?? DateTime.now;
 
   final ToolRepository _repository;
@@ -60,12 +64,14 @@ class ToolHubViewModel extends ChangeNotifier {
   final RecommendationLogRepository _recommendationLog;
   final AuthRepository _auth;
   final WeatherRepository _weather;
+  final LastRecommendationRepository _lastRecommendations;
   final Set<String>? _openableToolIds;
   final DateTime Function() _now;
 
   ToolCategory _selectedCategory = ToolCategory.all;
   HomeTab _selectedTab = HomeTab.home;
   Recommendation? _recommendation;
+  Recommendation? _lastRecommendation;
   String? _strategy;
   String? _recommendationLogId;
   bool _recommendationOpened = false;
@@ -86,14 +92,15 @@ class ToolHubViewModel extends ChangeNotifier {
   /// [loadRecommendation] finishes.
   Recommendation? get recommendation => _recommendation;
 
+  /// The recommendation saved in the previous session, shown as "Your last
+  /// recommendation". Null on the first launch.
+  Recommendation? get lastRecommendation => _lastRecommendation;
+
   /// The weather-based recommendation, shown next to [recommendation]. Null
   /// until [loadRecommendation] finishes, and when the weather has no opinion
   /// or could not be read.
   Recommendation? get weatherRecommendation => _weatherRecommendation;
 
-  /// The last weather read, null until [loadRecommendation] finishes. Carries
-  /// the outcome, so the screen can tell current weather, last known weather
-  /// and a refused location apart.
   WeatherReading? get weatherReading => _weatherReading;
 
   /// True while [loadRecommendation] is in flight, so the screen can show
@@ -140,6 +147,17 @@ class ToolHubViewModel extends ChangeNotifier {
       _userName = null;
     }
     if (_disposed) return;
+    notifyListeners();
+  }
+
+
+  Future<void> loadLastRecommendation() async {
+    final last = await _lastRecommendations.load(
+      tools: _openableTools(),
+      userId: _auth.currentUserId,
+    );
+    if (_disposed) return;
+    _lastRecommendation = last;
     notifyListeners();
   }
 
@@ -197,6 +215,13 @@ class ToolHubViewModel extends ChangeNotifier {
           strategy: strategy,
         );
         _recommendationOpened = false;
+        // A new recommendation replaces the saved one for the next launch.
+        unawaited(
+          _lastRecommendations.save(
+            recommendation,
+            userId: _auth.currentUserId,
+          ),
+        );
       }
 
       if (weatherRecommendation == null) {
