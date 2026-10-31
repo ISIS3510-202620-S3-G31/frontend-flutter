@@ -5,9 +5,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/widgets/screen_header.dart';
 import '../view_model/tool_feedback_view_model.dart';
-import 'mood_picker.dart';
+import 'comment_card.dart';
 import 'rating_card.dart';
-import 'reflection_card.dart';
 
 /// Asked right after the user leaves a tool, to keep track of how it went.
 class ToolFeedbackScreen extends StatefulWidget {
@@ -94,17 +93,9 @@ class _ToolFeedbackScreenState extends State<ToolFeedbackScreen> {
                           onChanged: _viewModel.setRating,
                         ),
                         const SizedBox(height: 16),
-                        MoodPicker(
-                          selected: _viewModel.mood,
-                          onSelected: _viewModel.selectMood,
-                        ),
-                        const SizedBox(height: 16),
-                        ReflectionCard(
-                          selectedTags: _viewModel.tags,
-                          onTagToggled: _viewModel.toggleTag,
-                          onCommentChanged: _viewModel.setComment,
-                          maxCommentLength:
-                              ToolFeedbackViewModel.maxCommentLength,
+                        CommentCard(
+                          onChanged: _viewModel.setComment,
+                          maxLength: ToolFeedbackViewModel.maxCommentLength,
                         ),
                       ],
                     ),
@@ -137,7 +128,7 @@ class _BottomBar extends StatelessWidget {
   final bool saving;
   final VoidCallback onFavorite;
 
-  /// Null until the user picks a mood.
+  /// Null while the feedback is being saved.
   final VoidCallback? onSave;
 
   @override
@@ -151,7 +142,7 @@ class _BottomBar extends StatelessWidget {
             selected: favorite,
             label: 'Mark this tool as a favourite',
             child: Material(
-              color: AppColors.panel,
+              color: AppColors.surfaceDim,
               shape: CircleBorder(
                 side: BorderSide(color: AppColors.text.withValues(alpha: 0.15)),
               ),

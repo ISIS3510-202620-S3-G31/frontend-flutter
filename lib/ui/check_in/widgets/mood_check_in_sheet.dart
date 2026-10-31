@@ -162,7 +162,7 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                       helperStyle: AppText.bodyMuted.copyWith(fontSize: 12),
                       helperMaxLines: 2,
                       filled: true,
-                      fillColor: AppColors.panel,
+                      fillColor: AppColors.surfaceDim,
                       // The limit is enforced anyway; the counter was noise.
                       counterText: '',
                       contentPadding: const EdgeInsets.all(14),
@@ -301,7 +301,7 @@ class _EmotionTile extends StatelessWidget {
       selected: isSelected,
       label: emotion.label,
       child: Material(
-        color: isSelected ? emotion.color : AppColors.panel,
+        color: isSelected ? emotion.color : AppColors.surfaceDim,
         borderRadius: BorderRadius.circular(18),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

@@ -254,7 +254,7 @@ class _EmptyStats extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: AppColors.panel,
+            color: AppColors.surfaceDim,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: AppColors.surfaceDim, width: 1.5),
           ),
@@ -265,7 +265,7 @@ class _EmptyStats extends StatelessWidget {
                 height: 64,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
-                  color: AppColors.surfaceDim,
+                  color: AppColors.background,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -315,8 +315,8 @@ class _EmptyStats extends StatelessWidget {
                   onPressed: onOpenToolbox,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.text,
-                    side: const BorderSide(
-                      color: AppColors.surfaceDim,
+                    side: BorderSide(
+                      color: AppColors.text.withValues(alpha: 0.25),
                       width: 1.5,
                     ),
                     shape: RoundedRectangleBorder(
