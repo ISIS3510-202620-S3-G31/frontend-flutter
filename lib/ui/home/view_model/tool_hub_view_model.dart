@@ -103,9 +103,9 @@ class ToolHubViewModel extends ChangeNotifier {
   /// [loadRecommendation] finishes.
   Recommendation? get recommendation => _recommendation;
 
-  /// The weather-based recommendation, shown next to [recommendation]. Null
-  /// until [loadRecommendation] finishes, and when the weather has no opinion
-  /// or could not be read.
+  /// The weather-based recommendation, shown in its own section on the home
+  /// screen. Null until [loadRecommendation] finishes, and when the weather
+  /// has no opinion or could not be read.
   Recommendation? get weatherRecommendation => _weatherRecommendation;
 
   /// The last weather read, null until [loadRecommendation] finishes. Carries

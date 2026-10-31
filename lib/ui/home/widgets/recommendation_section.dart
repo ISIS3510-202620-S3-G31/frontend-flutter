@@ -6,37 +6,30 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 
 /// The "Today's Recommendations" block of the home screen: the personal
-/// suggestion and the weather-based one shown together, plus the option of
-/// letting it pick at random.
+/// suggestion plus the option of letting it pick at random. The weather-based
+/// suggestion is not here — it has its own section,
+/// [WeatherRecommendationSection].
 class RecommendationSection extends StatelessWidget {
   const RecommendationSection({
     super.key,
     required this.recommendation,
-    required this.weatherRecommendation,
     required this.isLoading,
     required this.onOpen,
-    required this.onOpenWeather,
     required this.onSurpriseMe,
   });
 
   /// The personal recommendation. Null until it finishes loading.
   final Recommendation? recommendation;
 
-  /// The weather-based recommendation, shown next to [recommendation]. Null
-  /// when the weather has no opinion or could not be read.
-  final Recommendation? weatherRecommendation;
-
   /// True while the recommendations are being loaded, so a placeholder can be
   /// shown instead of an empty gap.
   final bool isLoading;
   final VoidCallback onOpen;
-  final VoidCallback onOpenWeather;
   final VoidCallback onSurpriseMe;
 
   @override
   Widget build(BuildContext context) {
     final suggested = recommendation;
-    final weatherSuggested = weatherRecommendation;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
@@ -63,17 +56,6 @@ class RecommendationSection extends StatelessWidget {
             const SizedBox(height: 12),
           ] else if (isLoading) ...[
             const RecommendationLoadingCard(),
-            const SizedBox(height: 12),
-          ],
-          if (weatherSuggested != null) ...[
-            RecommendationCard(
-              eyebrow: 'BECAUSE OF THE WEATHER',
-              eyebrowColor: AppColors.secondary,
-              iconAsset: weatherSuggested.tool.iconAsset,
-              title: weatherSuggested.tool.title,
-              subtitle: weatherSuggested.reason,
-              onTap: onOpenWeather,
-            ),
             const SizedBox(height: 12),
           ],
           RecommendationCard(
