@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
+import '../../../data/repositories/offline_sync_repository.dart';
 import '../../auth/widgets/profile_screen.dart';
 import '../../check_in/daily_check_in_prompt.dart';
 import '../../check_in/widgets/mood_check_in_sheet.dart';
@@ -28,7 +29,8 @@ class ToolHubScreen extends StatefulWidget {
   State<ToolHubScreen> createState() => _ToolHubScreenState();
 }
 
-class _ToolHubScreenState extends State<ToolHubScreen> {
+class _ToolHubScreenState extends State<ToolHubScreen>
+    with WidgetsBindingObserver {
   late final ToolHubViewModel _viewModel =
       widget.viewModel ??
       ToolHubViewModel(openableToolIds: toolScreens.keys.toSet());
@@ -39,23 +41,30 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _viewModel.loadUserName();
     _viewModel.loadLastRecommendation();
+    _viewModel.watchConnection();
     _viewModel.logScreenView();
+
+    OfflineSyncRepository.shared.start();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Right after creating an account, Register is still open on top of the
-    // home for a moment. A check-in opened then landed above Register and was
-    // closed together with it, so the home waits until it is on top;
-    // isCurrentOf calls this method again when that changes.
+
     if (!_homeStarted && (ModalRoute.isCurrentOf(context) ?? true)) {
       _homeStarted = true;
+      // The weather is re-read on a timer only while this screen is visible.
+      _viewModel.startWeatherPolling();
       _startHome();
     }
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) =>
+      _viewModel.onAppLifecycleChanged(state);
 
   Future<void> _startHome() async {
     await _askForCheckIn();
@@ -71,17 +80,21 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // The screen is gone, so the weather timer stops with it; dispose() of an
+    // owned view model cancels it as well.
+    _viewModel.stopWeatherPolling();
     if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
   }
 
-  void _openTool(ToolItem tool) {
+  void _openTool(ToolItem tool, ToolEntryPoint entryPoint) {
     final screen = toolScreens[tool.id];
     if (screen == null) {
       _showMessage('${tool.title} is coming soon!');
       return;
     }
-    openTool(context, tool: tool, screen: screen);
+    openTool(context, tool: tool, screen: screen, entryPoint: entryPoint);
   }
 
   Future<void> _openRandomTool() async {
@@ -90,7 +103,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     // Let the user read the message before the screen changes.
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted || toolScreens[tool.id] == null) return;
-    _openTool(tool);
+    _openTool(tool, ToolEntryPoint.random);
   }
 
   void _showMessage(String message, {int seconds = 2}) {
@@ -139,19 +152,21 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     final recommendation = _viewModel.recommendation;
     if (recommendation == null) return;
     _viewModel.openRecommendation();
-    _openTool(recommendation.tool);
+    _openTool(recommendation.tool, ToolEntryPoint.recommendation);
   }
 
   void _openLastRecommendation() {
     final recommendation = _viewModel.lastRecommendation;
-    if (recommendation != null) _openTool(recommendation.tool);
+    if (recommendation != null) {
+      _openTool(recommendation.tool, ToolEntryPoint.lastRecommendation);
+    }
   }
 
   void _openWeatherRecommendation() {
     final recommendation = _viewModel.weatherRecommendation;
     if (recommendation == null) return;
     _viewModel.openWeatherRecommendation();
-    _openTool(recommendation.tool);
+    _openTool(recommendation.tool, ToolEntryPoint.weather);
   }
 
   Widget _buildTools() {
@@ -201,7 +216,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
                         if (i > 0) const SizedBox(height: 12),
                         ToolCard(
                           tool: tools[i],
-                          onTap: () => _openTool(tools[i]),
+                          onTap: () => _openTool(tools[i], ToolEntryPoint.toolbox),
                         ),
                       ],
                     ],

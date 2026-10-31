@@ -5,8 +5,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/tool_feedback_model.dart';
 
-/// Keeps the tool feedback in `users/{uid}/tool_feedback`, the same place and
-/// shape the backend rules allow for the owner.
 class FeedbackFirestoreService {
   FeedbackFirestoreService({FirebaseFirestore? firestore})
     : _customFirestore = firestore;
@@ -19,13 +17,17 @@ class FeedbackFirestoreService {
   CollectionReference<Map<String, dynamic>> _feedback(String userId) =>
       _firestore.collection('users/$userId/tool_feedback');
 
+
+  /// Saves one answer in a new document and returns its path right away. The
+  /// id is made on the phone, so the offline queue can send the same document
+  /// again without duplicating it.
+  ///
   /// Not awaited: a Firestore write only completes once the server confirms
-  /// it, so without a connection the feedback screen spun forever. Firestore
-  /// keeps the answer on the phone and sends it when it can.
-  Future<void> add(String userId, ToolFeedback feedback) async {
-    unawaited(
-      _feedback(userId).doc().set(feedback.toMap()).catchError(_report),
-    );
+  /// it. Firestore keeps the answer on the phone and sends it when it can.
+  Future<String> add(String userId, ToolFeedback feedback) async {
+    final doc = _feedback(userId).doc();
+    unawaited(doc.set(feedback.toMap()).catchError(_report));
+    return doc.path;
   }
 
   static void _report(Object error) =>

@@ -4,7 +4,7 @@ import 'dart:math';
 import '../models/recommendation_model.dart';
 import '../services/analytics_service.dart';
 
-/// BQ3: writes down which tool the home recommended and whether the user opened it.
+/// BQ11: writes down which tool the home recommended and whether the user opened it.
 class RecommendationLogRepository {
   RecommendationLogRepository({AnalyticsService? analytics})
     : _analytics = analytics ?? AnalyticsService();
@@ -13,6 +13,7 @@ class RecommendationLogRepository {
 
   static const shownEvent = 'recommendation_shown';
   static const openedEvent = 'recommendation_opened';
+  static const tappedEvent = 'recommendation_tapped';
 
   static const _idChars =
       'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -39,6 +40,17 @@ class RecommendationLogRepository {
     unawaited(
       _analytics.logEvent(
         name: openedEvent,
+        parameters: {'recommendation_id': id, 'tool_id': toolId},
+      ),
+    );
+  }
+
+  /// Logs the tap on the recommended card, tied to its impression by [id],
+  /// so the recommendation-engagement metric counts interactions, not shows.
+  void logTapped(String id, {required String toolId}) {
+    unawaited(
+      _analytics.logEvent(
+        name: tappedEvent,
         parameters: {'recommendation_id': id, 'tool_id': toolId},
       ),
     );

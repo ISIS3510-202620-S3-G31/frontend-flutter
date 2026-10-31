@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../data/models/check_in_model.dart';
 import '../../../data/models/insight_model.dart';
+import '../../../data/models/tool_model.dart';
 import '../../../data/models/tool_session_model.dart';
 import '../../../data/repositories/analytics_repository.dart';
 import '../../../data/repositories/stats_repository.dart';
@@ -76,7 +77,11 @@ class StatsViewModel extends ChangeNotifier {
   Future<void> startToolSession({
     required String toolId,
     required String toolName,
-  }) => _analyticsRepo.startToolSession(toolId: toolId, toolName: toolName);
+  }) => _analyticsRepo.startToolSession(
+    toolId: toolId,
+    toolName: toolName,
+    entryPoint: ToolEntryPoint.stats,
+  );
 
   /// Marks that session as completed when the tool reported success.
   Future<void> completeToolSession({

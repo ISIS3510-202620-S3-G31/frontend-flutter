@@ -1,4 +1,5 @@
 import 'package:frontend_flutter/data/models/check_in_model.dart';
+import 'package:frontend_flutter/data/models/pending_write_model.dart';
 import 'package:frontend_flutter/data/repositories/check_in_repository.dart';
 import 'package:frontend_flutter/data/services/microphone_service.dart';
 import 'package:frontend_flutter/data/services/network/network_connectivity_service.dart';
@@ -9,7 +10,10 @@ class FakeCheckInRepository implements CheckInRepository {
   CheckIn? saved;
 
   @override
-  Future<void> save(CheckIn checkIn) async => saved = checkIn;
+  Future<SaveOutcome> save(CheckIn checkIn) async {
+    saved = checkIn;
+    return SaveOutcome.saved;
+  }
 
   @override
   Future<CheckIn?> todaysCheckIn() async => saved;

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../data/models/pending_write_model.dart';
 import '../../../data/models/tool_feedback_model.dart';
 import '../../../data/repositories/feedback_repository.dart';
 
@@ -71,7 +72,7 @@ class ToolFeedbackViewModel extends ChangeNotifier {
     _saving = true;
     _notify();
     try {
-      await _repository.save(
+      final outcome = await _repository.save(
         ToolFeedback(
           toolId: toolId,
           rating: _rating,
@@ -82,7 +83,9 @@ class ToolFeedbackViewModel extends ChangeNotifier {
         ),
       );
       _saved = true;
-      _message = 'Thanks! Your feedback is saved.';
+      _message = outcome == SaveOutcome.saved
+          ? 'Thanks! Your feedback is saved.'
+          : 'Saved on your phone. It will sync when you are back online.';
     } on Exception {
       _message = 'Could not save your feedback. Check your connection.';
     } finally {
