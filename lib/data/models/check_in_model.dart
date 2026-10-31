@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart' show StringCharacters;
+
 /// The six basic emotions the user can log in a check-in.
 enum Emotion {
   happiness('Happiness'),
@@ -32,6 +34,13 @@ class CheckIn {
   /// What the user wrote about the day, empty when they wrote nothing.
   final String note;
 
+
+  static const maxNoteLength = 280;
+
+
+  static String limitNote(String note) =>
+      note.characters.take(maxNoteLength).toString();
+
   /// A check-in is difficult if it has at least one difficult emotion.
   bool get isDifficult => emotions.any((emotion) => emotion.isDifficult);
 
@@ -39,7 +48,7 @@ class CheckIn {
     'emotions': [for (final emotion in emotions) emotion.name],
     'intensity': intensity,
     'timestamp': timestamp.toUtc().toIso8601String(),
-    'note': note,
+    'note': limitNote(note),
   };
 
   static CheckIn fromMap(Map<String, Object?> map) => CheckIn(

@@ -80,6 +80,27 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
     return Row(mainAxisSize: MainAxisSize.min, children: actions);
   }
 
+  /// "123/280" under the note. It turns red in the last 30 characters, so the
+  /// user sees the limit coming before reaching it.
+  Widget _noteCounter(
+    BuildContext context, {
+    required int currentLength,
+    required bool isFocused,
+    required int? maxLength,
+  }) {
+    final max = maxLength ?? CheckInViewModel.maxNoteLength;
+    final left = max - currentLength;
+    final nearLimit = left <= 30;
+    return Text(
+      '$currentLength/$max',
+      semanticsLabel: '$left characters left',
+      style: AppText.bodyMuted.copyWith(
+        fontSize: 12,
+        color: nearLimit ? AppColors.accent : null,
+      ),
+    );
+  }
+
   void _onViewModelChanged() {
     if (!mounted) return;
     // Only the dictation moves the note behind the field's back; when the user
@@ -155,6 +176,7 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                     style: AppText.body,
                     cursorColor: AppColors.primary,
                     onChanged: _viewModel.setNote,
+                    buildCounter: _noteCounter,
                     decoration: InputDecoration(
                       hintText: 'Add a note (optional)',
                       hintStyle: AppText.bodyMuted,
@@ -163,8 +185,6 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                       helperMaxLines: 2,
                       filled: true,
                       fillColor: AppColors.surfaceDim,
-                      // The limit is enforced anyway; the counter was noise.
-                      counterText: '',
                       contentPadding: const EdgeInsets.all(14),
                       suffixIcon: _noteActions(),
                       border: OutlineInputBorder(
