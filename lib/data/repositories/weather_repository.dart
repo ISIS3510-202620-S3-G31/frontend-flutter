@@ -88,6 +88,8 @@ class WeatherRepository {
     }
   }
 
+  Stream<bool> get onlineChanges => _connectivity.onlineChanges;
+
   /// When the check itself fails, the request gets to decide.
   Future<bool> _isOnline() async {
     try {

@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../data/models/recommendation_model.dart';
+import '../../../domain/context/weather_suggestion.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 
-/// The "Today's Recommendations" block of the home screen: what the app
-/// suggests today, plus the option of letting it pick at random.
 class RecommendationSection extends StatelessWidget {
   const RecommendationSection({
     super.key,
     required this.recommendation,
     required this.onOpen,
     required this.onSurpriseMe,
+    this.weatherSuggestion,
+    this.onOpenWeatherSuggestion,
   });
 
   /// Null until the recommendation finishes loading.
@@ -20,9 +21,14 @@ class RecommendationSection extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onSurpriseMe;
 
+  final WeatherSuggestion? weatherSuggestion;
+  final VoidCallback? onOpenWeatherSuggestion;
+
   @override
   Widget build(BuildContext context) {
     final suggested = recommendation;
+    final weather = weatherSuggestion;
+    final openWeather = onOpenWeatherSuggestion;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
@@ -48,6 +54,17 @@ class RecommendationSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
+          if (weather != null && openWeather != null) ...[
+            RecommendationCard(
+              eyebrow: 'WEATHER SUGGESTION',
+              eyebrowColor: AppColors.accent,
+              iconAsset: weather.tool.iconAsset,
+              title: weather.tool.title,
+              subtitle: weather.reason,
+              onTap: openWeather,
+            ),
+            const SizedBox(height: 12),
+          ],
           RecommendationCard(
             eyebrow: 'SURPRISE TOOL',
             eyebrowColor: AppColors.secondary,
@@ -62,8 +79,6 @@ class RecommendationSection extends StatelessWidget {
   }
 }
 
-/// A row in the recommendations list, built like [ToolCard] so the home and
-/// the toolbox read as the same list.
 class RecommendationCard extends StatelessWidget {
   const RecommendationCard({
     super.key,

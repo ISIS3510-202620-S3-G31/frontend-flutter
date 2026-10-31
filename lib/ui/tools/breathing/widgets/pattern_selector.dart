@@ -1,43 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../../data/models/breathing_model.dart';
 
-/// Three pills with the same width: 2-step, 3-step, 4-7-8.
-/// Each option has an icon and a label.
+
 class PatternSelector extends StatelessWidget {
   const PatternSelector({
     super.key,
     required this.selected,
     required this.onSelected,
+    this.onEditCustom,
   });
 
   final BreathingPattern selected;
   final ValueChanged<BreathingPattern> onSelected;
+  final VoidCallback? onEditCustom;
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[];
-    for (final pattern in BreathingPattern.values) {
-      if (children.isNotEmpty) children.add(const SizedBox(width: 8));
-      children.add(
-        Expanded(
-          child: _PatternPill(
-            pattern: pattern,
-            selected: pattern == selected,
-            onTap: () => onSelected(pattern),
-          ),
-        ),
-      );
-    }
-    return Row(children: children);
+    final editCustom = onEditCustom;
+
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.all(4),
+      decoration: const ShapeDecoration(
+        shape: StadiumBorder(side: BorderSide(color: AppColors.secondary)),
+      ),
+      child: Row(
+        children: [
+          for (final pattern in BreathingPattern.values)
+            Expanded(
+              child: _PatternOption(
+                pattern: pattern,
+                selected: pattern == selected,
+                onTap: pattern.isCustom && pattern == selected && editCustom != null
+                    ? editCustom
+                    : () => onSelected(pattern),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
-class _PatternPill extends StatelessWidget {
-  const _PatternPill({
+class _PatternOption extends StatelessWidget {
+  const _PatternOption({
     required this.pattern,
     required this.selected,
     required this.onTap,
@@ -49,31 +58,32 @@ class _PatternPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showEdit = selected && pattern.isCustom;
+
     return Semantics(
       button: true,
       selected: selected,
+      label: showEdit ? 'Custom, edit rhythm' : pattern.label,
+      excludeSemantics: true,
       child: Material(
-        color: selected ? AppColors.secondary : AppColors.surfaceDim,
+        color: selected ? AppColors.secondary : AppColors.background,
         shape: const StadiumBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: SizedBox(
-            height: 46,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SvgPicture.asset(pattern.icon, width: 20, height: 20),
-                const SizedBox(width: 6),
-                Text(
-                  pattern.label,
-                  style: AppText.body.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.text,
-                  ),
-                  maxLines: 1,
-                ),
-              ],
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(pattern.label, style: AppText.body, maxLines: 1),
+                  if (showEdit) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.edit, size: 14, color: AppColors.text),
+                  ],
+                ],
+              ),
             ),
           ),
         ),

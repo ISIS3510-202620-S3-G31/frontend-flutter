@@ -14,11 +14,13 @@ class HomeScreen extends StatelessWidget {
     required this.viewModel,
     required this.onOpenRecommendation,
     required this.onSurpriseMe,
+    required this.onOpenWeatherSuggestion,
   });
 
   final ToolHubViewModel viewModel;
   final VoidCallback onOpenRecommendation;
   final VoidCallback onSurpriseMe;
+  final VoidCallback onOpenWeatherSuggestion;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +73,8 @@ class HomeScreen extends StatelessWidget {
                   recommendation: viewModel.recommendation,
                   onOpen: onOpenRecommendation,
                   onSurpriseMe: onSurpriseMe,
+                  weatherSuggestion: viewModel.weatherSuggestion,
+                  onOpenWeatherSuggestion: onOpenWeatherSuggestion,
                 ),
               ],
             ),

@@ -25,6 +25,16 @@ enum BreathingPattern {
     defaultInhale: 4,
     defaultHold: 7,
     defaultExhale: 8,
+  ),
+
+
+  custom(
+    'Custom',
+    'assets/icons/ic_tool_breathing.svg',
+    true,
+    defaultInhale: 5,
+    defaultHold: 2,
+    defaultExhale: 6,
   );
 
   const BreathingPattern(
@@ -42,16 +52,26 @@ enum BreathingPattern {
   final int defaultInhale;
   final int defaultHold;
   final int defaultExhale;
+
+  bool get isCustom => this == BreathingPattern.custom;
 }
 
+
+const int customMinBreathSeconds = 2;
+const int customMaxSeconds = 10;
+
 enum BreathingPhase {
-  inhale('Breathe in'),
-  hold('Hold'),
-  exhale('Breathe out');
+  inhale('Breathe in', 'Inhale'),
+  hold('Hold', 'Hold'),
+  exhale('Breathe out', 'Exhale');
 
-  const BreathingPhase(this.label);
+  const BreathingPhase(this.label, this.word);
 
+  /// The instruction, read only by the screen reader.
   final String label;
+
+  /// The word shown inside the circle.
+  final String word;
 }
 
 enum BreathingStep {

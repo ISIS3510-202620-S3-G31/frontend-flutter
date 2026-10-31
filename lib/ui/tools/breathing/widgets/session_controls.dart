@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/circle_icon_button.dart';
+import '../../../core/theme/app_text.dart';
+import 'breathing_round_button.dart';
 
-/// Bottom row with three controls:
-/// - Small teal reset button on the left
-/// - Big orange play/pause button with a dark ring in the center
-/// - Small teal check/done button on the right
 class SessionControls extends StatelessWidget {
   const SessionControls({
     super.key,
@@ -15,76 +12,124 @@ class SessionControls extends StatelessWidget {
     required this.onToggleRunning,
     required this.onFinish,
     this.isRunning = true,
+    this.isReady = false,
+    this.canReset = true,
   });
 
   final VoidCallback onReset;
   final VoidCallback onToggleRunning;
   final VoidCallback onFinish;
   final bool isRunning;
+  final bool isReady;
+  final bool canReset;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        CircleIconButton(
-          asset: 'assets/icons/ic_restart.svg',
-          semanticLabel: 'Reset the session',
-          onPressed: onReset,
+        Visibility(
+          visible: canReset,
+          maintainSize: true,
+          maintainAnimation: true,
+          maintainState: true,
+          child: _LabeledButton(
+            label: 'Reset',
+            button: BreathingRoundButton(
+              icon: SvgPicture.asset(
+                'assets/icons/ic_restart.svg',
+                width: 22,
+                height: 22,
+              ),
+              semanticLabel: 'Reset the session',
+              onPressed: onReset,
+            ),
+          ),
         ),
-        _MainActionButton(isRunning: isRunning, onPressed: onToggleRunning),
-        CircleIconButton(
-          asset: 'assets/icons/ic_check.svg',
-          semanticLabel: 'Finish the session',
-          onPressed: onFinish,
+        const SizedBox(width: 40),
+        _PlayPauseButton(
+          isRunning: isRunning,
+          isReady: isReady,
+          onPressed: onToggleRunning,
+        ),
+        const SizedBox(width: 40),
+        _LabeledButton(
+          label: 'Finish',
+          button: BreathingRoundButton(
+            icon: SvgPicture.asset(
+              'assets/icons/ic_check.svg',
+              width: 22,
+              height: 22,
+            ),
+            semanticLabel: 'Finish the session',
+            onPressed: onFinish,
+          ),
         ),
       ],
     );
   }
 }
 
-class _MainActionButton extends StatelessWidget {
-  const _MainActionButton({required this.isRunning, required this.onPressed});
+/// 48 dp round button with its name under it.
+class _LabeledButton extends StatelessWidget {
+  const _LabeledButton({required this.label, required this.button});
+
+  final String label;
+  final Widget button;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 64,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          button,
+          const SizedBox(height: 4),
+          // The button already says it to the screen reader.
+          ExcludeSemantics(child: Text(label, style: AppText.body)),
+        ],
+      ),
+    );
+  }
+}
+
+/// The only orange thing on the screen: 72 dp, play or pause.
+class _PlayPauseButton extends StatelessWidget {
+  const _PlayPauseButton({
+    required this.isRunning,
+    required this.isReady,
+    required this.onPressed,
+  });
 
   final bool isRunning;
+  final bool isReady;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final label = isRunning
+        ? 'Pause'
+        : isReady
+        ? 'Start breathing'
+        : 'Resume';
+
     return Semantics(
       button: true,
-      label: isRunning ? 'Pause the session' : 'Resume the session',
-      child: Container(
-        width: 84,
-        height: 84,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.text, width: 3.5),
-        ),
-        child: Material(
-          color: AppColors.primary,
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onPressed,
-            customBorder: const CircleBorder(),
-            child: SizedBox(
-              width: 66,
-              height: 66,
-              child: Center(
-                child: isRunning
-                    ? SvgPicture.asset(
-                        'assets/icons/ic_pause.svg',
-                        width: 28,
-                        height: 28,
-                      )
-                    : const Icon(
-                        Icons.play_arrow_rounded,
-                        color: AppColors.text,
-                        size: 38,
-                      ),
-              ),
+      label: label,
+      excludeSemantics: true,
+      child: Material(
+        color: AppColors.primary,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox.square(
+            dimension: 72,
+            child: Icon(
+              isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              color: AppColors.text,
+              size: 32,
             ),
           ),
         ),

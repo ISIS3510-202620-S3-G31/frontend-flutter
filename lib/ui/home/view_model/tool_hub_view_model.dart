@@ -9,6 +9,8 @@ import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/recommendation_log_repository.dart';
 import '../../../data/repositories/stats_repository.dart';
 import '../../../data/repositories/tool_repository.dart';
+import '../../../data/repositories/weather_repository.dart';
+import '../../../domain/context/weather_suggestion.dart';
 import '../../../domain/recommendation/frequency_based_strategy.dart';
 import '../../../domain/recommendation/mood_based_strategy.dart';
 import '../../../domain/recommendation/recommendation_strategy.dart';
@@ -35,6 +37,7 @@ class ToolHubViewModel extends ChangeNotifier {
     AnalyticsRepository? analytics,
     RecommendationLogRepository? recommendationLog,
     AuthRepository? auth,
+    WeatherRepository? weather,
     this._openableToolIds,
     DateTime Function()? now,
   }) : _repository = repository ?? const ToolRepository(),
@@ -43,6 +46,7 @@ class ToolHubViewModel extends ChangeNotifier {
        _analytics = analytics ?? AnalyticsRepository(),
        _recommendationLog = recommendationLog ?? RecommendationLogRepository(),
        _auth = auth ?? AuthRepository(),
+       _weather = weather ?? WeatherRepository(),
        _now = now ?? DateTime.now;
 
   final ToolRepository _repository;
@@ -51,6 +55,7 @@ class ToolHubViewModel extends ChangeNotifier {
   final AnalyticsRepository _analytics;
   final RecommendationLogRepository _recommendationLog;
   final AuthRepository _auth;
+  final WeatherRepository _weather;
   final Set<String>? _openableToolIds;
   final DateTime Function() _now;
 
@@ -62,6 +67,9 @@ class ToolHubViewModel extends ChangeNotifier {
   bool _recommendationOpened = false;
   int _loads = 0;
   String? _userName;
+  WeatherSuggestion? _weatherSuggestion;
+  StreamSubscription<bool>? _waitingForConnection;
+  bool _weatherRetried = false;
   bool _disposed = false;
 
   ToolCategory get selectedCategory => _selectedCategory;
@@ -70,7 +78,8 @@ class ToolHubViewModel extends ChangeNotifier {
   /// Null until [loadRecommendation] finishes.
   Recommendation? get recommendation => _recommendation;
 
-  /// Null until [loadUserName] finishes, and when the profile cannot be read.
+  WeatherSuggestion? get weatherSuggestion => _weatherSuggestion;
+
   String? get userName => _userName;
 
   List<ToolItem> get tools => _repository.toolsIn(_selectedCategory);
@@ -157,6 +166,32 @@ class ToolHubViewModel extends ChangeNotifier {
     _recommendationLog.logOpened(id, toolId: recommendation.tool.id);
   }
 
+  Future<void> loadWeatherSuggestion() async {
+    final reading = await _weather.currentWeather();
+    if (_disposed) return;
+
+    final weather = reading.weather;
+    _weatherSuggestion = weather == null
+        ? null
+        : WeatherSuggestion.forWeather(weather, _openableTools());
+    debugPrint('[ContextAware] ${reading.outcome.name}: $weather');
+    notifyListeners();
+
+    if (reading.outcome == WeatherOutcome.offline) _retryWhenOnline();
+  }
+
+  /// Asks again the first time the phone reports a connection. Only once:
+  /// a phone on Wi-Fi without internet reports a connection right away, and
+  /// retrying every time would loop.
+  void _retryWhenOnline() {
+    if (_weatherRetried) return;
+    _weatherRetried = true;
+    _waitingForConnection = _weather.onlineChanges
+        .where((online) => online)
+        .take(1)
+        .listen((_) => unawaited(loadWeatherSuggestion()));
+  }
+
   List<ToolItem> _openableTools() {
     final openable = _openableToolIds;
     final tools = _repository.allTools();
@@ -184,6 +219,7 @@ class ToolHubViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _waitingForConnection?.cancel();
     super.dispose();
   }
 }

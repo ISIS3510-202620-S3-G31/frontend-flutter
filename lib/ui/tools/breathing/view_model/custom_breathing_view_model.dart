@@ -46,6 +46,25 @@ class CustomBreathingViewModel extends ChangeNotifier {
       _state.cycle > _state.totalCycles ||
       (_state.progress >= 1.0 && !_state.isRunning);
 
+  /// Not started yet: the only moment the rhythm and the duration can change.
+  bool get isReady =>
+      !_state.isRunning &&
+      _state.cycle == 1 &&
+      _state.phase == BreathingPhase.inhale &&
+      _state.progress == 0;
+
+  /// Cycles finished so far, shown as "N cycles" while breathing.
+  int get completedCycles =>
+      isCompleted ? _state.totalCycles : _state.cycle - 1;
+
+  /// Reset only makes sense once something has happened.
+  bool get canReset => !isReady;
+
+  /// False until the user taps Done in the Custom rhythm sheet, so choosing
+  /// Custom the first time opens the sheet.
+  bool get isCustomConfigured =>
+      _customTimings.containsKey(BreathingPattern.custom);
+
   /// Message to show once in a snack bar.
   String? get message => _message;
 
@@ -152,7 +171,8 @@ class CustomBreathingViewModel extends ChangeNotifier {
 
     switch (_state.phase) {
       case BreathingPhase.inhale:
-        next = _state.pattern.hasHold
+        // A Custom rhythm with a 0 s hold skips the hold.
+        next = _state.pattern.hasHold && _state.holdSeconds > 0
             ? BreathingPhase.hold
             : BreathingPhase.exhale;
       case BreathingPhase.hold:
@@ -206,19 +226,17 @@ class CustomBreathingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Back to Ready, paused, like the Kotlin app: the rhythm and the duration
+  /// can be changed again before playing.
   void resetSession() {
-    unawaited(_repository.rememberStartedPattern(_state.pattern));
     _phaseElapsed = 0;
     _state = _state.copyWith(
       cycle: 1,
       phase: BreathingPhase.inhale,
       progress: 0,
-      isRunning: true,
+      isRunning: false,
     );
-    _startTimer();
-    if (_state.isMusicEnabled) {
-      _playMusic();
-    }
+    _audioPlayer.pause();
     notifyListeners();
   }
 
@@ -417,6 +435,20 @@ class CustomBreathingViewModel extends ChangeNotifier {
     // Remember the selected pattern so the tool reopens with it.
     unawaited(_repository.rememberStartedPattern(pattern));
     notifyListeners();
+  }
+
+
+  void saveCustomRhythm({
+    required int inhale,
+    required int hold,
+    required int exhale,
+  }) {
+    _customTimings[BreathingPattern.custom] = (
+      inhale: inhale.clamp(customMinBreathSeconds, customMaxSeconds),
+      hold: hold.clamp(0, customMaxSeconds),
+      exhale: exhale.clamp(customMinBreathSeconds, customMaxSeconds),
+    );
+    selectPattern(BreathingPattern.custom);
   }
 
   void changeStep(BreathingStep step, int delta) {
