@@ -44,9 +44,8 @@ class UsageFlowViewModel extends ChangeNotifier {
     );
   }
 
-  /// Closes the tool's analytics session, then marks the flow step done when
-  /// the user stayed long enough for the session to count.
-  Future<void> finishTool() async {
+
+  Future<void> finishTool({bool completed = false}) async {
     final startedAt = _toolStep.startedAt;
     if (currentStep is! ToolStep || startedAt == null) return;
     final seconds = _now().difference(startedAt).inSeconds;
@@ -56,14 +55,16 @@ class UsageFlowViewModel extends ChangeNotifier {
       durationSeconds: seconds,
       exitReason: 'left_tool',
     );
-    if (seconds < _minToolSeconds) return;
+    final counts = tool.finishesByGoal
+        ? completed
+        : seconds >= _minToolSeconds;
+    if (!counts) return;
     _toolStep
       ..durationSeconds = seconds
       ..finished = true;
     notifyListeners();
   }
 
-  /// Called when the user leaves the feedback screen, saved or not.
   void finishFeedback() {
     final step = currentStep;
     if (step is! FeedbackStep) return;

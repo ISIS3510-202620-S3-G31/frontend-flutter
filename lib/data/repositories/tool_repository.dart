@@ -35,5 +35,6 @@ const _tools = [
     description: 'Let it all out in a safe space.',
     iconAsset: 'assets/icons/ic_tool_scream.svg',
     category: ToolCategory.release,
+    finishesByGoal: true,
   ),
 ];

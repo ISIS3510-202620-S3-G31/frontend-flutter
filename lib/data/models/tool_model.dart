@@ -16,6 +16,7 @@ class ToolItem {
     required this.description,
     required this.iconAsset,
     required this.category,
+    this.finishesByGoal = false,
   });
 
   final String id;
@@ -23,4 +24,6 @@ class ToolItem {
   final String description;
   final String iconAsset;
   final ToolCategory category;
+
+  final bool finishesByGoal;
 }
