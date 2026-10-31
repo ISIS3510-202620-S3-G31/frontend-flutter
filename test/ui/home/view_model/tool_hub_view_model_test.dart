@@ -80,15 +80,27 @@ class FakeRecommendationLogRepository extends RecommendationLogRepository {
   FakeRecommendationLogRepository() : super();
 
   int shown = 0;
+  final List<(String id, String toolId)> shownLog = [];
+  final List<(String id, String toolId)> taps = [];
+  final List<(String id, String toolId)> opens = [];
 
   @override
   String logShown(Recommendation recommendation, {required String strategy}) {
     shown++;
-    return 'log-$shown';
+    final id = 'log-$shown';
+    shownLog.add((id, recommendation.tool.id));
+    return id;
   }
 
   @override
-  void logOpened(String id, {required String toolId}) {}
+  void logOpened(String id, {required String toolId}) {
+    opens.add((id, toolId));
+  }
+
+  @override
+  void logTapped(String id, {required String toolId}) {
+    taps.add((id, toolId));
+  }
 }
 
 class FakeAuthRepository extends AuthRepository {
@@ -120,11 +132,14 @@ Weather get sunny => weatherAt(tempC: 20);
 /// Rain, so the weather strategy picks the breathing tool.
 Weather get rainy => weatherAt(tempC: 18, code: 61, rainMm: 1.5);
 
-ToolHubViewModel viewModel(FakeWeatherRepository weather) => ToolHubViewModel(
+ToolHubViewModel viewModel(
+  FakeWeatherRepository weather, {
+  FakeRecommendationLogRepository? recommendationLog,
+}) => ToolHubViewModel(
   repository: const ToolRepository(),
   statsRepository: FakeStatsRepository(),
   recommender: ToolRecommender(),
-  recommendationLog: FakeRecommendationLogRepository(),
+  recommendationLog: recommendationLog ?? FakeRecommendationLogRepository(),
   auth: FakeAuthRepository(),
   weather: weather,
   weatherPollInterval: interval,
@@ -317,6 +332,58 @@ void main() {
         async.elapse(interval * 3);
         expect(weather.reads, 0);
       });
+    });
+  });
+
+  group('recommendation engagement analytics', () {
+    test('tapping the recommended card logs a tap tied to its impression', () async {
+      final weather = FakeWeatherRepository()..enqueue(ready(sunny));
+      final log = FakeRecommendationLogRepository();
+      final vm = viewModel(weather, recommendationLog: log);
+
+      await vm.loadRecommendation();
+      final recommendation = vm.recommendation;
+      expect(recommendation, isNotNull);
+      expect(log.shown, greaterThan(0));
+
+      vm.openRecommendation();
+
+      expect(log.taps, hasLength(1));
+      expect(log.taps.single.$2, recommendation!.tool.id);
+      // The tap points back at the impression that was shown for it.
+      expect(log.shownLog.map((e) => e.$1), contains(log.taps.single.$1));
+      expect(log.opens, hasLength(1));
+
+      // Tapping the same card again does not log a second tap.
+      vm.openRecommendation();
+      expect(log.taps, hasLength(1));
+    });
+
+    test('tapping the weather card logs its own tap', () async {
+      final weather = FakeWeatherRepository()..enqueue(ready(rainy));
+      final log = FakeRecommendationLogRepository();
+      final vm = viewModel(weather, recommendationLog: log);
+
+      await vm.loadRecommendation();
+      final recommendation = vm.weatherRecommendation;
+      expect(recommendation, isNotNull);
+
+      vm.openWeatherRecommendation();
+
+      expect(log.taps, hasLength(1));
+      expect(log.taps.single.$2, recommendation!.tool.id);
+      expect(log.shownLog.map((e) => e.$1), contains(log.taps.single.$1));
+    });
+
+    test('a tap before any recommendation was shown logs nothing', () {
+      final log = FakeRecommendationLogRepository();
+      final vm = viewModel(FakeWeatherRepository(), recommendationLog: log);
+
+      vm.openRecommendation();
+      vm.openWeatherRecommendation();
+
+      expect(log.taps, isEmpty);
+      expect(log.opens, isEmpty);
     });
   });
 }

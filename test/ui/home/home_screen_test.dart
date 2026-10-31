@@ -58,12 +58,22 @@ class FakeStatsRepository extends StatsRepository {
 }
 
 class FakeRecommendationLogRepository extends RecommendationLogRepository {
+  final List<(String id, String toolId)> taps = [];
+  final List<(String id, String toolId)> opens = [];
+
   @override
   String logShown(Recommendation recommendation, {required String strategy}) =>
       'log';
 
   @override
-  void logOpened(String id, {required String toolId}) {}
+  void logOpened(String id, {required String toolId}) {
+    opens.add((id, toolId));
+  }
+
+  @override
+  void logTapped(String id, {required String toolId}) {
+    taps.add((id, toolId));
+  }
 }
 
 class FakeAuthRepository extends AuthRepository {
@@ -90,16 +100,24 @@ Weather get sunny => weatherAt(tempC: 20);
 /// Mild and cloudy, so the weather strategy has no opinion.
 Weather get mild => weatherAt(tempC: 20, code: 2);
 
-ToolHubViewModel viewModel(WeatherReading reading) => ToolHubViewModel(
+ToolHubViewModel viewModel(
+  WeatherReading reading, {
+  FakeRecommendationLogRepository? recommendationLog,
+}) => ToolHubViewModel(
   repository: const ToolRepository(),
   statsRepository: FakeStatsRepository(),
   recommender: ToolRecommender(),
-  recommendationLog: FakeRecommendationLogRepository(),
+  recommendationLog: recommendationLog ?? FakeRecommendationLogRepository(),
   auth: FakeAuthRepository(),
   weather: FakeWeatherRepository(reading),
 );
 
-Future<void> showHome(WidgetTester tester, ToolHubViewModel vm) async {
+Future<void> showHome(
+  WidgetTester tester,
+  ToolHubViewModel vm, {
+  VoidCallback? onOpenRecommendation,
+  VoidCallback? onSurpriseMe,
+}) async {
   // Loaded before pumping: HomeScreen reads the view model in its one build,
   // it does not listen to it (the shell above it does).
   await vm.loadRecommendation();
@@ -108,9 +126,9 @@ Future<void> showHome(WidgetTester tester, ToolHubViewModel vm) async {
       home: Scaffold(
         body: HomeScreen(
           viewModel: vm,
-          onOpenRecommendation: () {},
+          onOpenRecommendation: onOpenRecommendation ?? () {},
           onOpenWeatherRecommendation: () {},
-          onSurpriseMe: () {},
+          onSurpriseMe: onSurpriseMe ?? () {},
         ),
       ),
     ),
@@ -163,5 +181,42 @@ void main() {
 
     expect(find.text('Weather pick'), findsNothing);
     expect(find.text("Today's Recommendations"), findsOneWidget);
+  });
+
+  testWidgets('tapping the suggested card logs the recommendation tap', (
+    tester,
+  ) async {
+    final log = FakeRecommendationLogRepository();
+    final vm = viewModel(
+      WeatherReading(outcome: WeatherOutcome.ready, weather: sunny),
+      recommendationLog: log,
+    );
+
+    await showHome(tester, vm, onOpenRecommendation: vm.openRecommendation);
+
+    await tester.tap(find.text('Custom breathing'));
+    await tester.pump();
+
+    expect(log.taps, hasLength(1));
+    expect(log.taps.single.$2, vm.recommendation!.tool.id);
+    expect(log.opens, hasLength(1));
+  });
+
+  testWidgets('tapping the surprise card logs no recommendation tap', (
+    tester,
+  ) async {
+    final log = FakeRecommendationLogRepository();
+    final vm = viewModel(
+      WeatherReading(outcome: WeatherOutcome.ready, weather: sunny),
+      recommendationLog: log,
+    );
+
+    await showHome(tester, vm, onSurpriseMe: () {});
+
+    await tester.tap(find.text('Leave it to chance'));
+    await tester.pump();
+
+    expect(log.taps, isEmpty);
+    expect(log.opens, isEmpty);
   });
 }

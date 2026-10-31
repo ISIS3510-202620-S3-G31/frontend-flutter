@@ -359,14 +359,19 @@ class ToolHubViewModel extends ChangeNotifier {
     return 'mild';
   }
 
+  /// The user tapped the recommended card on the home screen: the interaction
+  /// event of the recommendation-engagement business question, logged next to
+  /// the opened event so taps can be told apart from impressions.
   void openRecommendation() {
     final id = _recommendationLogId;
     final recommendation = _recommendation;
     if (id == null || recommendation == null || _recommendationOpened) return;
     _recommendationOpened = true;
+    _recommendationLog.logTapped(id, toolId: recommendation.tool.id);
     _recommendationLog.logOpened(id, toolId: recommendation.tool.id);
   }
 
+  /// Same as [openRecommendation], for the weather-based card.
   void openWeatherRecommendation() {
     final id = _weatherRecommendationLogId;
     final recommendation = _weatherRecommendation;
@@ -374,6 +379,7 @@ class ToolHubViewModel extends ChangeNotifier {
       return;
     }
     _weatherRecommendationOpened = true;
+    _recommendationLog.logTapped(id, toolId: recommendation.tool.id);
     _recommendationLog.logOpened(id, toolId: recommendation.tool.id);
   }
 
