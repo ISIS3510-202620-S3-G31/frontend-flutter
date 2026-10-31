@@ -24,7 +24,7 @@ class CheckInViewModel extends ChangeNotifier {
        _microphone = microphone ?? const MicrophoneService(),
        _network = network ?? NetworkConnectivityService();
 
-  static const maxNoteLength = 500;
+  static const maxNoteLength = CheckIn.maxNoteLength;
 
   final CheckInRepository _repository;
   final DateTime Function() _now;
@@ -169,8 +169,8 @@ class CheckInViewModel extends ChangeNotifier {
     final before = _note.substring(0, _spanStart);
     final after = _note.substring(_spanStart + _spanLength);
     final merged = '$before$words$after';
-    final tooLong = merged.length > maxNoteLength;
-    _note = tooLong ? merged.substring(0, maxNoteLength) : merged;
+    _note = CheckIn.limitNote(merged);
+    final tooLong = _note.length < merged.length;
     if (tooLong && _isListening) {
       _dictationMessage =
           'Your note reached the $maxNoteLength character limit.';
@@ -210,7 +210,7 @@ class CheckInViewModel extends ChangeNotifier {
   }
 
   void setNote(String value) {
-    _note = value;
+    _note = CheckIn.limitNote(value);
     // Typing moves the text under the dictated stretch, so the next dictation
     // starts from the caret the widget reports instead of a stale span.
     if (!_isListening) _spanLength = 0;
@@ -231,7 +231,7 @@ class CheckInViewModel extends ChangeNotifier {
           emotions: [for (final leaf in mood.emotions) leaf.emotion],
           intensity: mood.intensity.round(),
           timestamp: _now(),
-          note: _note.trim(),
+          note: CheckIn.limitNote(_note.trim()),
         ),
       );
       _saved = true;

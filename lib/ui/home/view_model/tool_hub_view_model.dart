@@ -7,10 +7,12 @@ import '../../../data/models/tool_model.dart';
 import '../../../data/models/weather_model.dart';
 import '../../../data/repositories/analytics_repository.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/last_recommendation_repository.dart';
 import '../../../data/repositories/recommendation_log_repository.dart';
 import '../../../data/repositories/stats_repository.dart';
 import '../../../data/repositories/tool_repository.dart';
 import '../../../data/repositories/weather_repository.dart';
+import '../../../data/services/connectivity_service.dart';
 import '../../../data/services/location_service.dart';
 import '../../../domain/recommendation/frequency_based_strategy.dart';
 import '../../../domain/recommendation/mood_based_strategy.dart';
@@ -40,6 +42,8 @@ class ToolHubViewModel extends ChangeNotifier {
     RecommendationLogRepository? recommendationLog,
     AuthRepository? auth,
     WeatherRepository? weather,
+    LastRecommendationRepository? lastRecommendations,
+    ConnectivityService? connectivity,
     this._openableToolIds,
     DateTime Function()? now,
   }) : _repository = repository ?? const ToolRepository(),
@@ -51,6 +55,9 @@ class ToolHubViewModel extends ChangeNotifier {
        // One repository for the whole view model: each instance opens its own
        // HTTP client, so making one per load would pile them up.
        _weather = weather ?? WeatherRepository(),
+       _lastRecommendations =
+           lastRecommendations ?? LastRecommendationRepository(),
+       _connectivity = connectivity ?? ConnectivityService(),
        _now = now ?? DateTime.now;
 
   final ToolRepository _repository;
@@ -60,12 +67,15 @@ class ToolHubViewModel extends ChangeNotifier {
   final RecommendationLogRepository _recommendationLog;
   final AuthRepository _auth;
   final WeatherRepository _weather;
+  final LastRecommendationRepository _lastRecommendations;
+  final ConnectivityService _connectivity;
   final Set<String>? _openableToolIds;
   final DateTime Function() _now;
 
   ToolCategory _selectedCategory = ToolCategory.all;
   HomeTab _selectedTab = HomeTab.home;
   Recommendation? _recommendation;
+  Recommendation? _lastRecommendation;
   String? _strategy;
   String? _recommendationLogId;
   bool _recommendationOpened = false;
@@ -77,6 +87,8 @@ class ToolHubViewModel extends ChangeNotifier {
   String? _userName;
   WeatherReading? _weatherReading;
   bool _recommendationLoading = false;
+  bool _offline = false;
+  StreamSubscription<bool>? _connectionChanges;
   bool _disposed = false;
 
   ToolCategory get selectedCategory => _selectedCategory;
@@ -86,15 +98,20 @@ class ToolHubViewModel extends ChangeNotifier {
   /// [loadRecommendation] finishes.
   Recommendation? get recommendation => _recommendation;
 
+  /// The recommendation saved in the previous session, shown as "Your last
+  /// recommendation". Null on the first launch.
+  Recommendation? get lastRecommendation => _lastRecommendation;
+
   /// The weather-based recommendation, shown next to [recommendation]. Null
   /// until [loadRecommendation] finishes, and when the weather has no opinion
   /// or could not be read.
   Recommendation? get weatherRecommendation => _weatherRecommendation;
 
-  /// The last weather read, null until [loadRecommendation] finishes. Carries
-  /// the outcome, so the screen can tell current weather, last known weather
-  /// and a refused location apart.
   WeatherReading? get weatherReading => _weatherReading;
+
+  /// True without a connection. The home then shows [lastRecommendation] in
+  /// place of a new one, which needs the network to be worked out well.
+  bool get isOffline => _offline;
 
   /// True while [loadRecommendation] is in flight, so the screen can show
   /// that the recommendations — the weather read included — are still loading.
@@ -143,11 +160,36 @@ class ToolHubViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+
+  Future<void> loadLastRecommendation() async {
+    final last = await _lastRecommendations.load(
+      tools: _openableTools(),
+      userId: _auth.currentUserId,
+    );
+    if (_disposed) return;
+    _lastRecommendation = last;
+    notifyListeners();
+  }
+
+  /// Follows the connection while the home is open: losing it shows the last
+  /// saved recommendation, and getting it back works out a new one.
+  void watchConnection() {
+    _connectionChanges ??= _connectivity.onlineChanges.listen((online) {
+      // The first event only says how things are; nothing changed.
+      if (_disposed || online == !_offline) return;
+      _offline = !online;
+      notifyListeners();
+      if (online) unawaited(loadRecommendation());
+    });
+  }
+
   Future<void> loadRecommendation() async {
     final load = ++_loads;
     _recommendationLoading = true;
     notifyListeners();
     try {
+      _offline = !await _isOnline();
+      if (_disposed || load != _loads) return;
       final now = _now();
       final data = await _statsRepository.dataSince(
         DateTime(now.year, now.month, now.day - 29),
@@ -185,18 +227,30 @@ class ToolHubViewModel extends ChangeNotifier {
       );
       final weatherStrategy = _strategyName(_recommender.weatherStrategy);
 
-      if (recommendation == null) {
-        _recommendation = null;
-        _strategy = null;
-        _recommendationLogId = null;
-      } else if (!_isOnScreen(_recommendation, _strategy, recommendation, strategy)) {
-        _recommendation = recommendation;
-        _strategy = strategy;
-        _recommendationLogId = _recommendationLog.logShown(
-          recommendation,
-          strategy: strategy,
-        );
-        _recommendationOpened = false;
+      // Offline the history is only what Firestore kept on the phone, so a new
+      // personal recommendation could be worse than the saved one. The card
+      // stays as it is, nothing is saved, and the screen shows the last one.
+      if (!_offline) {
+        if (recommendation == null) {
+          _recommendation = null;
+          _strategy = null;
+          _recommendationLogId = null;
+        } else if (!_isOnScreen(_recommendation, _strategy, recommendation, strategy)) {
+          _recommendation = recommendation;
+          _strategy = strategy;
+          _recommendationLogId = _recommendationLog.logShown(
+            recommendation,
+            strategy: strategy,
+          );
+          _recommendationOpened = false;
+          // A new recommendation replaces the saved one for the next launch.
+          unawaited(
+            _lastRecommendations.save(
+              recommendation,
+              userId: _auth.currentUserId,
+            ),
+          );
+        }
       }
 
       if (weatherRecommendation == null) {
@@ -281,6 +335,15 @@ class ToolHubViewModel extends ChangeNotifier {
     }
   }
 
+  /// When the check itself fails, the app behaves as online, as before.
+  Future<bool> _isOnline() async {
+    try {
+      return await _connectivity.isOnline();
+    } catch (_) {
+      return true;
+    }
+  }
+
   List<ToolItem> _openableTools() {
     final openable = _openableToolIds;
     final tools = _repository.allTools();
@@ -313,6 +376,7 @@ class ToolHubViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _connectionChanges?.cancel();
     _weather.dispose();
     super.dispose();
   }

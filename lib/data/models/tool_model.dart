@@ -20,6 +20,9 @@ enum ToolEntryPoint {
   /// The "Because of the weather" card on the home.
   weather,
 
+  /// The "Your last recommendation" card on the home.
+  lastRecommendation,
+
   /// "Leave it to chance": the app picks a tool at random.
   random,
 

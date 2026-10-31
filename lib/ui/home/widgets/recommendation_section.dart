@@ -5,9 +5,7 @@ import '../../../data/models/recommendation_model.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 
-/// The "Today's Recommendations" block of the home screen: the personal
-/// suggestion and the weather-based one shown together, plus the option of
-/// letting it pick at random.
+
 class RecommendationSection extends StatelessWidget {
   const RecommendationSection({
     super.key,
@@ -17,6 +15,9 @@ class RecommendationSection extends StatelessWidget {
     required this.onOpen,
     required this.onOpenWeather,
     required this.onSurpriseMe,
+    this.lastRecommendation,
+    this.onOpenLast,
+    this.isOffline = false,
   });
 
   /// The personal recommendation. Null until it finishes loading.
@@ -33,10 +34,25 @@ class RecommendationSection extends StatelessWidget {
   final VoidCallback onOpenWeather;
   final VoidCallback onSurpriseMe;
 
+  /// The recommendation saved in the previous session. Hidden when it is the
+  /// same tool as today's, so the same card is not shown twice.
+  final Recommendation? lastRecommendation;
+  final VoidCallback? onOpenLast;
+
+  /// Without a connection no new recommendation is worked out: the last saved
+  /// one is shown, with a line that says why.
+  final bool isOffline;
+
   @override
   Widget build(BuildContext context) {
     final suggested = recommendation;
     final weatherSuggested = weatherRecommendation;
+    final last = lastRecommendation;
+    final openLast = onOpenLast;
+    final showLast =
+        last != null &&
+        openLast != null &&
+        last.tool.id != suggested?.tool.id;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
@@ -51,6 +67,10 @@ class RecommendationSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          if (isOffline) ...[
+            _OfflineNote(hasLastRecommendation: last != null),
+            const SizedBox(height: 12),
+          ],
           if (suggested != null) ...[
             RecommendationCard(
               eyebrow: 'SUGGESTED FOR TODAY',
@@ -61,8 +81,19 @@ class RecommendationSection extends StatelessWidget {
               onTap: onOpen,
             ),
             const SizedBox(height: 12),
-          ] else if (isLoading) ...[
+          ] else if (isLoading && !showLast && !isOffline) ...[
             const RecommendationLoadingCard(),
+            const SizedBox(height: 12),
+          ],
+          if (last != null && openLast != null && showLast) ...[
+            RecommendationCard(
+              eyebrow: 'YOUR LAST RECOMMENDATION',
+              eyebrowColor: AppColors.accent,
+              iconAsset: last.tool.iconAsset,
+              title: last.tool.title,
+              subtitle: last.reason,
+              onTap: openLast,
+            ),
             const SizedBox(height: 12),
           ],
           if (weatherSuggested != null) ...[
@@ -86,6 +117,32 @@ class RecommendationSection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Tells the user why the home shows the last saved recommendation.
+class _OfflineNote extends StatelessWidget {
+  const _OfflineNote({required this.hasLastRecommendation});
+
+  final bool hasLastRecommendation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.cloud_off_rounded, size: 18, color: AppColors.textMuted),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            hasLastRecommendation
+                ? "You're offline. Here is your last saved recommendation."
+                : "You're offline. New recommendations will show up when you "
+                      'reconnect.',
+            style: AppText.bodyMuted,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/user_location_model.dart';
 import 'location_gateway.dart';
 
@@ -142,6 +144,32 @@ class LocationService {
     } on Exception {
       await _lastKnown();
       return _reading(LocationAvailability.noReading);
+    }
+  }
+
+  /// Where the user is, only if they already allowed it and the reading is
+  /// fresh; null otherwise.
+  ///
+  /// For things the user did not ask for, like noting the city of a
+  /// check-in: those must never show the permission prompt, and a stale
+  /// reading could be from another city entirely.
+  Future<UserLocation?> locationIfAllowed() async {
+    try {
+      if (!await _gateway.hasPermission()) {
+        debugPrint('[Location] Not read: the permission was not given.');
+        return null;
+      }
+      final reading = await currentLocation();
+      if (reading.location == null || reading.isStale) {
+        debugPrint(
+          '[Location] Not read: no fresh fix (${reading.outcome.name}).',
+        );
+        return null;
+      }
+      return reading.location;
+    } on Exception catch (error) {
+      debugPrint('[Location] Not read: $error');
+      return null;
     }
   }
 

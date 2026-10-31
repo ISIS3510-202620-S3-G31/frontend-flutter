@@ -16,6 +16,13 @@ class LocationGateway {
   /// the app having permission and cannot be read from `permission_handler`.
   Future<bool> isServiceEnabled() => Geolocator.isLocationServiceEnabled();
 
+  /// Whether the user already let the app read the location. Only looks:
+  /// unlike [requestPermission], it never shows the prompt.
+  Future<bool> hasPermission() async {
+    final status = await ph.Permission.location.status;
+    return status.isGranted || status.isLimited;
+  }
+
   Future<LocationPermissionStatus> requestPermission() async {
     final status = await ph.Permission.location.request();
     // Limited is iOS granting approximate location, which is all the app asks

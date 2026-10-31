@@ -35,17 +35,18 @@ class OfflineSyncRepository {
   StreamSubscription<bool>? _onlineChanges;
   bool _flushing = false;
 
-  Future<SaveOutcome> save(PendingWrite write) async {
-    final sent = _remote.set(write.path, write.data)..ignore();
-    if (await _isOnline()) {
-      try {
-        await sent.timeout(_timeout);
-        return SaveOutcome.saved;
-      } on Exception catch (error) {
-        debugPrint('[OfflineSync] Queued ${write.path}: $error');
-      }
+  /// [write] was already handed to Firestore by its service. Online that is
+  /// enough. Offline it also goes to the queue, so it reaches the server when
+  /// the connection comes back, even if the app is closed first, and the
+  /// screen can say it was saved on the phone.
+  Future<SaveOutcome> track(PendingWrite write) async {
+    if (await _isOnline()) return SaveOutcome.saved;
+    try {
+      await _storage.add(write);
+    } catch (error) {
+      // Firestore still has the write; only the second chance is lost.
+      debugPrint('[OfflineSync] Could not queue ${write.path}: $error');
     }
-    await _storage.add(write);
     return SaveOutcome.savedOffline;
   }
 
@@ -75,10 +76,12 @@ class OfflineSyncRepository {
     }
   }
 
+  /// When the check itself fails (no plugin in tests, for one), the write is
+  /// treated as online: Firestore still keeps it.
   Future<bool> _isOnline() async {
     try {
       return await _connectivity.isOnline();
-    } on Exception {
+    } catch (_) {
       return true;
     }
   }

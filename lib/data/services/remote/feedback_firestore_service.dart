@@ -18,13 +18,16 @@ class FeedbackFirestoreService {
       _firestore.collection('users/$userId/tool_feedback');
 
 
-  String newPath(String userId) => _feedback(userId).doc().path;
-
-
-  Future<void> add(String userId, ToolFeedback feedback) async {
-    unawaited(
-      _feedback(userId).doc().set(feedback.toMap()).catchError(_report),
-    );
+  /// Saves one answer in a new document and returns its path right away. The
+  /// id is made on the phone, so the offline queue can send the same document
+  /// again without duplicating it.
+  ///
+  /// Not awaited: a Firestore write only completes once the server confirms
+  /// it. Firestore keeps the answer on the phone and sends it when it can.
+  Future<String> add(String userId, ToolFeedback feedback) async {
+    final doc = _feedback(userId).doc();
+    unawaited(doc.set(feedback.toMap()).catchError(_report));
+    return doc.path;
   }
 
   static void _report(Object error) =>

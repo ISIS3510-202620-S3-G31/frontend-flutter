@@ -17,14 +17,18 @@ class FeedbackRepository {
   final AuthService _auth;
   final OfflineSyncRepository _sync;
 
+  /// Saves the answer and tells whether it went out or stayed on the phone
+  /// ([SaveOutcome.savedOffline]). Throws [AuthException] when nobody is
+  /// signed in.
   Future<SaveOutcome> save(ToolFeedback feedback) async {
     final userId = _auth.currentUserId;
     if (userId == null) {
       throw const AuthException('Sign in to save your feedback.');
     }
-    return _sync.save(
+    final path = await _service.add(userId, feedback);
+    return _sync.track(
       PendingWrite(
-        path: _service.newPath(userId),
+        path: path,
         userId: userId,
         data: feedback.toMap(),
         createdAt: DateTime.now(),
