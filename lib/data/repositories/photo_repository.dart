@@ -41,12 +41,9 @@ class PhotoRepository {
     return file == null ? null : DailyPhoto(day: day, file: file);
   }
 
-  /// The days of [days] this account has a photo for, taken on this phone or
-  /// on another one.
-  ///
-  /// The days from other phones need the network. Without it the week still
-  /// shows what this phone holds, rather than an empty strip.
-  Future<Set<DateTime>> daysWithPhoto(List<DateTime> days) async {
+  /// The days of [days] with a photo already on this phone. Disk only, so it
+  /// is fast enough to run before the camera starts.
+  Future<Set<DateTime>> daysOnThisPhone(List<DateTime> days) async {
     final userId = _auth.currentUserId;
     if (userId == null) return <DateTime>{};
     final saved = await _dao.daysBetween(userId, days.first, days.last);
@@ -58,15 +55,31 @@ class PhotoRepository {
         saved.add(day);
       }
     }
-    try {
-      saved.addAll(
-        await _remote.daysWithPhoto(userId, days.first, days.last),
-      );
-    } on Exception catch (error) {
-      debugPrint('[PhotoOfTheDay] Could not read the other days: $error');
-    }
     return saved;
   }
+
+  /// The days of [days] this account has a photo for in Firebase, whichever
+  /// phone took it.
+  ///
+  /// Needs the network, so it is kept apart from [daysOnThisPhone]: the week
+  /// shows what this phone holds right away and fills in the rest when the
+  /// answer arrives. Empty when it cannot be asked.
+  Future<Set<DateTime>> daysInFirebase(List<DateTime> days) async {
+    final userId = _auth.currentUserId;
+    if (userId == null) return <DateTime>{};
+    try {
+      return await _remote.daysWithPhoto(userId, days.first, days.last);
+    } on Exception catch (error) {
+      debugPrint('[PhotoOfTheDay] Could not read the other days: $error');
+      return <DateTime>{};
+    }
+  }
+
+  /// Every day of [days] with a photo, here or in Firebase.
+  Future<Set<DateTime>> daysWithPhoto(List<DateTime> days) async => {
+    ...await daysOnThisPhone(days),
+    ...await daysInFirebase(days),
+  };
 
   /// The photo of [day] wherever it is: taken on this phone, already cached
   /// from another one, or downloaded now and cached for next time.
@@ -83,6 +96,9 @@ class PhotoRepository {
     final cached = await _cache.photoFor(userId, day);
     if (cached != null) return DailyPhoto(day: day, file: cached);
 
+    // Firebase Storage keeps retrying a download for minutes without a
+    // connection; better to say no at once.
+    if (!await _connectivity.isOnline()) return null;
     try {
       final bytes = await _remote.download(userId, day);
       if (bytes == null) return null;

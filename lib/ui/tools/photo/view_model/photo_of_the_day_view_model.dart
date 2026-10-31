@@ -125,15 +125,31 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   ];
 
   Future<void> load() async {
-    await _repository.discardSharedLeftovers();
     _todayPhoto = await _repository.photoOf(today);
-    _daysWithPhoto = await _repository.daysWithPhoto(week);
+    _daysWithPhoto = await _repository.daysOnThisPhone(week);
     _notify();
     _onlineChanges ??= _repository.onlineChanges.listen((online) {
       if (online) _uploadPending();
     });
-    _uploadPending();
+    // The camera is what the user opened the tool for; nothing that needs the
+    // network gets to delay it.
+    unawaited(_catchUp());
     await startCamera();
+  }
+
+  /// The slow half of opening: the days other phones have, the photos still
+  /// waiting to upload, and the leftovers of the shared folder. All of it
+  /// shows up late or not at all without costing the user a blank card.
+  Future<void> _catchUp() async {
+    final elsewhere = await _repository.daysInFirebase(week);
+    if (!_disposed && !elsewhere.every(_daysWithPhoto.contains)) {
+      _daysWithPhoto = {..._daysWithPhoto, ...elsewhere};
+      _notify();
+    }
+    if (_disposed) return;
+    await _uploadPending();
+    if (_disposed) return;
+    await _repository.discardSharedLeftovers();
   }
 
   Future<void> startCamera() async {

@@ -23,6 +23,10 @@ class PhotoRemoteService {
   /// is not worth pulling over mobile data.
   static const maxPhotoBytes = 12 * 1024 * 1024;
 
+  /// Wi-Fi without internet still counts as a connection, and Storage would
+  /// keep retrying for minutes; past this the download is given up.
+  static const downloadTimeLimit = Duration(seconds: 15);
+
   final FirebaseStorage? _customStorage;
   final FirebaseFirestore? _customFirestore;
 
@@ -72,7 +76,8 @@ class PhotoRemoteService {
     try {
       return await _storage
           .ref('users/$userId/photos/$name.jpg')
-          .getData(maxPhotoBytes);
+          .getData(maxPhotoBytes)
+          .timeout(downloadTimeLimit);
     } on FirebaseException catch (error) {
       // A day with no photo is an ordinary answer, not a failure.
       if (error.code == 'object-not-found') return null;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
@@ -35,8 +36,26 @@ class FakePhotoRepository implements PhotoRepository {
   }
 
   @override
-  Future<Set<DateTime>> daysWithPhoto(List<DateTime> days) async =>
+  Future<Set<DateTime>> daysOnThisPhone(List<DateTime> days) async =>
       {...stored.keys.where(days.contains)};
+
+  @override
+  Future<Set<DateTime>> daysInFirebase(List<DateTime> days) async {
+    // Hold the answer back the way a slow connection does.
+    if (firebaseGate != null) await firebaseGate!.future;
+    return {...elsewhere.where(days.contains)};
+  }
+
+  Completer<void>? firebaseGate;
+
+  @override
+  Future<Set<DateTime>> daysWithPhoto(List<DateTime> days) async => {
+    ...await daysOnThisPhone(days),
+    ...await daysInFirebase(days),
+  };
+
+  /// Days only another phone has, which arrive after the camera is up.
+  final elsewhere = <DateTime>{};
 
   @override
   Future<DailyPhoto> savePhoto(DateTime day, XFile photo) async {
@@ -149,6 +168,37 @@ void main() {
       expect(viewModel.isCompleted, isTrue);
       // The shutter is done for the day.
       expect(viewModel.canShoot, isFalse);
+    });
+  });
+
+  group('opening the tool', () {
+    test('does not wait for the network to answer', () async {
+      final otherDay = viewModel.week.first;
+      repository.elsewhere.add(otherDay);
+      final gate = Completer<void>();
+      repository.firebaseGate = gate;
+
+      await viewModel.load();
+
+      // Opening finished while Firebase is still thinking: the camera is not
+      // kept behind the week of the other phones.
+      expect(gate.isCompleted, isFalse);
+      expect(viewModel.weekStates.first, DayState.future);
+
+      gate.complete();
+      await pumpEventQueue();
+
+      // And the day shows up on its own once the answer lands.
+      expect(viewModel.weekStates.first, DayState.done);
+    });
+
+    test('shows what this phone has straight away', () async {
+      final mine = viewModel.week.first;
+      repository.stored[mine] = 'taken here';
+
+      await viewModel.load();
+
+      expect(viewModel.weekStates.first, DayState.done);
     });
   });
 

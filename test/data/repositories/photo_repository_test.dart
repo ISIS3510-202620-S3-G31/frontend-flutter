@@ -145,6 +145,21 @@ void main() {
       expect(await repository.daysWithPhoto(week), {monday});
     });
 
+    test('offline, it gives up at once instead of trying to download', () async {
+      connectivity.online = false;
+
+      expect(await repository.anyPhotoOf(wednesday), isNull);
+      // Storage would have retried for minutes; it is never even asked.
+      expect(remote.downloads, isEmpty);
+    });
+
+    test('offline, a photo already cached still shows', () async {
+      await repository.anyPhotoOf(wednesday);
+      connectivity.online = false;
+
+      expect(await repository.anyPhotoOf(wednesday), isNotNull);
+    });
+
     test('shows nothing rather than failing when it cannot be fetched', () async {
       remote.failure = Exception('no connection');
 

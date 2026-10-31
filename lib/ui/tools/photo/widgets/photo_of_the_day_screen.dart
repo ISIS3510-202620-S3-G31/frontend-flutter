@@ -12,7 +12,6 @@ import 'shutter_button.dart';
 import 'viewfinder.dart';
 import 'week_strip.dart';
 
-
 class PhotoOfTheDayScreen extends StatefulWidget {
   const PhotoOfTheDayScreen({super.key, this.viewModel});
 
@@ -82,11 +81,12 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
           date: _viewModel.selectedDay,
           content: content,
           showGrid: onCamera,
+          title: _viewModel.isShowingToday
+              ? 'Frame your moment today'
+              : 'This photo is not on your phone',
           hint: _hintFor(_viewModel),
           flashOn: _viewModel.flashOn,
-          onFlash: camera != null && onCamera
-              ? _viewModel.toggleFlash
-              : null,
+          onFlash: camera != null && onCamera ? _viewModel.toggleFlash : null,
         );
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -204,7 +204,11 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
 
 /// What the card says when there is no image on it yet.
 String _hintFor(PhotoOfTheDayViewModel viewModel) {
-  if (!viewModel.isShowingToday) return 'Nothing saved for this day.';
+  // Only days with a photo can be opened, so an empty card here means it is
+  // in Firebase and could not be fetched.
+  if (!viewModel.isShowingToday) {
+    return 'Connect to the internet to see this photo.';
+  }
   if (viewModel.cameraFailed) {
     return 'Camera not available. Tap to try again, or use the gallery.';
   }
