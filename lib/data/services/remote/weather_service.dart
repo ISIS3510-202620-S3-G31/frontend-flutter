@@ -23,7 +23,20 @@ class WeatherException implements Exception {
   String toString() => 'WeatherException(${failure.name}: $message)';
 }
 
-class WeatherService {
+/// What the app needs from a weather API. An interface so a test can answer
+/// without opening an [HttpClient], the same trick [LocationGateway] uses for
+/// the platform calls.
+abstract interface class WeatherFetcher {
+  Future<Weather> currentWeather({
+    required double latitude,
+    required double longitude,
+  });
+
+  /// Releases the client behind the fetcher. Fakes have nothing to release.
+  void close();
+}
+
+class WeatherService implements WeatherFetcher {
   WeatherService({
     HttpClient? httpClient,
     DateTime Function()? now,
@@ -43,6 +56,7 @@ class WeatherService {
 
   final Duration timeLimit;
 
+  @override
   Future<Weather> currentWeather({
     required double latitude,
     required double longitude,
@@ -72,6 +86,11 @@ class WeatherService {
       throw WeatherException(WeatherFailure.unavailable, error.message);
     }
   }
+
+  /// Releases the HTTP client, so a repository that is done does not leave it
+  /// open. Called by [WeatherRepository.dispose].
+  @override
+  void close() => _client.close();
 
   Future<String> _get(Uri uri) async {
     final request = await _client.getUrl(uri);

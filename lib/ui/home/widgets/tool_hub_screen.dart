@@ -130,6 +130,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
               HomeTab.home => HomeScreen(
                 viewModel: _viewModel,
                 onOpenRecommendation: _openRecommendation,
+                onOpenWeatherRecommendation: _openWeatherRecommendation,
                 onSurpriseMe: _openRandomTool,
                 onOpenWeatherSuggestion: _openWeatherSuggestion,
               ),
@@ -152,6 +153,13 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
   void _openWeatherSuggestion() {
     final suggestion = _viewModel.weatherSuggestion;
     if (suggestion != null) _openTool(suggestion.tool);
+  }
+
+  void _openWeatherRecommendation() {
+    final recommendation = _viewModel.weatherRecommendation;
+    if (recommendation == null) return;
+    _viewModel.openWeatherRecommendation();
+    _openTool(recommendation.tool);
   }
 
   Widget _buildTools() {

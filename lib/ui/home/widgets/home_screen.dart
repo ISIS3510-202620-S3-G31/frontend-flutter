@@ -6,6 +6,7 @@ import '../../core/theme/app_text.dart';
 import '../view_model/tool_hub_view_model.dart';
 import 'recommendation_section.dart';
 import 'user_avatar.dart';
+import 'weather_context_line.dart';
 
 /// Home tab: the greeting and what the app suggests doing today.
 class HomeScreen extends StatelessWidget {
@@ -13,12 +14,14 @@ class HomeScreen extends StatelessWidget {
     super.key,
     required this.viewModel,
     required this.onOpenRecommendation,
+    required this.onOpenWeatherRecommendation,
     required this.onSurpriseMe,
     required this.onOpenWeatherSuggestion,
   });
 
   final ToolHubViewModel viewModel;
   final VoidCallback onOpenRecommendation;
+  final VoidCallback onOpenWeatherRecommendation;
   final VoidCallback onSurpriseMe;
   final VoidCallback onOpenWeatherSuggestion;
 
@@ -68,10 +71,21 @@ class HomeScreen extends StatelessWidget {
                     style: AppText.breathingTitle.copyWith(fontSize: 26),
                   ),
                 ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: WeatherContextLine(
+                    reading: viewModel.weatherReading,
+                    onFixLocation: viewModel.fixLocationAccess,
+                  ),
+                ),
                 const SizedBox(height: 28),
                 RecommendationSection(
                   recommendation: viewModel.recommendation,
+                  weatherRecommendation: viewModel.weatherRecommendation,
+                  isLoading: viewModel.isRecommendationLoading,
                   onOpen: onOpenRecommendation,
+                  onOpenWeather: onOpenWeatherRecommendation,
                   onSurpriseMe: onSurpriseMe,
                   weatherSuggestion: viewModel.weatherSuggestion,
                   onOpenWeatherSuggestion: onOpenWeatherSuggestion,
