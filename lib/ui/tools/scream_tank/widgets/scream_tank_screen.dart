@@ -10,8 +10,7 @@ import 'intensity_meter.dart';
 import 'mic_button.dart';
 import 'tank_illustration.dart';
 
-/// The user screams into the phone: the mic level drives the intensity meter,
-/// and loudness accumulated over time fills the tank.
+
 class ScreamTankScreen extends StatefulWidget {
   const ScreamTankScreen({super.key, this.viewModel});
 
@@ -69,9 +68,10 @@ class _ScreamTankScreenState extends State<ScreamTankScreen>
     );
   }
 
+
   void _finishSession() {
     _viewModel.stopListening();
-    Navigator.maybePop(context, _viewModel.isFull);
+    Navigator.pop(context, _viewModel.isFull);
   }
 
   @override
@@ -79,83 +79,98 @@ class _ScreamTankScreenState extends State<ScreamTankScreen>
     return ListenableBuilder(
       listenable: _viewModel,
       builder: (context, _) {
-        return AnnotatedRegion<SystemUiOverlayStyle>(
-          value: SystemUiOverlayStyle.dark,
-          child: Scaffold(
-            backgroundColor: AppColors.background,
-            body: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  const ScreenHeader(title: ScreamTankWordmark()),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        // 480 px on the 844 px Figma frame, shorter on smaller
-                        // phones so the mic button always fits.
-                        final stageHeight =
-                            (constraints.maxHeight -
-                                    24 -
-                                    _meterHeight -
-                                    _minControlsHeight)
-                                .clamp(260.0, 480.0);
-                        return Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                24,
-                                12,
-                                24,
-                                12,
-                              ),
-                              child: SizedBox(
-                                width: double.infinity,
-                                height: stageHeight,
-                                child: _Stage(
-                                  fill: _viewModel.fill,
-                                  micLevel: _viewModel.micLevel,
-                                  listening: _viewModel.listening,
-                                ),
-                              ),
-                            ),
-                            IntensityMeter(db: _viewModel.db),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 40,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    CircleIconButton(
-                                      asset: 'assets/icons/ic_restart.svg',
-                                      semanticLabel: 'Empty the tank',
-                                      onPressed: _viewModel.restart,
-                                    ),
-                                    MicButton(
-                                      listening: _viewModel.listening,
-                                      level: _viewModel.micLevel,
-                                      onPressed: _viewModel.canToggleMic
-                                          ? _viewModel.toggleMic
-                                          : null,
-                                    ),
-                                    CircleIconButton(
-                                      asset: 'assets/icons/ic_check.svg',
-                                      semanticLabel: 'Finish session',
-                                      onPressed: _finishSession,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+        return PopScope(
+          // Every way back goes through _finishSession, which pops by hand.
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _finishSession();
+          },
+          child: AnnotatedRegion<SystemUiOverlayStyle>(
+            value: SystemUiOverlayStyle.dark,
+            child: Scaffold(
+              backgroundColor: AppColors.background,
+              body: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    ScreenHeader(
+                      title: const ScreamTankWordmark(),
+                      onBack: _finishSession,
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // 480 px on the 844 px Figma frame, shorter on smaller
+                          // phones so the mic button always fits.
+                          final stageHeight =
+                              (constraints.maxHeight -
+                                      24 -
+                                      _meterHeight -
+                                      _minControlsHeight)
+                                  .clamp(260.0, 480.0);
+                          return Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  24,
+                                  12,
+                                  24,
+                                  12,
+                                ),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: stageHeight,
+                                  child: _Stage(
+                                    fill: _viewModel.fill,
+                                    micLevel: _viewModel.micLevel,
+                                    listening: _viewModel.listening,
+                                    isFull: _viewModel.isFull,
+                                    goalDb: _viewModel.goal.targetDb,
+                                  ),
+                                ),
+                              ),
+                              IntensityMeter(
+                                db: _viewModel.db,
+                                goalDb: _viewModel.goal.targetDb,
+                              ),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 40,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      CircleIconButton(
+                                        asset: 'assets/icons/ic_restart.svg',
+                                        semanticLabel: 'Empty the tank',
+                                        onPressed: _viewModel.restart,
+                                      ),
+                                      MicButton(
+                                        listening: _viewModel.listening,
+                                        level: _viewModel.micLevel,
+                                        onPressed: _viewModel.canToggleMic
+                                            ? _viewModel.toggleMic
+                                            : null,
+                                      ),
+                                      CircleIconButton(
+                                        asset: 'assets/icons/ic_check.svg',
+                                        semanticLabel: 'Finish session',
+                                        onPressed: _finishSession,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           ),
@@ -187,11 +202,15 @@ class _Stage extends StatelessWidget {
     required this.fill,
     required this.micLevel,
     required this.listening,
+    required this.isFull,
+    required this.goalDb,
   });
 
   final double fill;
   final double micLevel;
   final bool listening;
+  final bool isFull;
+  final double goalDb;
 
   @override
   Widget build(BuildContext context) {
@@ -221,7 +240,9 @@ class _Stage extends StatelessWidget {
                   SizedBox(
                     width: 270,
                     child: Text(
-                      fill >= 1 ? 'Tank full! Well done.' : 'Let it all out!',
+                      isFull
+                          ? 'Tank full! Well done.'
+                          : 'Reach ${goalDb.round()} dB to fill the tank!',
                       textAlign: TextAlign.center,
                       style: AppText.h3.copyWith(color: AppColors.background),
                     ),

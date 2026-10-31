@@ -54,11 +54,11 @@ class _UsageFlowScreenState extends State<UsageFlowScreen> {
   Future<void> _openTool() async {
     await _viewModel.startTool();
     if (!mounted) return;
-    await Navigator.push(
+    final completed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: widget.toolScreen),
+      MaterialPageRoute<bool>(builder: widget.toolScreen),
     );
-    await _viewModel.finishTool();
+    await _viewModel.finishTool(completed: completed ?? false);
     if (!mounted) return;
     // Under the minimum duration the session is not worth rating, so the flow
     // closes instead of asking the user to start the tool again.

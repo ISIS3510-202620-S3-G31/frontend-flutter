@@ -6,26 +6,27 @@ import 'package:flutter/services.dart';
 
 import '../../../../data/repositories/analytics_repository.dart';
 import '../../../../data/services/microphone_service.dart';
+import '../../../../domain/scream/scream_goal.dart';
 import '../../../../utils/noise_level.dart';
 
 class ScreamTankViewModel extends ChangeNotifier {
   ScreamTankViewModel({
     MicrophoneService? microphone,
     AnalyticsRepository? analytics,
+    ScreamGoal goal = const ScreamGoal(),
   }) : _microphone = microphone ?? const MicrophoneService(),
-       _analytics = analytics ?? AnalyticsRepository();
+       _analytics = analytics ?? AnalyticsRepository(),
+       _goal = goal;
 
   final MicrophoneService _microphone;
   final AnalyticsRepository _analytics;
+  final ScreamGoal _goal;
 
-  /// Seconds of screaming at full level needed to fill the tank.
-  static const _secondsToFill = 20.0;
 
-  /// Quieter readings don't fill the tank, so silence doesn't count.
-  static const _fillThresholdDb = 60.0;
-
-  /// How fast the meter follows the mic, so it doesn't flicker.
   static const _smoothingSeconds = 0.15;
+
+
+  static const _firstReadingSeconds = 0.1;
 
   StreamSubscription<double>? _readings;
   DateTime? _lastReading;
@@ -33,15 +34,23 @@ class ScreamTankViewModel extends ChangeNotifier {
   bool _disposed = false;
 
   double _db = 0;
-  double _fill = 0;
+
+  /// The loudest the (smoothed) mic has been in this session. The tank keeps
+  /// it, so pausing the mic does not empty the tank.
+  double _peakDb = 0;
   String? _errorMessage;
   bool _canOpenSettings = false;
 
+  ScreamGoal get goal => _goal;
   double get db => _db;
-  double get fill => _fill;
+
+  /// How close the loudest moment got to the goal, 0..1.
+  double get fill => _goal.progressOf(_peakDb);
   double get micLevel => levelFromDb(_db);
   bool get listening => _readings != null;
-  bool get isFull => _fill >= 1;
+
+  /// True once the goal loudness was reached: the session is complete.
+  bool get isFull => _goal.isReached(_peakDb);
   bool get canToggleMic => !_requestingPermission && !isFull;
   String? get errorMessage => _errorMessage;
   bool get canOpenSettings => _canOpenSettings;
@@ -85,17 +94,15 @@ class ScreamTankViewModel extends ChangeNotifier {
     final now = DateTime.now();
     final last = _lastReading;
     _lastReading = now;
-    // Capped so a hiccup between readings can't fill the tank in one step.
     final dt = last == null
-        ? 0.0
-        : math.min(now.difference(last).inMicroseconds / 1e6, 0.5);
+        ? _firstReadingSeconds
+        : now.difference(last).inMicroseconds / 1e6;
 
-    final smoothing = dt == 0 ? 1.0 : 1 - math.exp(-dt / _smoothingSeconds);
+    final smoothing = 1 - math.exp(-dt / _smoothingSeconds);
     _db += (db - _db) * smoothing;
-    if (_db >= _fillThresholdDb) {
-      _fill = math.min(1.0, _fill + levelFromDb(_db) * dt / _secondsToFill);
-    }
+    _peakDb = math.max(_peakDb, _db);
     _notify();
+
 
     if (isFull) {
       HapticFeedback.heavyImpact();
@@ -104,6 +111,10 @@ class ScreamTankViewModel extends ChangeNotifier {
       _analytics.completeToolSession(
         toolId: 'scream',
         toolName: 'Scream Tank',
+        additionalParams: {
+          'peak_db': _peakDb.round(),
+          'goal_db': _goal.targetDb.round(),
+        },
       );
     }
   }
@@ -119,7 +130,7 @@ class ScreamTankViewModel extends ChangeNotifier {
 
   void restart() {
     stopListening();
-    _fill = 0;
+    _peakDb = 0;
     _notify();
   }
 
