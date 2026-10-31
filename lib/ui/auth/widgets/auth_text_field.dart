@@ -18,6 +18,14 @@ class AuthTextField extends StatelessWidget {
     this.textInputAction,
     this.inputFormatters,
     this.onFieldSubmitted,
+    this.onChanged,
+    this.errorText,
+    this.helperText,
+    this.readOnly = false,
+    this.onTap,
+    this.autofillHints,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
   });
 
   final String label;
@@ -31,6 +39,26 @@ class AuthTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onFieldSubmitted;
+  final ValueChanged<String>? onChanged;
+
+  final String? errorText;
+
+  /// The rule of the field, shown while there is nothing to complain about.
+  final String? helperText;
+
+  /// For fields filled from a picker instead of the keyboard.
+  final bool readOnly;
+  final VoidCallback? onTap;
+
+  /// What the phone may fill in from the accounts it has saved, such as
+  /// [AutofillHints.email].
+  final Iterable<String>? autofillHints;
+
+  /// Off for emails and passwords, which the keyboard would "fix".
+  final bool autocorrect;
+
+  /// Off for passwords, so the keyboard does not learn them.
+  final bool enableSuggestions;
 
   @override
   Widget build(BuildContext context) {
@@ -55,15 +83,26 @@ class AuthTextField extends StatelessWidget {
           inputFormatters: inputFormatters,
           validator: validator,
           onFieldSubmitted: onFieldSubmitted,
+          onChanged: onChanged,
+          readOnly: readOnly,
+          onTap: onTap,
+          autofillHints: autofillHints,
+          autocorrect: autocorrect,
+          enableSuggestions: enableSuggestions,
           style: AppText.body.copyWith(color: AppColors.text, fontSize: 15),
           cursorColor: AppColors.primary,
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: AppText.bodyMuted.copyWith(fontSize: 14),
+            errorText: errorText,
+            helperText: helperText,
+            helperStyle: AppText.bodyMuted.copyWith(fontSize: 12),
+            helperMaxLines: 2,
+            errorMaxLines: 2,
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: AppColors.panel,
+            fillColor: AppColors.background,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 14,

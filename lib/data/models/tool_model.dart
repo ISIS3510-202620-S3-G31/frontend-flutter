@@ -9,6 +9,27 @@ enum ToolCategory {
   final String label;
 }
 
+
+enum ToolEntryPoint {
+  /// The list in the Tools tab.
+  toolbox,
+
+  /// The personal "Suggested for today" card on the home.
+  recommendation,
+
+  /// The "Because of the weather" card on the home.
+  weather,
+
+  /// The "Your last recommendation" card on the home.
+  lastRecommendation,
+
+  /// "Leave it to chance": the app picks a tool at random.
+  random,
+
+  /// An insight in the Stats tab.
+  stats,
+}
+
 class ToolItem {
   const ToolItem({
     required this.id,

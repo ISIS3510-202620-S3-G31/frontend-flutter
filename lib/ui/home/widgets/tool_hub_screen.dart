@@ -2,24 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
-import '../../../data/services/analytics_service.dart';
+import '../../../data/repositories/offline_sync_repository.dart';
 import '../../auth/widgets/profile_screen.dart';
 import '../../check_in/daily_check_in_prompt.dart';
 import '../../check_in/widgets/mood_check_in_sheet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../../stats/widgets/stats_screen.dart';
-import '../../usage_flow/widgets/usage_flow_screen.dart';
+import '../../usage_flow/tool_launcher.dart';
 import '../tool_routes.dart';
 import '../view_model/tool_hub_view_model.dart';
 import 'category_filter_bar.dart';
-import 'leave_to_chance_card.dart';
-import 'recommendation_section.dart';
+import 'home_screen.dart';
 import 'tool_card.dart';
 import 'tool_hub_header.dart';
 import 'toolbox_bottom_nav.dart';
 
-/// Toolbox: the home screen that lists every wellness tool.
+/// Shell holding the four tabs of the bottom bar.
 class ToolHubScreen extends StatefulWidget {
   const ToolHubScreen({super.key, this.viewModel});
 
@@ -30,20 +29,47 @@ class ToolHubScreen extends StatefulWidget {
   State<ToolHubScreen> createState() => _ToolHubScreenState();
 }
 
-class _ToolHubScreenState extends State<ToolHubScreen> {
+class _ToolHubScreenState extends State<ToolHubScreen>
+    with WidgetsBindingObserver {
   late final ToolHubViewModel _viewModel =
-      widget.viewModel ?? ToolHubViewModel();
+      widget.viewModel ??
+      ToolHubViewModel(openableToolIds: toolScreens.keys.toSet());
   late final bool _ownsViewModel = widget.viewModel == null;
   final _checkInPrompt = DailyCheckInPrompt();
+  bool _homeStarted = false;
 
   @override
   void initState() {
     super.initState();
-    _viewModel.loadRecommendation();
-    _askForCheckIn();
-    AnalyticsService().logScreenView(
-      screenName: _viewModel.selectedTab.screenName,
-    );
+    WidgetsBinding.instance.addObserver(this);
+    _viewModel.loadUserName();
+    _viewModel.loadLastRecommendation();
+    _viewModel.watchConnection();
+    _viewModel.logScreenView();
+
+    OfflineSyncRepository.shared.start();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_homeStarted && (ModalRoute.isCurrentOf(context) ?? true)) {
+      _homeStarted = true;
+      // The weather is re-read on a timer only while this screen is visible.
+      _viewModel.startWeatherPolling();
+      _startHome();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) =>
+      _viewModel.onAppLifecycleChanged(state);
+
+  Future<void> _startHome() async {
+    await _askForCheckIn();
+    if (!mounted) return;
+    await _viewModel.loadRecommendation();
   }
 
   /// The first time the app opens each day, asks the user how they feel.
@@ -54,22 +80,21 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // The screen is gone, so the weather timer stops with it; dispose() of an
+    // owned view model cancels it as well.
+    _viewModel.stopWeatherPolling();
     if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
   }
 
-  void _openTool(ToolItem tool) {
+  void _openTool(ToolItem tool, ToolEntryPoint entryPoint) {
     final screen = toolScreens[tool.id];
     if (screen == null) {
       _showMessage('${tool.title} is coming soon!');
       return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => UsageFlowScreen(tool: tool, toolScreen: screen),
-      ),
-    );
+    openTool(context, tool: tool, screen: screen, entryPoint: entryPoint);
   }
 
   Future<void> _openRandomTool() async {
@@ -78,7 +103,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     // Let the user read the message before the screen changes.
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted || toolScreens[tool.id] == null) return;
-    _openTool(tool);
+    _openTool(tool, ToolEntryPoint.random);
   }
 
   void _showMessage(String message, {int seconds = 2}) {
@@ -105,9 +130,16 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
             ),
             body: switch (_viewModel.selectedTab) {
               HomeTab.stats => StatsScreen(
-                onOpenToolbox: () => _viewModel.selectTab(HomeTab.home),
+                onOpenToolbox: () => _viewModel.selectTab(HomeTab.tools),
               ),
-              HomeTab.home => _buildHome(),
+              HomeTab.home => HomeScreen(
+                viewModel: _viewModel,
+                onOpenRecommendation: _openRecommendation,
+                onOpenWeatherRecommendation: _openWeatherRecommendation,
+                onOpenLastRecommendation: _openLastRecommendation,
+                onSurpriseMe: _openRandomTool,
+              ),
+              HomeTab.tools => _buildTools(),
               HomeTab.profile => const ProfileScreen(),
             },
           ),
@@ -116,9 +148,29 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     );
   }
 
-  Widget _buildHome() {
-    final tools = _viewModel.tools;
+  void _openRecommendation() {
     final recommendation = _viewModel.recommendation;
+    if (recommendation == null) return;
+    _viewModel.openRecommendation();
+    _openTool(recommendation.tool, ToolEntryPoint.recommendation);
+  }
+
+  void _openLastRecommendation() {
+    final recommendation = _viewModel.lastRecommendation;
+    if (recommendation != null) {
+      _openTool(recommendation.tool, ToolEntryPoint.lastRecommendation);
+    }
+  }
+
+  void _openWeatherRecommendation() {
+    final recommendation = _viewModel.weatherRecommendation;
+    if (recommendation == null) return;
+    _viewModel.openWeatherRecommendation();
+    _openTool(recommendation.tool, ToolEntryPoint.weather);
+  }
+
+  Widget _buildTools() {
+    final tools = _viewModel.tools;
 
     return SafeArea(
       bottom: false,
@@ -133,15 +185,6 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
                   selectedCategory: _viewModel.selectedCategory,
                   onCategorySelected: _viewModel.selectCategory,
                 ),
-                LeaveToChanceCard(onSurpriseMe: _openRandomTool),
-                if (recommendation != null)
-                  RecommendationSection(
-                    recommendation: recommendation,
-                    onOpen: () {
-                      _viewModel.openRecommendation();
-                      _openTool(recommendation.tool);
-                    },
-                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
                   child: Row(
@@ -173,7 +216,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
                         if (i > 0) const SizedBox(height: 12),
                         ToolCard(
                           tool: tools[i],
-                          onTap: () => _openTool(tools[i]),
+                          onTap: () => _openTool(tools[i], ToolEntryPoint.toolbox),
                         ),
                       ],
                     ],

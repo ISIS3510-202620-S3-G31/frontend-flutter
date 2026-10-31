@@ -1,15 +1,22 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../domain/auth/registration_rules.dart';
 import '../models/user_model.dart';
 
 /// Exception thrown by [AuthService] with a user-friendly error message.
 class AuthException implements Exception {
   const AuthException(this.message, {this.code});
 
+  static const offline = 'offline';
+
   final String message;
   final String? code;
+
+  bool get isOffline => code == offline || code == 'network-request-failed';
 
   @override
   String toString() => message;
@@ -20,6 +27,15 @@ class AuthService {
   AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _customAuth = auth,
       _customFirestore = firestore;
+
+  static const offlineMessage =
+      'No internet connection. Connect to Wi-Fi or mobile data and try again.';
+  static const _signInFailed = 'Could not sign in. Please try again.';
+  static const _signUpFailed =
+      'Could not create your account. Please try again.';
+
+  /// How long a profile read or write may take before the app moves on.
+  static const _timeLimit = Duration(seconds: 10);
 
   final FirebaseAuth? _customAuth;
   final FirebaseFirestore? _customFirestore;
@@ -33,6 +49,9 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   String? get currentUserId => _auth.currentUser?.uid;
+
+  DocumentReference<Map<String, dynamic>> _profileOf(String uid) =>
+      _firestore.collection('users').doc(uid);
 
   /// Fetches a user's profile from Firestore `users/{uid}`.
   Future<UserModel?> getUserProfile(String uid) async {
@@ -52,11 +71,26 @@ class AuthService {
     }
   }
 
-  /// Fetches the profile of the currently logged-in user.
+  /// The profile of the signed-in user, without ever failing: the Firestore
+  /// document when it can be read (from the server or the phone's copy),
+  /// otherwise what the session saved on the phone knows. Null only when
+  /// nobody is signed in.
   Future<UserModel?> getCurrentUserProfile() async {
-    final uid = currentUserId;
-    if (uid == null) return null;
-    return getUserProfile(uid);
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    try {
+      final snapshot = await _profileOf(user.uid).get().timeout(_timeLimit);
+      final data = snapshot.data();
+      if (data != null) return UserModel.fromMap(data, id: user.uid);
+    } on Exception catch (error) {
+      debugPrint('[AuthService] Could not load users/${user.uid}: $error');
+    }
+    return _sessionProfile(user);
+  }
+
+  UserModel? currentSessionProfile() {
+    final user = _auth.currentUser;
+    return user == null ? null : _sessionProfile(user);
   }
 
   /// Registers a new user with Firebase Auth and saves their profile in Firestore.
@@ -64,142 +98,69 @@ class AuthService {
     required String email,
     required String password,
     required String name,
-    required int age,
+    required DateTime birthDate,
   }) async {
-    UserCredential? credential;
+    final UserCredential credential;
     try {
-      debugPrint('[AuthService] Creating user account for: ${email.trim()}');
       credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-
-      final user = credential.user;
-      if (user == null) {
-        throw const AuthException('Registration failed: no user returned.');
-      }
-
-      debugPrint(
-        '[AuthService] Auth account created (${user.uid}). Updating display name...',
-      );
-      try {
-        await user.updateDisplayName(name.trim());
-      } catch (e) {
-        debugPrint('[AuthService] Non-fatal error updating displayName: $e');
-      }
-
-      final userModel = UserModel(
-        uid: user.uid,
-        email: email.trim(),
-        name: name.trim(),
-        age: age,
-      );
-
-      debugPrint(
-        '[AuthService] Saving user profile to Firestore users/${user.uid}...',
-      );
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .set(userModel.toMap())
-          .timeout(
-            const Duration(seconds: 12),
-            onTimeout: () => throw const AuthException(
-              'Firestore timed out while saving profile. Please check your internet connection and Firestore rules in Firebase Console.',
-              code: 'timeout',
-            ),
-          );
-
-      debugPrint(
-        '[AuthService] User profile created and saved to Firestore successfully.',
-      );
-      return userModel;
-    } on FirebaseAuthException catch (e) {
-      debugPrint(
-        '[AuthService] FirebaseAuthException [${e.code}]: ${e.message}',
-      );
-      throw AuthException(_mapFirebaseError(e), code: e.code);
-    } on FirebaseException catch (e) {
-      debugPrint(
-        '[AuthService] FirebaseException (${e.plugin}) [${e.code}]: ${e.message}',
-      );
-      // Clean up orphaned Auth user if Firestore persistence failed
-      if (credential?.user != null) {
-        try {
-          await credential!.user!.delete();
-          debugPrint('[AuthService] Rolled back orphaned auth user.');
-        } catch (_) {}
-      }
-      if (e.plugin == 'cloud_firestore' && e.code == 'permission-denied') {
-        throw const AuthException(
-          'Firestore permission denied. Please verify your Firestore security rules in Firebase Console.',
-          code: 'permission-denied',
-        );
-      }
-      throw AuthException(
-        'Database error (${e.plugin}/${e.code}): ${e.message ?? e.toString()}',
-        code: e.code,
-      );
-    } catch (e, stack) {
-      debugPrint('[AuthService] Unexpected error: $e\n$stack');
-      if (credential?.user != null) {
-        try {
-          await credential!.user!.delete();
-        } catch (_) {}
-      }
-      if (e is AuthException) rethrow;
-      throw AuthException('Registration failed: ${e.toString()}');
+    } on FirebaseAuthException catch (error) {
+      debugPrint('[AuthService] signUp [${error.code}]: ${error.message}');
+      throw AuthException(_mapFirebaseError(error), code: error.code);
     }
+    final user = credential.user;
+    if (user == null) throw const AuthException(_signUpFailed);
+
+    final profile = UserModel(
+      uid: user.uid,
+      email: email.trim(),
+      name: name.trim(),
+      birthDate: birthDate,
+    );
+    try {
+      await user.updateDisplayName(profile.name);
+    } on Exception catch (error) {
+      debugPrint('[AuthService] Could not save the display name: $error');
+    }
+    try {
+      await _profileOf(user.uid).set(profile.toMap()).timeout(_timeLimit);
+    } on TimeoutException {
+      debugPrint('[AuthService] users/${user.uid} will be saved when online.');
+    } on FirebaseException catch (error) {
+      debugPrint('[AuthService] Could not save users/${user.uid}: $error');
+      await _deleteQuietly(user);
+      throw const AuthException(_signUpFailed);
+    }
+    return profile;
   }
 
-  /// Signs in an existing user with Firebase Auth and loads their Firestore profile.
   Future<UserModel> signIn({
     required String email,
     required String password,
   }) async {
+    final UserCredential credential;
     try {
-      debugPrint('[AuthService] Signing in user: ${email.trim()}');
-      final credential = await _auth.signInWithEmailAndPassword(
+      credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+    } on FirebaseAuthException catch (error) {
+      debugPrint('[AuthService] signIn [${error.code}]: ${error.message}');
+      throw AuthException(_mapFirebaseError(error), code: error.code);
+    }
+    final user = credential.user;
+    if (user == null) throw const AuthException(_signInFailed);
 
-      final user = credential.user;
-      if (user == null) {
-        throw const AuthException('Sign in failed: no user returned.');
-      }
-
-      // Fetch profile from Firestore
-      var profile = await getUserProfile(user.uid);
-
-      // If document is missing in Firestore, build an in-memory profile
-      if (profile == null) {
-        debugPrint(
-          '[AuthService] User profile document not found in Firestore. Using in-memory fallback.',
-        );
-        profile = UserModel(
-          uid: user.uid,
-          email: user.email ?? email.trim(),
-          name: user.displayName ?? '',
-          age: null,
-        );
-      }
-
-      return profile;
-    } on FirebaseAuthException catch (e) {
-      debugPrint(
-        '[AuthService] signIn FirebaseAuthException [${e.code}]: ${e.message}',
-      );
-      throw AuthException(_mapFirebaseError(e), code: e.code);
-    } catch (e) {
-      if (e is AuthException) rethrow;
-      throw AuthException(
-        'An unexpected error occurred during sign in: ${e.toString()}',
-      );
+    try {
+      return await _ensureProfile(user);
+    } on Exception catch (error) {
+      debugPrint('[AuthService] Could not check users/${user.uid}: $error');
+      return _sessionProfile(user);
     }
   }
 
-  /// Signs out the currently authenticated user.
   Future<void> signOut() async {
     try {
       await _auth.signOut();
@@ -208,31 +169,56 @@ class AuthService {
     }
   }
 
-  /// Maps Firebase authentication error codes to human-readable messages.
-  String _mapFirebaseError(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found':
-        return 'No user found with this email address.';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again.';
-      case 'invalid-credential':
-        return 'Invalid email or password. Please verify your credentials.';
-      case 'email-already-in-use':
-        return 'An account already exists with this email address. Try signing in instead.';
-      case 'weak-password':
-        return 'The password is too weak. Please use at least 6 characters.';
-      case 'invalid-email':
-        return 'The email address is invalid.';
-      case 'user-disabled':
-        return 'This account has been disabled. Please contact support.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
-      case 'network-request-failed':
-        return 'Network error. Please check your internet connection.';
-      case 'operation-not-allowed':
-        return 'Email/password sign-in is disabled in Firebase Console. Please enable it under Authentication > Sign-in method.';
-      default:
-        return e.message ?? 'Authentication failed (${e.code}).';
+  Future<UserModel> _ensureProfile(User user) async {
+    final document = _profileOf(user.uid);
+    final snapshot = await document.get().timeout(_timeLimit);
+    final data = snapshot.data();
+    if (data != null) return UserModel.fromMap(data, id: user.uid);
+
+    final email = user.email ?? '';
+    final displayName = user.displayName?.trim() ?? '';
+    final profile = UserModel(
+      uid: user.uid,
+      email: email,
+
+      name: displayName.isNotEmpty ? displayName : email.split('@').first,
+    );
+
+    if (!snapshot.metadata.isFromCache) {
+      await document.set(profile.toMap()).timeout(_timeLimit);
+    }
+    return profile;
+  }
+
+  UserModel _sessionProfile(User user) => UserModel(
+    uid: user.uid,
+    email: user.email ?? '',
+    name: user.displayName?.trim() ?? '',
+  );
+
+  Future<void> _deleteQuietly(User user) async {
+    try {
+      await user.delete();
+    } on Exception catch (error) {
+      debugPrint('[AuthService] Could not remove the account: $error');
     }
   }
+
+
+  String _mapFirebaseError(FirebaseAuthException error) => switch (error.code) {
+
+    'invalid-credential' ||
+    'user-not-found' ||
+    'wrong-password' => 'Incorrect email or password.',
+    'invalid-email' => 'Enter a valid email address.',
+    'email-already-in-use' =>
+      'This email is already registered. Try signing in instead.',
+    'weak-password' =>
+      'Use at least ${RegistrationRules.minPasswordLength} characters, '
+          'one uppercase letter and one number.',
+    'user-disabled' => 'This account has been disabled.',
+    'too-many-requests' => 'Too many attempts. Wait a moment and try again.',
+    'network-request-failed' => offlineMessage,
+    _ => 'Something went wrong. Please try again.',
+  };
 }

@@ -1,42 +1,64 @@
+import 'dart:async';
+import 'dart:math';
+
 import '../models/recommendation_model.dart';
-import '../services/auth_service.dart';
-import '../services/remote/recommendation_firestore_service.dart';
+import '../services/analytics_service.dart';
 
-/// Writes down which tool the app recommended and whether the user opened it.
+/// BQ11: writes down which tool the home recommended and whether the user opened it.
 class RecommendationLogRepository {
-  RecommendationLogRepository({
-    RecommendationFirestoreService? service,
-    AuthService? auth,
-  }) : _service = service ?? RecommendationFirestoreService(),
-       _auth = auth ?? AuthService();
+  RecommendationLogRepository({AnalyticsService? analytics})
+    : _analytics = analytics ?? AnalyticsService();
 
-  final RecommendationFirestoreService _service;
-  final AuthService _auth;
+  final AnalyticsService _analytics;
 
-  /// Returns the id of the record, or null when nobody is signed in.
-  String? logShown(
-    Recommendation recommendation, {
-    required String strategy,
-    required DateTime shownAt,
-  }) {
-    final userId = _auth.currentUserId;
-    if (userId == null) return null;
-    return _service.add(userId, {
-      'toolId': recommendation.tool.id,
-      'toolName': recommendation.tool.title,
-      'strategy': strategy,
-      'reason': recommendation.reason,
-      'shownAt': shownAt.toUtc().toIso8601String(),
-      'opened': false,
-    });
+  static const shownEvent = 'recommendation_shown';
+  static const openedEvent = 'recommendation_opened';
+  static const tappedEvent = 'recommendation_tapped';
+
+  static const _idChars =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  static final _random = Random();
+  String logShown(Recommendation recommendation, {required String strategy}) {
+    final id = _newId();
+    unawaited(
+      _analytics.logEvent(
+        name: shownEvent,
+        parameters: {
+          'recommendation_id': id,
+          'tool_id': recommendation.tool.id,
+          'tool_name': recommendation.tool.title,
+          'strategy': strategy,
+          'reason': recommendation.reason,
+          'emotion': ?recommendation.emotion?.name,
+        },
+      ),
+    );
+    return id;
   }
 
-  void logOpened(String id, DateTime openedAt) {
-    final userId = _auth.currentUserId;
-    if (userId == null) return;
-    _service.update(userId, id, {
-      'opened': true,
-      'openedAt': openedAt.toUtc().toIso8601String(),
-    });
+  void logOpened(String id, {required String toolId}) {
+    unawaited(
+      _analytics.logEvent(
+        name: openedEvent,
+        parameters: {'recommendation_id': id, 'tool_id': toolId},
+      ),
+    );
   }
+
+  /// Logs the tap on the recommended card, tied to its impression by [id],
+  /// so the recommendation-engagement metric counts interactions, not shows.
+  void logTapped(String id, {required String toolId}) {
+    unawaited(
+      _analytics.logEvent(
+        name: tappedEvent,
+        parameters: {'recommendation_id': id, 'tool_id': toolId},
+      ),
+    );
+  }
+
+  /// Twenty random letters and digits, like the ids Firestore makes.
+  static String _newId() => String.fromCharCodes([
+    for (var i = 0; i < 20; i++)
+      _idChars.codeUnitAt(_random.nextInt(_idChars.length)),
+  ]);
 }

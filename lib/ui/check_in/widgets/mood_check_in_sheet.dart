@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../data/models/check_in_model.dart';
 import '../../core/theme/app_colors.dart';
@@ -37,21 +36,83 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
       widget.viewModel ?? CheckInViewModel();
   late final bool _ownsViewModel = widget.viewModel == null;
 
+  final _noteController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _viewModel.addListener(_onViewModelChanged);
+    _viewModel.prepareDictation();
   }
 
   @override
   void dispose() {
     _viewModel.removeListener(_onViewModelChanged);
+    _noteController.dispose();
     if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
   }
 
+  /// Hands the recognizer the caret, so the words land where the user left it.
+  void _toggleDictation() {
+    final selection = _noteController.selection;
+    final caret = selection.isValid
+        ? selection.baseOffset
+        : _noteController.text.length;
+    _viewModel.toggleDictation(at: caret);
+  }
+
+
+  Widget? _noteActions() {
+    final actions = [
+      if (_viewModel.canReadNote || _viewModel.isReadingNote)
+        _ReadNoteButton(
+          isReading: _viewModel.isReadingNote,
+          onPressed: _viewModel.toggleReadNote,
+        ),
+      if (_viewModel.canDictate)
+        _DictateButton(
+          isListening: _viewModel.isListening,
+          onPressed: _toggleDictation,
+        ),
+    ];
+    if (actions.isEmpty) return null;
+    return Row(mainAxisSize: MainAxisSize.min, children: actions);
+  }
+
+  /// "123/280" under the note. It turns red in the last 30 characters, so the
+  /// user sees the limit coming before reaching it.
+  Widget _noteCounter(
+    BuildContext context, {
+    required int currentLength,
+    required bool isFocused,
+    required int? maxLength,
+  }) {
+    final max = maxLength ?? CheckInViewModel.maxNoteLength;
+    final left = max - currentLength;
+    final nearLimit = left <= 30;
+    return Text(
+      '$currentLength/$max',
+      semanticsLabel: '$left characters left',
+      style: AppText.bodyMuted.copyWith(
+        fontSize: 12,
+        color: nearLimit ? AppColors.accent : null,
+      ),
+    );
+  }
+
   void _onViewModelChanged() {
     if (!mounted) return;
+    // Only the dictation moves the note behind the field's back; when the user
+    // types, the two already agree and this does nothing.
+    if (_noteController.text != _viewModel.note) {
+      _noteController.value = TextEditingValue(
+        text: _viewModel.note,
+        selection: TextSelection.collapsed(
+          offset: _viewModel.noteCaret.clamp(0, _viewModel.note.length),
+        ),
+      );
+    }
     final message = _viewModel.message;
     if (message != null) {
       _viewModel.clearMessage();
@@ -77,46 +138,30 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
           listenable: _viewModel,
           builder: (context, _) {
             final selected = _viewModel.emotions;
-            final mood = _viewModel.mood;
             return SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(child: Text('Mood Check-In', style: AppText.h1)),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        icon: const Icon(Icons.close),
-                        color: AppColors.text,
-                        tooltip: 'Close',
+                  // Standard grabber: says the sheet can be dragged away, so
+                  // it replaces the close button and its tooltip.
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceDim,
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                    ],
+                    ),
                   ),
-                  Text(
-                    DateFormat('EEEE, MMMM d').format(DateTime.now()),
-                    style: AppText.bodyMuted,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'How are you feeling?',
-                    style: AppText.h3.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text('Pick one or more.', style: AppText.bodyMuted),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
+                  Text('Check-in', style: AppText.h1),
+                  const SizedBox(height: 16),
                   _EmotionGrid(
                     selected: selected,
                     onSelected: _viewModel.toggleEmotion,
                   ),
-                  if (mood != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      'You feel: ${mood.name}',
-                      style: AppText.body.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ],
                   const SizedBox(height: 20),
                   _IntensitySlider(
                     value: _viewModel.intensity,
@@ -125,24 +170,30 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                   ),
                   const SizedBox(height: 16),
                   TextField(
+                    controller: _noteController,
                     maxLines: 3,
                     maxLength: CheckInViewModel.maxNoteLength,
                     style: AppText.body,
+                    cursorColor: AppColors.primary,
                     onChanged: _viewModel.setNote,
+                    buildCounter: _noteCounter,
                     decoration: InputDecoration(
-                      hintText: 'Add a note about your day (optional)',
+                      hintText: 'Add a note (optional)',
                       hintStyle: AppText.bodyMuted,
+                      helperText: _viewModel.dictationHint,
+                      helperStyle: AppText.bodyMuted.copyWith(fontSize: 12),
+                      helperMaxLines: 2,
                       filled: true,
-                      fillColor: AppColors.panel,
-                      counterStyle: AppText.bodyMuted.copyWith(fontSize: 12),
+                      fillColor: AppColors.surfaceDim,
                       contentPadding: const EdgeInsets.all(14),
+                      suffixIcon: _noteActions(),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   FilledButton(
                     onPressed: _viewModel.canSave ? _viewModel.save : null,
                     style: FilledButton.styleFrom(
@@ -171,6 +222,49 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Starts and stops the dictation. Its state follows the recognizer, which
+/// stops on its own after a pause.
+class _DictateButton extends StatelessWidget {
+  const _DictateButton({required this.isListening, required this.onPressed});
+
+  final bool isListening;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: isListening ? 'Stop dictating' : 'Dictate your note',
+      icon: Icon(
+        isListening ? Icons.mic : Icons.mic_none,
+        color: isListening ? AppColors.accent : AppColors.textMuted,
+        size: 22,
+      ),
+    );
+  }
+}
+
+
+class _ReadNoteButton extends StatelessWidget {
+  const _ReadNoteButton({required this.isReading, required this.onPressed});
+
+  final bool isReading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: isReading ? 'Stop reading' : 'Listen to your note',
+      icon: Icon(
+        isReading ? Icons.stop_circle_outlined : Icons.volume_up_outlined,
+        color: isReading ? AppColors.accent : AppColors.textMuted,
+        size: 22,
       ),
     );
   }
@@ -227,7 +321,7 @@ class _EmotionTile extends StatelessWidget {
       selected: isSelected,
       label: emotion.label,
       child: Material(
-        color: isSelected ? emotion.color : AppColors.panel,
+        color: isSelected ? emotion.color : AppColors.surfaceDim,
         borderRadius: BorderRadius.circular(18),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -272,7 +366,17 @@ class _IntensitySlider extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('How strong is it?', style: AppText.bodyMuted),
+        Row(
+          children: [
+            Expanded(
+              child: Text('How strong is it?', style: AppText.bodyMuted),
+            ),
+            Text(
+              '$value/5',
+              style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             trackHeight: 8,
@@ -280,6 +384,10 @@ class _IntensitySlider extends StatelessWidget {
             inactiveTrackColor: AppColors.surfaceDim,
             thumbColor: color,
             overlayColor: color.withValues(alpha: 0.15),
+            // Material paints these from the generated scheme, which turns
+            // them white. The palette has no white.
+            activeTickMarkColor: AppColors.text.withValues(alpha: 0.25),
+            inactiveTickMarkColor: AppColors.text.withValues(alpha: 0.15),
             showValueIndicator: ShowValueIndicator.never,
           ),
           child: Slider(
@@ -288,17 +396,6 @@ class _IntensitySlider extends StatelessWidget {
             max: 5,
             divisions: 4,
             onChanged: (picked) => onChanged(picked.round()),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Barely', style: AppText.bodyMuted),
-              Text('In the middle', style: AppText.bodyMuted),
-              Text('A lot', style: AppText.bodyMuted),
-            ],
           ),
         ),
       ],

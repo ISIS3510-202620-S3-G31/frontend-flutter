@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
-import 'breathing_ring.dart';
+import 'breathing_orb.dart';
 import '../../../../data/models/breathing_model.dart';
 
 /// Dark card with the state of the session. Bloom uses the Mindful pose,
@@ -18,7 +18,7 @@ class TimerCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: Container(
-        height: 320,
+        height: 360,
         width: double.infinity,
         color: AppColors.text,
         child: Stack(
@@ -29,7 +29,8 @@ class TimerCard extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    BreathingRing(
+                    BreathingOrb(
+                      phase: state.phase,
                       progress: state.progress,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -37,7 +38,7 @@ class TimerCard extends StatelessWidget {
                           Text(
                             '${state.secondsLeft}',
                             style: AppText.h2.copyWith(
-                              fontSize: 64,
+                              fontSize: 72,
                               height: 1,
                               color: AppColors.background,
                               fontWeight: FontWeight.w400,

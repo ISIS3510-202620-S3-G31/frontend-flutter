@@ -1,57 +1,73 @@
-/// User profile model stored in Firestore under 'users/{uid}'.
+import 'package:intl/intl.dart';
+
+import '../../domain/auth/registration_rules.dart';
+
+
 class UserModel {
   const UserModel({
     required this.uid,
     required this.email,
     required this.name,
-    this.age,
+    this.birthDate,
+    this._age,
   });
+
+  static final _dayFormat = DateFormat('yyyy-MM-dd');
 
   final String uid;
   final String email;
   final String name;
-  final int? age;
 
-  UserModel copyWith({String? uid, String? email, String? name, int? age}) {
-    return UserModel(
-      uid: uid ?? this.uid,
-      email: email ?? this.email,
-      name: name ?? this.name,
-      age: age ?? this.age,
-    );
+  /// Null in profiles saved before the date was stored; they only have an age.
+  final DateTime? birthDate;
+
+  final int? _age;
+
+  int? get age {
+    final birthDate = this.birthDate;
+    if (birthDate == null) return _age;
+    return RegistrationRules.ageOn(birthDate, DateTime.now());
   }
 
-  /// Serializes the user model to a map for Firestore.
-  /// Must strictly contain only keys allowed by Firestore rules: ['name', 'age', 'email'].
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'age': age ?? 0,
-      'email': email,
-    };
-  }
 
-  /// Deserializes a Firestore map into a [UserModel].
+  Map<String, dynamic> toMap() => {
+    'name': name,
+    'email': email,
+    'age': ?age,
+    'birthDate': ?_formatDay(birthDate),
+  };
+
+  /// Reads the document as this app or the Kotlin app saved it.
   factory UserModel.fromMap(Map<String, dynamic> map, {String? id}) {
-    int? parseAge(dynamic value) {
-      if (value == null) return null;
-      if (value is int) return value;
-      if (value is num) return value.toInt();
-      if (value is String) return int.tryParse(value);
-      return null;
-    }
-
+    final birthDate = map['birthDate'];
     return UserModel(
-      uid: id ?? map['uid'] as String? ?? '',
-      email: map['email'] as String? ?? '',
-      name: map['name'] as String? ?? '',
-      age: parseAge(map['age']),
+      uid: id ?? _text(map['uid']),
+      email: _text(map['email']),
+      name: _text(map['name']),
+      birthDate: birthDate is String ? DateTime.tryParse(birthDate) : null,
+      age: _readAge(map['age']),
     );
+  }
+
+  static String? _formatDay(DateTime? day) =>
+      day == null ? null : _dayFormat.format(day);
+
+  static String _text(Object? value) => value is String ? value : '';
+
+
+  static int? _readAge(Object? value) {
+    final age = switch (value) {
+      num number => number.toInt(),
+      String text => int.tryParse(text),
+      _ => null,
+    };
+    return age != null && age > 0 ? age : null;
   }
 
   @override
   String toString() =>
-      'UserModel(uid: $uid, email: $email, name: $name, age: $age)';
+      'UserModel(uid: $uid, email: $email, name: $name, '
+      'birthDate: $birthDate, age: $age)';
 
   @override
   bool operator ==(Object other) {
@@ -60,9 +76,10 @@ class UserModel {
         other.uid == uid &&
         other.email == email &&
         other.name == name &&
-        other.age == age;
+        other.birthDate == birthDate &&
+        other._age == _age;
   }
 
   @override
-  int get hashCode => Object.hash(uid, email, name, age);
+  int get hashCode => Object.hash(uid, email, name, birthDate, _age);
 }

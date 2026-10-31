@@ -52,7 +52,9 @@ class BreathingMusicCard extends StatelessWidget {
                   ),
                   child: Icon(
                     isMusicEnabled ? Icons.music_note : Icons.music_off,
-                    color: isMusicEnabled ? Colors.white : AppColors.textMuted,
+                    color: isMusicEnabled
+                        ? AppColors.background
+                        : AppColors.textMuted,
                     size: 22,
                   ),
                 ),

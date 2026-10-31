@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import '../../../data/models/check_in_model.dart';
 import '../../../data/models/insight_model.dart';
+import '../../../data/models/tool_model.dart';
 import '../../../data/models/tool_session_model.dart';
+import '../../../data/repositories/analytics_repository.dart';
 import '../../../data/repositories/stats_repository.dart';
 import '../../../data/repositories/tool_repository.dart';
 import '../../../domain/useful_insights_engine.dart';
@@ -27,6 +29,7 @@ class StatsViewModel extends ChangeNotifier {
   StatsViewModel({
     StatsRepository? repository,
     ToolRepository? toolRepository,
+    this.analytics,
     DateTime Function()? now,
   }) : _repository = repository ?? StatsRepository(),
        _toolRepository = toolRepository ?? const ToolRepository(),
@@ -41,8 +44,14 @@ class StatsViewModel extends ChangeNotifier {
   final DateTime Function() _now;
   final UsefulInsightsEngine _insightsEngine;
 
+  /// Analytics of the sessions opened from an insight; the shared repository
+  /// is created on first use, so plain view model tests never touch Firebase.
+  final AnalyticsRepository? analytics;
+
+  AnalyticsRepository get _analyticsRepo => analytics ?? AnalyticsRepository();
+
   bool _loading = true;
-  bool _isSample = true;
+  bool _isEmpty = true;
   bool _disposed = false;
   Emotion? _topFeeling;
   int _weekCheckIns = 0;
@@ -52,8 +61,9 @@ class StatsViewModel extends ChangeNotifier {
 
   bool get loading => _loading;
 
-  /// True while these numbers are the sample history, not the user's own.
-  bool get isSample => _isSample;
+  /// True while the user has no check-ins and no finished tools, so there is
+  /// nothing to chart yet.
+  bool get isEmpty => _isEmpty;
 
   /// Title of a tool, to show it the same way the toolbox does.
   String toolNameOf(String toolId) {
@@ -62,6 +72,40 @@ class StatsViewModel extends ChangeNotifier {
     }
     return toolId;
   }
+
+  /// Begins the analytics session of a tool opened from an insight.
+  Future<void> startToolSession({
+    required String toolId,
+    required String toolName,
+  }) => _analyticsRepo.startToolSession(
+    toolId: toolId,
+    toolName: toolName,
+    entryPoint: ToolEntryPoint.stats,
+  );
+
+  /// Marks that session as completed when the tool reported success.
+  Future<void> completeToolSession({
+    required String toolId,
+    required String toolName,
+    int? durationSeconds,
+  }) => _analyticsRepo.completeToolSession(
+    toolId: toolId,
+    toolName: toolName,
+    durationSeconds: durationSeconds,
+  );
+
+  /// Closes the session when the user comes back from the tool.
+  Future<void> endToolSession({
+    required String toolId,
+    required String toolName,
+    int? durationSeconds,
+    String? exitReason,
+  }) => _analyticsRepo.endToolSession(
+    toolId: toolId,
+    toolName: toolName,
+    durationSeconds: durationSeconds,
+    exitReason: exitReason,
+  );
 
   /// Most frequent emotion in this week's check-ins, or null if there are none.
   Emotion? get topFeeling => _topFeeling;
@@ -90,9 +134,12 @@ class StatsViewModel extends ChangeNotifier {
     final monthAgo = DateTime(now.year, now.month, now.day - 29);
 
     final data = await _repository.dataSince(monthAgo);
+    // Measured to decide on compute(): a month of history is worked out in a
+    // fraction of a millisecond, less than starting an isolate would cost.
+    final aggregation = Stopwatch()..start();
     final checkIns = data.checkIns;
     final sessions = data.sessions;
-    _isSample = data.isSample;
+    _isEmpty = data.isEmpty;
     final toolNames = {
       for (final tool in _toolRepository.allTools()) tool.id: tool.title,
     };
@@ -112,6 +159,12 @@ class StatsViewModel extends ChangeNotifier {
         .generate(checkIns: checkIns, sessions: sessions, toolNames: toolNames)
         .take(_maxInsightsShown)
         .toList();
+    if (kDebugMode) {
+      debugPrint(
+        '[Stats] Charts worked out in ${aggregation.elapsedMicroseconds} µs '
+        'from ${checkIns.length} check-ins and ${sessions.length} sessions',
+      );
+    }
   }
 
   DayMood? _moodOf(List<CheckIn> checkIns, DateTime day) {

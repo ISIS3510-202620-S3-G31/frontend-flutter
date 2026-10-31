@@ -5,6 +5,13 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- google_fonts downloads the fonts on first launch (debug builds already have it). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Check-in dictation: speech_to_text routes audio through a headset when there is one. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Context-aware recommendations only need the city, so the app never asks
+         for ACCESS_FINE_LOCATION or for location in the background. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:label="frontend_flutter"
@@ -47,6 +54,16 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- From targetSdk 30 on, an app only sees the speech recognizer it asks
+             for by name. Without this, initialize() reports no recognition. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+        <!-- Read aloud: the same rule applies to the text-to-speech engine.
+             Without this, flutter_tts cannot find the phone's voice. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
         </intent>
     </queries>
 </manifest>

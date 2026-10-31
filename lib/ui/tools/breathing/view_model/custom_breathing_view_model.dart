@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../data/models/breathing_model.dart';
-import '../../../../data/services/analytics_service.dart';
+import '../../../../data/repositories/analytics_repository.dart';
 import '../../../../data/repositories/breathing_repository.dart';
 import '../../../../data/services/breathing_audio_player_service.dart';
 
@@ -17,20 +17,18 @@ class CustomBreathingViewModel extends ChangeNotifier {
   CustomBreathingViewModel({
     BreathingRepository? repository,
     BreathingAudioPlayerService? audioPlayer,
-    AnalyticsService? analytics,
+    AnalyticsRepository? analytics,
   }) : _repository = repository ?? BreathingRepository(),
-       _ownsRepository = repository == null,
        _audioPlayer = audioPlayer ?? BreathingAudioPlayerService(),
        _ownsAudioPlayer = audioPlayer == null,
-       _analytics = analytics ?? AnalyticsService() {
+       _analytics = analytics ?? AnalyticsRepository() {
     _initMusic();
   }
 
   final BreathingRepository _repository;
-  final bool _ownsRepository;
   final BreathingAudioPlayerService _audioPlayer;
   final bool _ownsAudioPlayer;
-  final AnalyticsService _analytics;
+  final AnalyticsRepository _analytics;
 
   CustomBreathingState _state = const CustomBreathingState();
   Timer? _timer;
@@ -78,6 +76,24 @@ class CustomBreathingViewModel extends ChangeNotifier {
       notifyListeners();
     });
 
+    // Open with the pattern the last session was started with (cache-aside:
+    // in-memory first, then the persisted value on a cold start).
+    final lastPattern = await _repository.loadLastStartedPattern();
+    if (lastPattern != null) {
+      final custom = _customTimings[lastPattern];
+      _state = _state.copyWith(
+        pattern: lastPattern,
+        inhaleSeconds: custom?.inhale ?? lastPattern.defaultInhale,
+        holdSeconds: custom?.hold ?? lastPattern.defaultHold,
+        exhaleSeconds: custom?.exhale ?? lastPattern.defaultExhale,
+      );
+    }
+
+    final lastMinutes = await _repository.loadLastSessionMinutes();
+    if (lastMinutes != null) {
+      _state = _state.copyWith(sessionMinutes: lastMinutes);
+    }
+
     final online = await _repository.isOnline();
     final isMusicEnabled = await _repository.isMusicEnabled();
     final tracks = await _repository.getTracks();
@@ -101,6 +117,11 @@ class CustomBreathingViewModel extends ChangeNotifier {
   }
 
   void start() {
+    _analytics.logToolStep(
+      toolId: 'breathing',
+      stepName: 'session_started',
+      stepIndex: 0,
+    );
     _startTimer();
   }
 
@@ -155,6 +176,11 @@ class CustomBreathingViewModel extends ChangeNotifier {
     _audioPlayer.stop();
     _state = _state.copyWith(isRunning: false, progress: 1);
     _message = 'Breathing session complete! Well done.';
+    _analytics.logToolStep(
+      toolId: 'breathing',
+      stepName: 'session_complete',
+      stepIndex: _state.totalCycles,
+    );
     _analytics.completeToolSession(
       toolId: 'breathing',
       toolName: 'Custom Breathing',
@@ -168,6 +194,7 @@ class CustomBreathingViewModel extends ChangeNotifier {
     _state = _state.copyWith(isRunning: nextRunning);
 
     if (nextRunning) {
+      unawaited(_repository.rememberStartedPattern(_state.pattern));
       if (!(_timer?.isActive ?? false)) _startTimer();
       if (_state.isMusicEnabled) {
         _playMusic();
@@ -180,6 +207,7 @@ class CustomBreathingViewModel extends ChangeNotifier {
   }
 
   void resetSession() {
+    unawaited(_repository.rememberStartedPattern(_state.pattern));
     _phaseElapsed = 0;
     _state = _state.copyWith(
       cycle: 1,
@@ -386,6 +414,8 @@ class CustomBreathingViewModel extends ChangeNotifier {
       phase: BreathingPhase.inhale,
       progress: 0,
     );
+    // Remember the selected pattern so the tool reopens with it.
+    unawaited(_repository.rememberStartedPattern(pattern));
     notifyListeners();
   }
 
@@ -416,6 +446,8 @@ class CustomBreathingViewModel extends ChangeNotifier {
 
   void selectDuration(int minutes) {
     _state = _state.copyWith(sessionMinutes: minutes);
+    // Remember the selected duration so the tool reopens with it.
+    unawaited(_repository.rememberSessionMinutes(minutes));
     notifyListeners();
   }
 
@@ -429,9 +461,6 @@ class CustomBreathingViewModel extends ChangeNotifier {
     if (_ownsAudioPlayer) {
       _audioPlayer.stop();
       _audioPlayer.dispose();
-    }
-    if (_ownsRepository) {
-      _repository.dispose();
     }
     super.dispose();
   }

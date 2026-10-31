@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'data/services/analytics_service.dart';
 import 'firebase_options.dart';
 import 'ui/auth/widgets/auth_gate.dart';
-import 'ui/core/theme/app_colors.dart';
+import 'ui/core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,10 +28,7 @@ class MainApp extends StatelessWidget {
     final analytics = analyticsService ?? _defaultAnalyticsService;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: AppColors.primary,
-        scaffoldBackgroundColor: AppColors.background,
-      ),
+      theme: AppTheme.light,
       navigatorObservers: [analytics.observer],
       home: const AuthGate(),
     );
