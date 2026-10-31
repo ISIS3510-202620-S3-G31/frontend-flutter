@@ -19,8 +19,6 @@ class ToolFeedbackViewModel extends ChangeNotifier {
   final FeedbackRepository _repository;
 
   int _rating = 5;
-  FeedbackMood? _mood;
-  final Set<FeedbackTag> _tags = {};
   String _comment = '';
   bool _favorite = false;
   bool _saving = false;
@@ -29,8 +27,6 @@ class ToolFeedbackViewModel extends ChangeNotifier {
   bool _disposed = false;
 
   int get rating => _rating;
-  FeedbackMood? get mood => _mood;
-  Set<FeedbackTag> get tags => _tags;
   String get comment => _comment;
   bool get favorite => _favorite;
   bool get saving => _saving;
@@ -41,8 +37,9 @@ class ToolFeedbackViewModel extends ChangeNotifier {
   /// Message to show once in a snack bar. The screen calls [clearMessage].
   String? get message => _message;
 
-  /// The mood is the only answer the stats screen cannot do without.
-  bool get canSave => _mood != null && !_saving;
+  /// The rating always has a value and the comment is optional, so the
+  /// feedback can be saved as it stands.
+  bool get canSave => !_saving;
 
   /// Short description of the rating, shown next to the number.
   String get ratingLabel => switch (_rating) {
@@ -59,16 +56,6 @@ class ToolFeedbackViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void selectMood(FeedbackMood mood) {
-    _mood = mood;
-    notifyListeners();
-  }
-
-  void toggleTag(FeedbackTag tag) {
-    _tags.contains(tag) ? _tags.remove(tag) : _tags.add(tag);
-    notifyListeners();
-  }
-
   void setComment(String value) {
     _comment = value;
     notifyListeners();
@@ -80,8 +67,7 @@ class ToolFeedbackViewModel extends ChangeNotifier {
   }
 
   Future<void> save() async {
-    final mood = _mood;
-    if (mood == null || _saving) return;
+    if (_saving) return;
     _saving = true;
     _notify();
     try {
@@ -89,10 +75,8 @@ class ToolFeedbackViewModel extends ChangeNotifier {
         ToolFeedback(
           toolId: toolId,
           rating: _rating,
-          mood: mood,
           startedAt: startedAt,
           durationSeconds: durationSeconds,
-          tags: _tags.toList(),
           comment: _comment.trim(),
           favorite: _favorite,
         ),

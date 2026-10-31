@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/photo_repository.dart';
 
 class AuthViewModel extends ChangeNotifier {
-  AuthViewModel({AuthRepository? repository})
-      : _repository = repository ?? AuthRepository();
+  AuthViewModel({AuthRepository? repository, PhotoRepository? photos})
+      : _repository = repository ?? AuthRepository(),
+        _photos = photos ?? PhotoRepository();
 
   final AuthRepository _repository;
+  final PhotoRepository _photos;
 
   UserModel? _currentUser;
   bool _isLoading = false;
@@ -105,14 +108,35 @@ class AuthViewModel extends ChangeNotifier {
     _errorMessage = null;
     _notify();
 
+    // The cached photos are filed under this id, and Firebase forgets it the
+    // moment the sign-out goes through.
+    final userId = _repository.currentUserId;
+
     try {
       await _repository.signOut();
       _currentUser = null;
     } catch (e) {
       _errorMessage = e.toString();
+      return;
     } finally {
       _isLoading = false;
       _notify();
+    }
+
+    if (userId != null) await _forgetCachedPhotos(userId);
+  }
+
+  /// Drops the photos this phone downloaded for the account that just left.
+  ///
+  /// They can all be fetched from Firebase again, so keeping them would only
+  /// hold disk for someone who is no longer using this phone. It runs after
+  /// the sign-out and swallows its own errors: the user is already out, and
+  /// failing to delete a file is no reason to tell them otherwise.
+  Future<void> _forgetCachedPhotos(String userId) async {
+    try {
+      await _photos.forgetCached(userId);
+    } on Exception catch (error) {
+      debugPrint('[Auth] Could not clear the cached photos: $error');
     }
   }
 }

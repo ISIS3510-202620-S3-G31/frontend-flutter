@@ -29,7 +29,7 @@ class BreathingMusicSheet extends StatelessWidget {
           builder: (context, scrollController) {
             return Container(
               decoration: const BoxDecoration(
-                color: AppColors.panel,
+                color: AppColors.background,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
