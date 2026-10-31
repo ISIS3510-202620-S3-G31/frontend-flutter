@@ -50,6 +50,14 @@ class PhotoDao {
     return [for (final row in rows) DateTime.parse(row['day']! as String)];
   }
 
+  /// Deletes the one database used before each account had its own. Its rows
+  /// cannot be assigned to anyone: see
+  /// [PhotoStorageService.deleteSharedLeftovers].
+  Future<void> deleteSharedDatabase() async {
+    final path = join(await getDatabasesPath(), 'photo_of_the_day.db');
+    if (await databaseExists(path)) await deleteDatabase(path);
+  }
+
   Future<void> markSynced(String userId, DateTime day) async {
     final db = await _open(userId);
     await db.update(

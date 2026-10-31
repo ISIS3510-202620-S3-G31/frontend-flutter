@@ -76,7 +76,9 @@ class RatingCard extends StatelessWidget {
             data: SliderTheme.of(context).copyWith(
               trackHeight: 8,
               activeTrackColor: AppColors.primary,
-              inactiveTrackColor: AppColors.surfaceDim,
+              // The card is surfaceDim, so the empty track takes the screen's
+              // background to stay visible.
+              inactiveTrackColor: AppColors.background,
               thumbColor: AppColors.primary,
               overlayColor: AppColors.primary.withValues(alpha: 0.15),
               showValueIndicator: ShowValueIndicator.never,
@@ -167,7 +169,7 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.panel,
+        color: AppColors.surfaceDim,
         borderRadius: BorderRadius.circular(24),
       ),
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
