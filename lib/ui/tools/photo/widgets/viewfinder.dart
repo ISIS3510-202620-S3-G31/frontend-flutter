@@ -14,6 +14,7 @@ class Viewfinder extends StatelessWidget {
     required this.flashOn,
     required this.onFlash,
     required this.hint,
+    this.title = 'Frame your moment today',
     this.content,
     this.showGrid = true,
   });
@@ -25,6 +26,7 @@ class Viewfinder extends StatelessWidget {
   /// Live camera preview or today's photo. When null, the prompt is shown.
   final Widget? content;
   final bool showGrid;
+  final String title;
   final String hint;
 
   @override
@@ -38,7 +40,10 @@ class Viewfinder extends StatelessWidget {
           children: [
             ?content,
             if (showGrid) const CustomPaint(painter: _ThirdsGridPainter()),
-            if (content == null) Center(child: _Prompt(hint: hint)),
+            if (content == null)
+              Center(
+                child: _Prompt(title: title, hint: hint),
+              ),
             Positioned(
               left: 16,
               right: 16,
@@ -66,8 +71,9 @@ class Viewfinder extends StatelessWidget {
 }
 
 class _Prompt extends StatelessWidget {
-  const _Prompt({required this.hint});
+  const _Prompt({required this.title, required this.hint});
 
+  final String title;
   final String hint;
 
   @override
@@ -93,7 +99,7 @@ class _Prompt extends StatelessWidget {
         SizedBox(
           width: 260,
           child: Text(
-            'Frame your moment today',
+            title,
             textAlign: TextAlign.center,
             style: AppText.h3.copyWith(color: AppColors.background),
           ),

@@ -4,13 +4,17 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 import '../view_model/auth_view_model.dart';
+import '../view_model/login_form_view_model.dart';
 import 'auth_text_field.dart';
+import 'offline_dialog.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.viewModel});
+  const LoginScreen({super.key, this.viewModel, this.formViewModel});
 
   final AuthViewModel? viewModel;
+
+  final LoginFormViewModel? formViewModel;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -19,8 +23,14 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   late final AuthViewModel _viewModel = widget.viewModel ?? AuthViewModel();
   late final bool _ownsViewModel = widget.viewModel == null;
+  late final LoginFormViewModel _form =
+      widget.formViewModel ?? LoginFormViewModel();
+  late final bool _ownsForm = widget.formViewModel == null;
 
-  final _formKey = GlobalKey<FormState>();
+  /// Built once, so a rebuild does not sign the builder up to both view models
+  /// again.
+  late final Listenable _changes = Listenable.merge([_viewModel, _form]);
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -29,6 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    if (_ownsForm) _form.dispose();
     if (_ownsViewModel) {
       _viewModel.dispose();
     }
@@ -37,13 +48,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     _viewModel.clearError();
-    if (!_formKey.currentState!.validate()) return;
+    if (!_form.isValid) return;
 
     FocusScope.of(context).unfocus();
-    await _viewModel.signIn(
-      email: _emailController.text,
-      password: _passwordController.text,
+    final signedIn = await _viewModel.signIn(
+      email: _form.email,
+      password: _form.password,
     );
+    if (!mounted) return;
+    // When it works, the auth gate swaps this screen for the home.
+    if (!signedIn && _viewModel.isOffline) await showOfflineDialog(context);
   }
 
   void _navigateToRegister() {
@@ -58,8 +72,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: _viewModel,
+      listenable: _changes,
       builder: (context, _) {
+        final canSubmit = _form.isValid && !_viewModel.isLoading;
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
@@ -69,8 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   horizontal: 24,
                   vertical: 24,
                 ),
-                child: Form(
-                  key: _formKey,
+                // Lets the phone fill in, and offer to save, the email and
+                // password as one account.
+                child: AutofillGroup(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -81,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 88,
                           height: 88,
                           decoration: BoxDecoration(
-                            color: AppColors.panel,
+                            color: AppColors.surfaceDim,
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: AppColors.surfaceDim,
@@ -159,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppColors.panel,
+                          color: AppColors.surfaceDim,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: AppColors.surfaceDim,
@@ -175,16 +191,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               hintText: 'name@example.com',
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your email.';
-                                }
-                                if (!value.contains('@') ||
-                                    !value.contains('.')) {
-                                  return 'Please enter a valid email address.';
-                                }
-                                return null;
-                              },
+                              autofillHints: const [AutofillHints.email],
+                              autocorrect: false,
+                              onChanged: _form.setEmail,
+                              errorText: _form.emailError,
                             ),
                             const SizedBox(height: 16),
                             AuthTextField(
@@ -193,7 +203,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               hintText: 'Enter your password',
                               obscureText: _obscurePassword,
                               textInputAction: TextInputAction.done,
-                              onFieldSubmitted: (_) => _submit(),
+                              autofillHints: const [AutofillHints.password],
+                              autocorrect: false,
+                              enableSuggestions: false,
+                              onChanged: _form.setPassword,
+                              errorText: _form.passwordError,
+                              onFieldSubmitted: (_) {
+                                if (canSubmit) _submit();
+                              },
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
@@ -208,15 +225,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   });
                                 },
                               ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your password.';
-                                }
-                                if (value.length < 6) {
-                                  return 'Password must be at least 6 characters.';
-                                }
-                                return null;
-                              },
                             ),
                           ],
                         ),
@@ -227,10 +235,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       SizedBox(
                         height: 52,
                         child: FilledButton(
-                          onPressed: _viewModel.isLoading ? null : _submit,
+                          onPressed: canSubmit ? _submit : null,
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.text,
+                            disabledBackgroundColor: AppColors.surfaceDim,
+                            disabledForegroundColor: AppColors.textMuted,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),

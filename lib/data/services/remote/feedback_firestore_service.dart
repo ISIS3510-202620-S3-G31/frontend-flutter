@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../models/tool_feedback_model.dart';
 
@@ -16,8 +19,17 @@ class FeedbackFirestoreService {
   CollectionReference<Map<String, dynamic>> _feedback(String userId) =>
       _firestore.collection('users/$userId/tool_feedback');
 
-  Future<void> add(String userId, ToolFeedback feedback) =>
-      _feedback(userId).add(feedback.toMap());
+  /// Not awaited: a Firestore write only completes once the server confirms
+  /// it, so without a connection the feedback screen spun forever. Firestore
+  /// keeps the answer on the phone and sends it when it can.
+  Future<void> add(String userId, ToolFeedback feedback) async {
+    unawaited(
+      _feedback(userId).doc().set(feedback.toMap()).catchError(_report),
+    );
+  }
+
+  static void _report(Object error) =>
+      debugPrint('[Feedback] Could not save the feedback: $error');
 
   Future<List<ToolFeedback>> since(String userId, DateTime from) async {
     final snapshot = await _feedback(userId)

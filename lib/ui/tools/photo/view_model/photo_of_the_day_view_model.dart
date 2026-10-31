@@ -11,6 +11,21 @@ import '../../../../data/services/camera_service.dart';
 
 enum DayState { done, today, future }
 
+/// What the big card is showing.
+enum PhotoViewMode {
+  /// The live camera, waiting for a shot.
+  camera,
+
+  /// A photo just taken and not saved yet: confirm it or take it again.
+  review,
+
+  /// Today's photo, already saved.
+  saved,
+
+  /// The photo of another day, which cannot be retaken.
+  otherDay,
+}
+
 class PhotoOfTheDayViewModel extends ChangeNotifier {
   PhotoOfTheDayViewModel({
     PhotoRepository? repository,
@@ -42,14 +57,55 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
   DailyPhoto? _todayPhoto;
   Set<DateTime> _daysWithPhoto = {};
 
+  late DateTime _selectedDay = today;
+  XFile? _pending;
+  DailyPhoto? _otherDayPhoto;
+  bool _loadingDay = false;
+
+  /// Guards against a slow day arriving after the user moved to another one.
+  int _dayLoads = 0;
+
   CameraController? get cameraController => _controller;
   bool get cameraFailed => _cameraFailed;
   bool get flashOn => _flashOn;
-  File? get todayPhoto => _todayPhoto?.file;
   String? get message => _message;
 
-  bool get canShoot => _todayPhoto == null && !_busy;
+  /// The day the card is showing; today unless the user picked another one.
+  DateTime get selectedDay => _selectedDay;
+
+  bool get isShowingToday => _selectedDay == today;
+
+  /// True while the photo of another day is being fetched.
+  bool get loadingDay => _loadingDay;
+
+  PhotoViewMode get mode {
+    if (!isShowingToday) return PhotoViewMode.otherDay;
+    if (_pending != null) return PhotoViewMode.review;
+    if (_todayPhoto != null) return PhotoViewMode.saved;
+    return PhotoViewMode.camera;
+  }
+
+  /// The image on the card, or null when the camera should show instead.
+  File? get shownPhoto => switch (mode) {
+    PhotoViewMode.review => File(_pending!.path),
+    PhotoViewMode.saved => _todayPhoto?.file,
+    PhotoViewMode.otherDay => _otherDayPhoto?.file,
+    PhotoViewMode.camera => null,
+  };
+
+  bool get canShoot => mode == PhotoViewMode.camera && !_busy;
+
+  /// True while a shot waits to be kept or taken again.
+  bool get isReviewing => mode == PhotoViewMode.review;
+
+  bool get isBusy => _busy;
+
   bool get isCompleted => _todayPhoto != null;
+
+  /// Days of the week the user can open, which are the ones with a photo.
+  bool canOpen(DateTime day) => _daysWithPhoto.contains(day);
+
+  int get selectedDayIndex => week.indexOf(_selectedDay);
 
   bool get canSwitchCamera => _cameras.length > 1;
 
@@ -70,19 +126,36 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
 
   Future<void> load() async {
     _todayPhoto = await _repository.photoOf(today);
-    _daysWithPhoto = await _repository.daysWithPhoto(week);
+    _daysWithPhoto = await _repository.daysOnThisPhone(week);
     _notify();
     _onlineChanges ??= _repository.onlineChanges.listen((online) {
       if (online) _uploadPending();
     });
-    _uploadPending();
+    // The camera is what the user opened the tool for; nothing that needs the
+    // network gets to delay it.
+    unawaited(_catchUp());
     await startCamera();
+  }
+
+  /// The slow half of opening: the days other phones have, the photos still
+  /// waiting to upload, and the leftovers of the shared folder. All of it
+  /// shows up late or not at all without costing the user a blank card.
+  Future<void> _catchUp() async {
+    final elsewhere = await _repository.daysInFirebase(week);
+    if (!_disposed && !elsewhere.every(_daysWithPhoto.contains)) {
+      _daysWithPhoto = {..._daysWithPhoto, ...elsewhere};
+      _notify();
+    }
+    if (_disposed) return;
+    await _uploadPending();
+    if (_disposed) return;
+    await _repository.discardSharedLeftovers();
   }
 
   Future<void> startCamera() async {
     if (_controller != null ||
         _startingCamera ||
-        _todayPhoto != null ||
+        mode != PhotoViewMode.camera ||
         _disposed) {
       return;
     }
@@ -102,8 +175,8 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
         _cameras[_cameraIndex],
         flashOn: _flashOn,
       );
-      // The screen may have closed, or a gallery photo arrived, meanwhile.
-      if (_disposed || _todayPhoto != null) {
+      // The screen may have closed, or a photo arrived, meanwhile.
+      if (_disposed || mode != PhotoViewMode.camera) {
         await controller.dispose();
         return;
       }
@@ -153,13 +226,15 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     await startCamera();
   }
 
+  /// Takes the shot and shows it for review. Nothing is saved until
+  /// [confirmPhoto], so the user can take it again as many times as they want.
   Future<void> takePhoto() async {
     final controller = _controller;
     if (controller == null || _busy) return;
     _busy = true;
     _notify();
     try {
-      await _save(await _cameraService.takePicture(controller));
+      _pending = await _cameraService.takePicture(controller);
     } on Exception {
       _message = 'Could not take the photo. Try again.';
     } finally {
@@ -174,7 +249,9 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
     _notify();
     try {
       final picked = await _cameraService.pickFromGallery();
-      if (picked != null) await _save(picked);
+      // A picked photo is reviewed like a taken one, so both are confirmed
+      // the same way.
+      if (picked != null) _pending = picked;
     } on Exception {
       _message = 'Could not open the gallery.';
     } finally {
@@ -182,6 +259,62 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
       _notify();
     }
   }
+
+  /// Keeps the photo under review as the photo of the day.
+  Future<void> confirmPhoto() async {
+    final pending = _pending;
+    if (pending == null || _busy) return;
+    _busy = true;
+    _notify();
+    try {
+      await _save(pending);
+      _pending = null;
+    } on Exception {
+      _message = 'Could not save the photo. Try again.';
+    } finally {
+      _busy = false;
+      _notify();
+    }
+  }
+
+  /// Throws the shot away and goes back to the camera. Nothing was written, so
+  /// there is nothing to undo.
+  Future<void> retakePhoto() async {
+    if (_pending == null || _busy) return;
+    _pending = null;
+    _notify();
+    await startCamera();
+  }
+
+  /// Shows the photo of [day], downloading it when another phone took it.
+  ///
+  /// Days without a photo are not openable, so tapping one does nothing.
+  Future<void> selectDay(DateTime day) async {
+    if (day == _selectedDay || (!canOpen(day) && day != today)) return;
+    final load = ++_dayLoads;
+    _selectedDay = day;
+    _otherDayPhoto = null;
+
+    if (day == today) {
+      _loadingDay = false;
+      _notify();
+      await startCamera();
+      return;
+    }
+
+    // The camera has no business running while another day is on screen.
+    await _stopCamera();
+    _loadingDay = true;
+    _notify();
+    final photo = await _repository.anyPhotoOf(day);
+    // The user may have moved on while this was in flight.
+    if (_disposed || load != _dayLoads) return;
+    _otherDayPhoto = photo;
+    _loadingDay = false;
+    _notify();
+  }
+
+  Future<void> showToday() => selectDay(today);
 
   Future<void> _save(XFile photo) async {
     _todayPhoto = await _repository.savePhoto(today, photo);
@@ -197,8 +330,16 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
       toolId: 'photo',
       toolName: 'Photo of the Day',
     );
-    if (!await _uploadPending()) {
+    // The photo is kept the moment it is on disk. Compressing and uploading
+    // take seconds and happen behind the user's back, so "Keep this one"
+    // never waits for them.
+    unawaited(_uploadAfterSaving());
+  }
+
+  Future<void> _uploadAfterSaving() async {
+    if (!await _uploadPending() && !_disposed) {
       _message = 'Saved on your phone. It will upload later.';
+      _notify();
     }
   }
 

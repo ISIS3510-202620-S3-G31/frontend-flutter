@@ -8,6 +8,7 @@ import '../../core/widgets/circle_icon_button.dart';
 import '../view_model/auth_view_model.dart';
 import '../view_model/register_form_view_model.dart';
 import 'auth_text_field.dart';
+import 'offline_dialog.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.viewModel, this.formViewModel});
@@ -71,20 +72,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     _viewModel.clearError();
-    final age = _form.age;
-    if (!_form.isValid || age == null) return;
+    final birthDate = _form.birthDate;
+    if (!_form.isValid || birthDate == null) return;
 
     FocusScope.of(context).unfocus();
     final success = await _viewModel.signUp(
       email: _form.email.trim(),
       password: _form.password,
       name: _form.name.trim(),
-      age: age,
+      birthDate: birthDate,
     );
+    if (!mounted) return;
 
-    if (success && mounted) {
-      // If we pushed RegisterScreen on top of LoginScreen, pop so AuthGate takes over cleanly
+    if (success) {
       Navigator.of(context).popUntil((route) => route.isFirst);
+    } else if (_viewModel.isOffline) {
+      await showOfflineDialog(context);
     }
   }
 
@@ -180,7 +183,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.panel,
+                      color: AppColors.surfaceDim,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: AppColors.surfaceDim,
