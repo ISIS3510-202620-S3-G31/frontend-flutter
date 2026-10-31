@@ -74,13 +74,13 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     super.dispose();
   }
 
-  void _openTool(ToolItem tool) {
+  void _openTool(ToolItem tool, ToolEntryPoint entryPoint) {
     final screen = toolScreens[tool.id];
     if (screen == null) {
       _showMessage('${tool.title} is coming soon!');
       return;
     }
-    openTool(context, tool: tool, screen: screen);
+    openTool(context, tool: tool, screen: screen, entryPoint: entryPoint);
   }
 
   Future<void> _openRandomTool() async {
@@ -89,7 +89,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     // Let the user read the message before the screen changes.
     await Future.delayed(const Duration(milliseconds: 600));
     if (!mounted || toolScreens[tool.id] == null) return;
-    _openTool(tool);
+    _openTool(tool, ToolEntryPoint.random);
   }
 
   void _showMessage(String message, {int seconds = 2}) {
@@ -137,14 +137,14 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     final recommendation = _viewModel.recommendation;
     if (recommendation == null) return;
     _viewModel.openRecommendation();
-    _openTool(recommendation.tool);
+    _openTool(recommendation.tool, ToolEntryPoint.recommendation);
   }
 
   void _openWeatherRecommendation() {
     final recommendation = _viewModel.weatherRecommendation;
     if (recommendation == null) return;
     _viewModel.openWeatherRecommendation();
-    _openTool(recommendation.tool);
+    _openTool(recommendation.tool, ToolEntryPoint.weather);
   }
 
   Widget _buildTools() {
@@ -194,7 +194,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
                         if (i > 0) const SizedBox(height: 12),
                         ToolCard(
                           tool: tools[i],
-                          onTap: () => _openTool(tools[i]),
+                          onTap: () => _openTool(tools[i], ToolEntryPoint.toolbox),
                         ),
                       ],
                     ],
