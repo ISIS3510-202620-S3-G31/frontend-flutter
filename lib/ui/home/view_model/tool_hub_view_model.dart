@@ -32,6 +32,15 @@ enum HomeTab {
 }
 
 class ToolHubViewModel extends ChangeNotifier {
+  /// How often the weather is re-read while the Tool Hub is visible.
+  ///
+  /// The location behind the weather is cached for 30 minutes
+  /// ([LocationService.freshness]), so polling faster than that would only
+  /// re-read the same place. 45 minutes sits past that cache — each poll gets
+  /// a fresh position — and inside the 30-60 minute window: the goal is the
+  /// general conditions of the user's area, not precise tracking.
+  static const Duration defaultWeatherPollInterval = Duration(minutes: 45);
+
   ToolHubViewModel({
     ToolRepository? repository,
     StatsRepository? statsRepository,
@@ -42,6 +51,7 @@ class ToolHubViewModel extends ChangeNotifier {
     WeatherRepository? weather,
     this._openableToolIds,
     DateTime Function()? now,
+    Duration? weatherPollInterval,
   }) : _repository = repository ?? const ToolRepository(),
        _statsRepository = statsRepository ?? StatsRepository(),
        _recommender = recommender ?? ToolRecommender(),
@@ -51,6 +61,8 @@ class ToolHubViewModel extends ChangeNotifier {
        // One repository for the whole view model: each instance opens its own
        // HTTP client, so making one per load would pile them up.
        _weather = weather ?? WeatherRepository(),
+       _weatherPollInterval =
+           weatherPollInterval ?? defaultWeatherPollInterval,
        _now = now ?? DateTime.now;
 
   final ToolRepository _repository;
@@ -62,6 +74,11 @@ class ToolHubViewModel extends ChangeNotifier {
   final WeatherRepository _weather;
   final Set<String>? _openableToolIds;
   final DateTime Function() _now;
+  final Duration _weatherPollInterval;
+  Timer? _weatherPollTimer;
+  Future<WeatherReading>? _weatherReadInFlight;
+  bool _pollingRequested = false;
+  bool _foreground = true;
 
   ToolCategory _selectedCategory = ToolCategory.all;
   HomeTab _selectedTab = HomeTab.home;
@@ -76,6 +93,7 @@ class ToolHubViewModel extends ChangeNotifier {
   int _loads = 0;
   String? _userName;
   WeatherReading? _weatherReading;
+  Weather? _appliedWeather;
   bool _recommendationLoading = false;
   bool _disposed = false;
 
@@ -159,12 +177,13 @@ class ToolHubViewModel extends ChangeNotifier {
       // cost the personal one, so it degrades to no weather at all.
       WeatherReading? reading;
       try {
-        reading = await _weather.currentWeather();
+        reading = await _readWeather();
       } on Exception {
         reading = null;
       }
       if (_disposed || load != _loads) return;
       _weatherReading = reading;
+      _appliedWeather = reading == null ? null : _usableWeather(reading);
 
       final lastDay = now.subtract(const Duration(days: 1));
       final history = UserHistory(
@@ -173,18 +192,14 @@ class ToolHubViewModel extends ChangeNotifier {
             if (!checkIn.timestamp.isBefore(lastDay)) checkIn,
         ],
         sessions: data.sessions,
-        weather: reading == null ? null : _usableWeather(reading),
+        weather: _appliedWeather,
       );
       final tools = _openableTools();
       // Two recommendations at once: the personal one and the one for the
       // weather, so the screen can show both cards.
       final recommendation = _recommender.recommend(history, tools);
       final strategy = _strategyName(_recommender.strategy);
-      final weatherRecommendation = _recommender.weatherRecommendation(
-        history,
-        tools,
-      );
-      final weatherStrategy = _strategyName(_recommender.weatherStrategy);
+      _applyWeatherRecommendation(_appliedWeather);
 
       if (recommendation == null) {
         _recommendation = null;
@@ -199,25 +214,6 @@ class ToolHubViewModel extends ChangeNotifier {
         );
         _recommendationOpened = false;
       }
-
-      if (weatherRecommendation == null) {
-        _weatherRecommendation = null;
-        _weatherStrategy = null;
-        _weatherRecommendationLogId = null;
-      } else if (!_isOnScreen(
-        _weatherRecommendation,
-        _weatherStrategy,
-        weatherRecommendation,
-        weatherStrategy,
-      )) {
-        _weatherRecommendation = weatherRecommendation;
-        _weatherStrategy = weatherStrategy;
-        _weatherRecommendationLogId = _recommendationLog.logShown(
-          weatherRecommendation,
-          strategy: weatherStrategy,
-        );
-        _weatherRecommendationOpened = false;
-      }
     } finally {
       // A newer load owns the flag once it has started, and a disposed view
       // model has no listeners left to tell.
@@ -226,6 +222,138 @@ class ToolHubViewModel extends ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  /// Starts the periodic weather read, for while the Tool Hub screen is
+  /// visible. Calling it again while it runs changes nothing.
+  void startWeatherPolling() {
+    _pollingRequested = true;
+    _syncWeatherPollTimer();
+  }
+
+  /// Stops the periodic weather read, for when the screen goes away.
+  void stopWeatherPolling() {
+    _pollingRequested = false;
+    _syncWeatherPollTimer();
+  }
+
+  /// The app left or re-entered the foreground. Polling only runs while the
+  /// app is in front; coming back reads at once, because the weather may have
+  /// changed while the app was away.
+  void onAppLifecycleChanged(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    _syncWeatherPollTimer();
+    if (_foreground && _pollingRequested) unawaited(_pollWeather());
+  }
+
+  /// The timer runs only while the screen is visible and the app is in the
+  /// foreground; [dispose] cancels it too, so it never outlives this view
+  /// model.
+  void _syncWeatherPollTimer() {
+    final shouldRun = _pollingRequested && _foreground && !_disposed;
+    if (shouldRun && _weatherPollTimer == null) {
+      _weatherPollTimer = Timer.periodic(
+        _weatherPollInterval,
+        (_) => unawaited(_pollWeather()),
+      );
+    } else if (!shouldRun && _weatherPollTimer != null) {
+      _weatherPollTimer!.cancel();
+      _weatherPollTimer = null;
+    }
+  }
+
+  /// One timer tick: reads the weather and refreshes the recommendation only
+  /// when the condition behind it changed.
+  Future<void> _pollWeather() async {
+    if (_disposed) return;
+    try {
+      final reading = await _readWeather();
+      if (_disposed) return;
+      _applyWeatherReading(reading);
+    } on Exception {
+      // A failed read keeps the last known weather and the recommendation on
+      // screen; the next tick tries again.
+    }
+  }
+
+  /// One weather read at a time: while a read is in flight, whoever asks next
+  /// gets the same future instead of starting another, so reads never
+  /// overlap. The read is awaited, so it runs off the UI thread — the event
+  /// loop keeps painting while the HTTP call is in flight.
+  Future<WeatherReading> _readWeather() {
+    final inFlight = _weatherReadInFlight;
+    if (inFlight != null) return inFlight;
+    final read = _weather.currentWeather();
+    _weatherReadInFlight = read;
+    unawaited(
+      read.then(
+        (_) => _clearWeatherRead(read),
+        onError: (_) => _clearWeatherRead(read),
+      ),
+    );
+    return read;
+  }
+
+  void _clearWeatherRead(Future<WeatherReading> read) {
+    if (identical(_weatherReadInFlight, read)) _weatherReadInFlight = null;
+  }
+
+  /// Applies a polled reading: the recommendation is rebuilt and the
+  /// listeners told only when the condition it keys on changed, so the card
+  /// does not flicker on every tick.
+  void _applyWeatherReading(WeatherReading reading) {
+    final weather = _usableWeather(reading);
+    _weatherReading = reading;
+    if (_conditionKey(_appliedWeather) == _conditionKey(weather)) return;
+    _appliedWeather = weather;
+    _applyWeatherRecommendation(weather);
+    notifyListeners();
+  }
+
+  /// Rebuilds the weather-based recommendation from [weather] and swaps it in
+  /// when it differs from the one on screen, logging the new one.
+  void _applyWeatherRecommendation(Weather? weather) {
+    // The weather strategy reads only the weather out of the history.
+    final history = UserHistory(
+      recentCheckIns: const [],
+      sessions: const [],
+      weather: weather,
+    );
+    final recommendation = _recommender.weatherRecommendation(
+      history,
+      _openableTools(),
+    );
+    final strategy = _strategyName(_recommender.weatherStrategy);
+    if (recommendation == null) {
+      _weatherRecommendation = null;
+      _weatherStrategy = null;
+      _weatherRecommendationLogId = null;
+    } else if (!_isOnScreen(
+      _weatherRecommendation,
+      _weatherStrategy,
+      recommendation,
+      strategy,
+    )) {
+      _weatherRecommendation = recommendation;
+      _weatherStrategy = strategy;
+      _weatherRecommendationLogId = _recommendationLog.logShown(
+        recommendation,
+        strategy: strategy,
+      );
+      _weatherRecommendationOpened = false;
+    }
+  }
+
+  /// What the weather recommendation keys on — rain, cold, clear sun, or
+  /// nothing — in the order [WeatherBasedStrategy] checks them. The exact
+  /// temperature is not part of it, so a tick that only moves the thermometer
+  /// does not rebuild the card.
+  String? _conditionKey(Weather? weather) {
+    if (weather == null) return null;
+    if (weather.isRainy) return 'rainy';
+    if (weather.isCold) return 'cold';
+    if (weather.isClearAndSunny) return 'sunny';
+    return 'mild';
   }
 
   void openRecommendation() {
@@ -314,6 +442,9 @@ class ToolHubViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    // The poll timer must not keep running once the view model is gone.
+    _weatherPollTimer?.cancel();
+    _weatherPollTimer = null;
     _weather.dispose();
     super.dispose();
   }
