@@ -143,26 +143,28 @@ void main() {
   });
 
   group('polling', () {
-    test('the first load reads once, then the timer keeps the weather current',
-        () {
-      fakeAsync((async) async {
-        final rain = rainy;
-        final weather = FakeWeatherRepository()
-          ..enqueue(ready(sunny))
-          ..enqueue(ready(rain));
-        final vm = viewModel(weather);
+    test(
+      'the first load reads once, then the timer keeps the weather current',
+      () {
+        fakeAsync((async) async {
+          final rain = rainy;
+          final weather = FakeWeatherRepository()
+            ..enqueue(ready(sunny))
+            ..enqueue(ready(rain));
+          final vm = viewModel(weather);
 
-        await vm.loadRecommendation();
-        expect(weather.reads, 1);
-        expect(vm.weatherRecommendation?.tool.id, 'photo');
+          await vm.loadRecommendation();
+          expect(weather.reads, 1);
+          expect(vm.weatherRecommendation?.tool.id, 'photo');
 
-        vm.startWeatherPolling();
-        async.elapse(interval);
-        expect(weather.reads, 2);
-        expect(vm.weatherRecommendation?.tool.id, 'breathing');
-        expect(vm.weatherReading?.weather, same(rain));
-      });
-    });
+          vm.startWeatherPolling();
+          async.elapse(interval);
+          expect(weather.reads, 2);
+          expect(vm.weatherRecommendation?.tool.id, 'breathing');
+          expect(vm.weatherReading?.weather, same(rain));
+        });
+      },
+    );
 
     test('a tick that changes only the temperature does not notify', () {
       fakeAsync((async) {
@@ -226,35 +228,37 @@ void main() {
       });
     });
 
-    test('a failed read keeps the last known weather and the recommendation',
-        () {
-      fakeAsync((async) {
-        final weather = FakeWeatherRepository()..enqueue(ready(rainy));
-        final vm = viewModel(weather);
+    test(
+      'a failed read keeps the last known weather and the recommendation',
+      () {
+        fakeAsync((async) {
+          final weather = FakeWeatherRepository()..enqueue(ready(rainy));
+          final vm = viewModel(weather);
 
-        vm.startWeatherPolling();
-        async.elapse(interval);
-        expect(vm.weatherRecommendation?.tool.id, 'breathing');
+          vm.startWeatherPolling();
+          async.elapse(interval);
+          expect(vm.weatherRecommendation?.tool.id, 'breathing');
 
-        // The API is down: the read fails, nothing on screen is cleared.
-        weather.error = Exception('network down');
-        async.elapse(interval);
-        expect(weather.reads, 2);
-        expect(vm.weatherRecommendation?.tool.id, 'breathing');
-        expect(vm.weatherReading?.outcome, WeatherOutcome.ready);
+          // The API is down: the read fails, nothing on screen is cleared.
+          weather.error = Exception('network down');
+          async.elapse(interval);
+          expect(weather.reads, 2);
+          expect(vm.weatherRecommendation?.tool.id, 'breathing');
+          expect(vm.weatherReading?.outcome, WeatherOutcome.ready);
 
-        // Offline with the last known weather: same condition, no flicker,
-        // but the reading says where the weather came from.
-        weather.error = null;
-        weather.enqueue(
-          WeatherReading(outcome: WeatherOutcome.offline, weather: rainy),
-        );
-        async.elapse(interval);
-        expect(weather.reads, 3);
-        expect(vm.weatherRecommendation?.tool.id, 'breathing');
-        expect(vm.weatherReading?.outcome, WeatherOutcome.offline);
-      });
-    });
+          // Offline with the last known weather: same condition, no flicker,
+          // but the reading says where the weather came from.
+          weather.error = null;
+          weather.enqueue(
+            WeatherReading(outcome: WeatherOutcome.offline, weather: rainy),
+          );
+          async.elapse(interval);
+          expect(weather.reads, 3);
+          expect(vm.weatherRecommendation?.tool.id, 'breathing');
+          expect(vm.weatherReading?.outcome, WeatherOutcome.offline);
+        });
+      },
+    );
 
     test('dispose stops the timer', () {
       fakeAsync((async) {

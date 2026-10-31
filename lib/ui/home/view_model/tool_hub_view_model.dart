@@ -58,11 +58,10 @@ class ToolHubViewModel extends ChangeNotifier {
        _analytics = analytics ?? AnalyticsRepository(),
        _recommendationLog = recommendationLog ?? RecommendationLogRepository(),
        _auth = auth ?? AuthRepository(),
-       // One repository for the whole view model: each instance opens its own
-       // HTTP client, so making one per load would pile them up.
+       // One repository for the whole view model, so every read goes through
+       // the same in-flight guard in [_readWeather].
        _weather = weather ?? WeatherRepository(),
-       _weatherPollInterval =
-           weatherPollInterval ?? defaultWeatherPollInterval,
+       _weatherPollInterval = weatherPollInterval ?? defaultWeatherPollInterval,
        _now = now ?? DateTime.now;
 
   final ToolRepository _repository;
@@ -205,7 +204,12 @@ class ToolHubViewModel extends ChangeNotifier {
         _recommendation = null;
         _strategy = null;
         _recommendationLogId = null;
-      } else if (!_isOnScreen(_recommendation, _strategy, recommendation, strategy)) {
+      } else if (!_isOnScreen(
+        _recommendation,
+        _strategy,
+        recommendation,
+        strategy,
+      )) {
         _recommendation = recommendation;
         _strategy = strategy;
         _recommendationLogId = _recommendationLog.logShown(
@@ -278,8 +282,8 @@ class ToolHubViewModel extends ChangeNotifier {
 
   /// One weather read at a time: while a read is in flight, whoever asks next
   /// gets the same future instead of starting another, so reads never
-  /// overlap. The read is awaited, so it runs off the UI thread — the event
-  /// loop keeps painting while the HTTP call is in flight.
+  /// overlap. The HTTP call and the JSON parse run in their own isolate
+  /// ([WeatherService]), so the UI thread only waits for the finished reading.
   Future<WeatherReading> _readWeather() {
     final inFlight = _weatherReadInFlight;
     if (inFlight != null) return inFlight;
