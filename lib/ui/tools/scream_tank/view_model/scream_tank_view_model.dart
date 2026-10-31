@@ -13,10 +13,9 @@ class ScreamTankViewModel extends ChangeNotifier {
   ScreamTankViewModel({
     MicrophoneService? microphone,
     AnalyticsRepository? analytics,
-    ScreamGoal goal = const ScreamGoal(),
+    this._goal = const ScreamGoal(),
   }) : _microphone = microphone ?? const MicrophoneService(),
-       _analytics = analytics ?? AnalyticsRepository(),
-       _goal = goal;
+       _analytics = analytics ?? AnalyticsRepository();
 
   final MicrophoneService _microphone;
   final AnalyticsRepository _analytics;
