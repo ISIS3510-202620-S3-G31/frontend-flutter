@@ -25,14 +25,14 @@ Future<void> openTool(
   try {
     // Logging the start must never stand between the tap and the tool.
     unawaited(usage.startTool());
-    await Navigator.push(
+    final completed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<bool>(
         builder: screen,
         settings: RouteSettings(name: '/tools/${tool.id}'),
       ),
     );
-    await usage.finishTool();
+    await usage.finishTool(completed: completed ?? false);
     // A visit too short to rate leaves the flow on the tool step.
     if (!context.mounted || usage.currentStep is! FeedbackStep) return;
     await Navigator.push(
