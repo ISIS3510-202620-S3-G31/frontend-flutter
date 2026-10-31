@@ -1,7 +1,7 @@
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
-import '../../models/breathing_music_model.dart';
+import '../../models/breathing_model.dart';
 
 class BreathingLocalDatabaseService {
   BreathingLocalDatabaseService({Database? database}) : _db = database;
@@ -207,6 +207,78 @@ class BreathingLocalDatabaseService {
     await db.insert('breathing_music_settings', {
       'key': 'music_enabled',
       'value': enabled.toString(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Gets the last started breathing pattern from settings.
+  Future<BreathingPattern?> getLastStartedPattern() async {
+    final db = await _getDatabase();
+    String? name;
+    if (db == null) {
+      name = _inMemorySettingsFallback['last_started_pattern'];
+    } else {
+      final result = await db.query(
+        'breathing_music_settings',
+        where: 'key = ?',
+        whereArgs: ['last_started_pattern'],
+        limit: 1,
+      );
+      if (result.isEmpty) return null;
+      name = result.first['value'] as String?;
+    }
+    if (name == null) return null;
+    for (final pattern in BreathingPattern.values) {
+      if (pattern.name == name) return pattern;
+    }
+    return null;
+  }
+
+  /// Sets the last started breathing pattern in settings.
+  Future<void> setLastStartedPattern(BreathingPattern pattern) async {
+    final db = await _getDatabase();
+    if (db == null) {
+      _inMemorySettingsFallback['last_started_pattern'] = pattern.name;
+      return;
+    }
+
+    await db.insert('breathing_music_settings', {
+      'key': 'last_started_pattern',
+      'value': pattern.name,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Gets the last selected session duration (minutes) from settings.
+  Future<int?> getLastSessionMinutes() async {
+    final db = await _getDatabase();
+    String? raw;
+    if (db == null) {
+      raw = _inMemorySettingsFallback['last_session_minutes'];
+    } else {
+      final result = await db.query(
+        'breathing_music_settings',
+        where: 'key = ?',
+        whereArgs: ['last_session_minutes'],
+        limit: 1,
+      );
+      if (result.isEmpty) return null;
+      raw = result.first['value'] as String?;
+    }
+    final minutes = int.tryParse(raw ?? '');
+    if (minutes == null || !sessionDurations.contains(minutes)) return null;
+    return minutes;
+  }
+
+  /// Sets the last selected session duration (minutes) in settings.
+  Future<void> setLastSessionMinutes(int minutes) async {
+    final db = await _getDatabase();
+    if (db == null) {
+      _inMemorySettingsFallback['last_session_minutes'] = minutes.toString();
+      return;
+    }
+
+    await db.insert('breathing_music_settings', {
+      'key': 'last_session_minutes',
+      'value': minutes.toString(),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

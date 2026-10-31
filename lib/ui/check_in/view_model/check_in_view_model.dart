@@ -5,6 +5,7 @@ import '../../../data/repositories/check_in_repository.dart';
 import '../../../data/services/microphone_service.dart';
 import '../../../data/services/network/network_connectivity_service.dart';
 import '../../../data/services/speech_recognition_service.dart';
+import '../../../data/services/text_to_speech_service.dart';
 import '../../../domain/mood/mood.dart';
 import '../../../domain/mood/mood_template.dart';
 
@@ -15,6 +16,7 @@ class CheckInViewModel extends ChangeNotifier {
     SpeechRecognitionService? speech,
     MicrophoneService? microphone,
     NetworkConnectivityService? network,
+    this._voice,
   }) : _repository = repository ?? CheckInRepository(),
        _now = now ?? DateTime.now,
        _speech = speech ?? SpeechRecognitionService(),
@@ -28,6 +30,13 @@ class CheckInViewModel extends ChangeNotifier {
   final SpeechRecognitionService _speech;
   final MicrophoneService _microphone;
   final NetworkConnectivityService _network;
+
+  /// The voice a test passes in; the app uses the phone's shared one.
+  final TextToSpeechService? _voice;
+  TextToSpeechService? _activeVoice;
+
+  /// The note as it was when the voice started reading it.
+  String? _readText;
 
   final Set<Emotion> _emotions = {};
   int _intensity = 3;
@@ -80,6 +89,28 @@ class CheckInViewModel extends ChangeNotifier {
   /// Shown under the note field when dictation could not run.
   String? get dictationMessage => _dictationMessage;
 
+
+  String? get dictationHint =>
+      _dictationMessage ??
+      (_isListening ? 'Listening… tap the mic when you finish.' : null);
+
+  bool get canReadNote => _note.trim().isNotEmpty;
+
+  bool get isReadingNote {
+    final voice = _activeVoice;
+    return voice != null &&
+        voice.state.value != SpeechState.idle &&
+        voice.text == _readText;
+  }
+
+  TextToSpeechService get _noteVoice {
+    final existing = _activeVoice;
+    if (existing != null) return existing;
+    final voice = _voice ?? TextToSpeechService();
+    voice.state.addListener(_notify);
+    return _activeVoice = voice;
+  }
+
   /// Where the caret belongs after a dictated update: right after the words.
   int get noteCaret => _spanStart + _spanLength;
 
@@ -101,6 +132,7 @@ class CheckInViewModel extends ChangeNotifier {
       return;
     }
     if (!_canDictate) return;
+    if (isReadingNote) await _activeVoice?.stop();
 
     _dictationMessage = null;
     if (await _microphone.requestPermission() != MicPermission.granted) {
@@ -121,13 +153,31 @@ class CheckInViewModel extends ChangeNotifier {
     }
   }
 
+
+  Future<void> toggleReadNote() async {
+    if (isReadingNote) {
+      await _activeVoice?.stop();
+      return;
+    }
+    final text = _note.trim();
+    if (text.isEmpty) return;
+    // The microphone would hear the phone's own voice.
+    if (_isListening) await _speech.stop();
+    _readText = text;
+    await _noteVoice.speak(text);
+  }
+
   void _onWords(String words, bool isFinal) {
     final before = _note.substring(0, _spanStart);
     final after = _note.substring(_spanStart + _spanLength);
     final merged = '$before$words$after';
-    _note = merged.length > maxNoteLength
-        ? merged.substring(0, maxNoteLength)
-        : merged;
+    final tooLong = merged.length > maxNoteLength;
+    _note = tooLong ? merged.substring(0, maxNoteLength) : merged;
+    if (tooLong && _isListening) {
+      _dictationMessage =
+          'Your note reached the $maxNoteLength character limit.';
+      _speech.stop();
+    }
     _spanLength = _note.length - before.length - after.length;
     if (isFinal) _spanStart = _spanStart + _spanLength;
     if (isFinal) _spanLength = 0;
@@ -174,6 +224,9 @@ class CheckInViewModel extends ChangeNotifier {
     if (mood == null || _saving) return;
     _saving = true;
     _notify();
+
+    if (_isListening) await _speech.stop();
+    if (isReadingNote) await _activeVoice?.stop();
     try {
       await _repository.save(
         CheckIn(
@@ -202,6 +255,10 @@ class CheckInViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+
+    if (_isListening) _speech.stop();
+    if (isReadingNote) _activeVoice?.stop();
+    _activeVoice?.state.removeListener(_notify);
     super.dispose();
   }
 }

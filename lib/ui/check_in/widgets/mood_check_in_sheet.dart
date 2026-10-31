@@ -62,6 +62,24 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
     _viewModel.toggleDictation(at: caret);
   }
 
+
+  Widget? _noteActions() {
+    final actions = [
+      if (_viewModel.canReadNote || _viewModel.isReadingNote)
+        _ReadNoteButton(
+          isReading: _viewModel.isReadingNote,
+          onPressed: _viewModel.toggleReadNote,
+        ),
+      if (_viewModel.canDictate)
+        _DictateButton(
+          isListening: _viewModel.isListening,
+          onPressed: _toggleDictation,
+        ),
+    ];
+    if (actions.isEmpty) return null;
+    return Row(mainAxisSize: MainAxisSize.min, children: actions);
+  }
+
   void _onViewModelChanged() {
     if (!mounted) return;
     // Only the dictation moves the note behind the field's back; when the user
@@ -140,7 +158,7 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                     decoration: InputDecoration(
                       hintText: 'Add a note (optional)',
                       hintStyle: AppText.bodyMuted,
-                      helperText: _viewModel.dictationMessage,
+                      helperText: _viewModel.dictationHint,
                       helperStyle: AppText.bodyMuted.copyWith(fontSize: 12),
                       helperMaxLines: 2,
                       filled: true,
@@ -148,12 +166,7 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
                       // The limit is enforced anyway; the counter was noise.
                       counterText: '',
                       contentPadding: const EdgeInsets.all(14),
-                      suffixIcon: _viewModel.canDictate
-                          ? _DictateButton(
-                              isListening: _viewModel.isListening,
-                              onPressed: _toggleDictation,
-                            )
-                          : null,
+                      suffixIcon: _noteActions(),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -210,6 +223,27 @@ class _DictateButton extends StatelessWidget {
       icon: Icon(
         isListening ? Icons.mic : Icons.mic_none,
         color: isListening ? AppColors.accent : AppColors.textMuted,
+        size: 22,
+      ),
+    );
+  }
+}
+
+
+class _ReadNoteButton extends StatelessWidget {
+  const _ReadNoteButton({required this.isReading, required this.onPressed});
+
+  final bool isReading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: isReading ? 'Stop reading' : 'Listen to your note',
+      icon: Icon(
+        isReading ? Icons.stop_circle_outlined : Icons.volume_up_outlined,
+        color: isReading ? AppColors.accent : AppColors.textMuted,
         size: 22,
       ),
     );

@@ -60,5 +60,10 @@
         <intent>
             <action android:name="android.speech.RecognitionService"/>
         </intent>
+        <!-- Read aloud: the same rule applies to the text-to-speech engine.
+             Without this, flutter_tts cannot find the phone's voice. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
     </queries>
 </manifest>
