@@ -28,6 +28,8 @@ class ScreamTankViewModel extends ChangeNotifier {
 
   static const _firstReadingSeconds = 0.1;
 
+  static const _maxStepSeconds = 0.5;
+
   StreamSubscription<double>? _readings;
   DateTime? _lastReading;
   bool _requestingPermission = false;
@@ -35,22 +37,24 @@ class ScreamTankViewModel extends ChangeNotifier {
 
   double _db = 0;
 
-  /// The loudest the (smoothed) mic has been in this session. The tank keeps
-  /// it, so pausing the mic does not empty the tank.
+  /// The loudest the (smoothed) mic has been in this session, for analytics.
   double _peakDb = 0;
+
+  /// Seconds screamed at or above the goal. Pausing keeps them.
+  double _loudSeconds = 0;
   String? _errorMessage;
   bool _canOpenSettings = false;
 
   ScreamGoal get goal => _goal;
   double get db => _db;
 
-  /// How close the loudest moment got to the goal, 0..1.
-  double get fill => _goal.progressOf(_peakDb);
+  /// How full the tank is, 0..1.
+  double get fill => _goal.progressOf(_loudSeconds);
   double get micLevel => levelFromDb(_db);
   bool get listening => _readings != null;
 
-  /// True once the goal loudness was reached: the session is complete.
-  bool get isFull => _goal.isReached(_peakDb);
+  /// True once the tank is full: the session is complete.
+  bool get isFull => _goal.isReached(_loudSeconds);
   bool get canToggleMic => !_requestingPermission && !isFull;
   String? get errorMessage => _errorMessage;
   bool get canOpenSettings => _canOpenSettings;
@@ -96,11 +100,15 @@ class ScreamTankViewModel extends ChangeNotifier {
     _lastReading = now;
     final dt = last == null
         ? _firstReadingSeconds
-        : now.difference(last).inMicroseconds / 1e6;
+        : math.min(
+            now.difference(last).inMicroseconds / 1e6,
+            _maxStepSeconds,
+          );
 
     final smoothing = 1 - math.exp(-dt / _smoothingSeconds);
     _db += (db - _db) * smoothing;
     _peakDb = math.max(_peakDb, _db);
+    if (_goal.isLoudEnough(_db)) _loudSeconds += dt;
     _notify();
 
 
@@ -114,6 +122,7 @@ class ScreamTankViewModel extends ChangeNotifier {
         additionalParams: {
           'peak_db': _peakDb.round(),
           'goal_db': _goal.targetDb.round(),
+          'goal_seconds': _goal.secondsToFill.round(),
         },
       );
     }
@@ -131,6 +140,7 @@ class ScreamTankViewModel extends ChangeNotifier {
   void restart() {
     stopListening();
     _peakDb = 0;
+    _loudSeconds = 0;
     _notify();
   }
 

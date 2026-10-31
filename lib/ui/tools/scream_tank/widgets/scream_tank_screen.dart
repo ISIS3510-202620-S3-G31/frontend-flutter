@@ -242,7 +242,7 @@ class _Stage extends StatelessWidget {
                     child: Text(
                       isFull
                           ? 'Tank full! Well done.'
-                          : 'Reach ${goalDb.round()} dB to fill the tank!',
+                          : 'Scream above ${goalDb.round()} dB to fill the tank!',
                       textAlign: TextAlign.center,
                       style: AppText.h3.copyWith(color: AppColors.background),
                     ),

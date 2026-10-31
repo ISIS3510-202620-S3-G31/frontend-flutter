@@ -1,14 +1,16 @@
 
 class ScreamGoal {
-  const ScreamGoal({this.targetDb = 85, this.floorDb = 40})
-    : assert(targetDb > floorDb);
+  const ScreamGoal({this.targetDb = 85, this.secondsToFill = 5})
+    : assert(secondsToFill > 0);
 
   final double targetDb;
 
-  final double floorDb;
+  final double secondsToFill;
 
-  double progressOf(double db) =>
-      ((db - floorDb) / (targetDb - floorDb)).clamp(0.0, 1.0);
+  bool isLoudEnough(double db) => db >= targetDb;
 
-  bool isReached(double db) => db >= targetDb;
+  double progressOf(double loudSeconds) =>
+      (loudSeconds / secondsToFill).clamp(0.0, 1.0);
+
+  bool isReached(double loudSeconds) => loudSeconds >= secondsToFill;
 }
