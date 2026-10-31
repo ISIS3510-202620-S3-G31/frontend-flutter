@@ -6,11 +6,9 @@ import '../../home/widgets/tool_hub_screen.dart';
 import '../view_model/auth_gate_view_model.dart';
 import 'login_screen.dart';
 
-/// Shows the toolbox or the login screen depending on the auth state.
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key, this.viewModel});
 
-  /// Pass one in tests; otherwise the gate builds its own.
   final AuthGateViewModel? viewModel;
 
   @override
@@ -21,10 +19,13 @@ class _AuthGateState extends State<AuthGate> {
   late final AuthGateViewModel _viewModel =
       widget.viewModel ?? AuthGateViewModel();
 
+
+  late final Stream<User?> _authChanges = _viewModel.authStateChanges;
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: _viewModel.authStateChanges,
+      stream: _authChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
