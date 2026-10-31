@@ -30,6 +30,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       widget.formViewModel ?? RegisterFormViewModel();
   late final bool _ownsForm = widget.formViewModel == null;
 
+  /// Built once, so a rebuild does not sign the builder up to both view models
+  /// again.
+  late final Listenable _changes = Listenable.merge([_viewModel, _form]);
+
   final _nameController = TextEditingController();
   final _birthDateController = TextEditingController();
   final _emailController = TextEditingController();
@@ -95,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_viewModel, _form]),
+      listenable: _changes,
       builder: (context, _) {
         final canSubmit = _form.isValid && !_viewModel.isLoading;
         return Scaffold(

@@ -48,8 +48,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _navigateToRegister() {
     _viewModel.clearError();
+    // Register gets its own view model: this screen disposes this one as soon
+    // as the new account signs in, while Register is still open.
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => RegisterScreen(viewModel: _viewModel)),
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
     );
   }
 
