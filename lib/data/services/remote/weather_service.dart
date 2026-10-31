@@ -24,28 +24,18 @@ class WeatherException implements Exception {
   String toString() => 'WeatherException(${failure.name}: $message)';
 }
 
-/// What the app needs from a weather API. An interface so a test can answer
-/// without opening an [HttpClient], the same trick [LocationGateway] uses for
-/// the platform calls.
+/// What the app needs from a weather API
 abstract interface class WeatherFetcher {
   Future<Weather> currentWeather({
     required double latitude,
     required double longitude,
   });
 
-  /// Releases whatever the fetcher holds between reads. Fakes have nothing to
-  /// release.
+  /// Releases whatever the fetcher holds between reads. Fakes have nothing to release.
   void close();
 }
 
 /// Reads the weather from Open-Meteo.
-///
-/// Every read runs in its own isolate ([Isolate.run]): the HTTP wait and the
-/// JSON parse happen on a background thread, in parallel with the UI, and only
-/// the finished [Weather] crosses back to the caller's isolate. Each read opens
-/// and closes its own [HttpClient] inside that isolate — a client cannot cross
-/// the isolate boundary — so nothing is held between reads and [close] has
-/// nothing to release.
 class WeatherService implements WeatherFetcher {
   WeatherService({
     String? baseUrl,
@@ -73,9 +63,7 @@ class WeatherService implements WeatherFetcher {
       '&longitude=${longitude.toStringAsFixed(2)}'
       '&current=$_currentFields',
     );
-    // readAt is computed here, in this isolate, so the closure sent to the
-    // background isolate captures only sendable values (Uri, Duration,
-    // DateTime) and the static [_read].
+    // readAt is computed here, in this isolate, so the closure sent to the background isolate captures only sendable values (Uri, Duration, DateTime) and the static [_read].
     final readAt = _now();
     return Isolate.run(
       () => _read(uri, timeLimit, readAt),
@@ -83,8 +71,7 @@ class WeatherService implements WeatherFetcher {
     );
   }
 
-  /// The read itself, executed inside [Isolate.run]. Static on purpose: an
-  /// instance method would capture `this`, and the service must stay sendable.
+  /// The read itself, executed inside [Isolate.run].
   static Future<Weather> _read(
     Uri uri,
     Duration timeLimit,
@@ -114,9 +101,7 @@ class WeatherService implements WeatherFetcher {
     }
   }
 
-  /// Nothing is held between reads — each one closes its own client inside its
-  /// isolate — so there is nothing to release. Kept because [WeatherFetcher]
-  /// requires it and [WeatherRepository.dispose] calls it.
+  /// Nothing is held between reads, each one closes its own client inside its isolate, so there is nothing to release.
   @override
   void close() {}
 
