@@ -18,8 +18,9 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_svg: ^2.3.0
-  # 14.0.3+ pulls dbus 0.7 through its Linux implementation, which clashes with
-  # the dbus 0.8 that connectivity_plus needs. Neither matters on Android or iOS.
+  # Read aloud with the phone's own voice: no network and no API key.
+  flutter_tts: ^4.2.5
+
   geolocator: ^14.0.1
   google_fonts: ^8.2.1
   image_picker: ^1.2.3
