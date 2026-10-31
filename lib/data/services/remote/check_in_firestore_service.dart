@@ -3,8 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/check_in_model.dart';
 
-/// Keeps the daily check-ins in `users/{uid}/check_ins`, one document per day
-/// named `yyyy-MM-dd`, so a day can never end up with two of them.
+
 class CheckInFirestoreService {
   CheckInFirestoreService({FirebaseFirestore? firestore})
     : _customFirestore = firestore;
@@ -24,6 +23,10 @@ class CheckInFirestoreService {
     final data = doc.data();
     return data == null ? null : CheckIn.fromMap(data);
   }
+
+
+  String pathFor(String userId, CheckIn checkIn) =>
+      _checkIns(userId).doc(_dayFormat.format(checkIn.timestamp)).path;
 
   /// Saving the same day again replaces it, so the user can correct it.
   Future<void> save(String userId, CheckIn checkIn) => _checkIns(

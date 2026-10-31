@@ -5,8 +5,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/tool_feedback_model.dart';
 
-/// Keeps the tool feedback in `users/{uid}/tool_feedback`, the same place and
-/// shape the backend rules allow for the owner.
 class FeedbackFirestoreService {
   FeedbackFirestoreService({FirebaseFirestore? firestore})
     : _customFirestore = firestore;
@@ -19,9 +17,10 @@ class FeedbackFirestoreService {
   CollectionReference<Map<String, dynamic>> _feedback(String userId) =>
       _firestore.collection('users/$userId/tool_feedback');
 
-  /// Not awaited: a Firestore write only completes once the server confirms
-  /// it, so without a connection the feedback screen spun forever. Firestore
-  /// keeps the answer on the phone and sends it when it can.
+
+  String newPath(String userId) => _feedback(userId).doc().path;
+
+
   Future<void> add(String userId, ToolFeedback feedback) async {
     unawaited(
       _feedback(userId).doc().set(feedback.toMap()).catchError(_report),

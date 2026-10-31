@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
+import '../../../data/repositories/offline_sync_repository.dart';
 import '../../auth/widgets/profile_screen.dart';
 import '../../check_in/daily_check_in_prompt.dart';
 import '../../check_in/widgets/mood_check_in_sheet.dart';
@@ -41,15 +42,14 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     super.initState();
     _viewModel.loadUserName();
     _viewModel.logScreenView();
+
+    OfflineSyncRepository.shared.start();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Right after creating an account, Register is still open on top of the
-    // home for a moment. A check-in opened then landed above Register and was
-    // closed together with it, so the home waits until it is on top;
-    // isCurrentOf calls this method again when that changes.
+
     if (!_homeStarted && (ModalRoute.isCurrentOf(context) ?? true)) {
       _homeStarted = true;
       _startHome();
