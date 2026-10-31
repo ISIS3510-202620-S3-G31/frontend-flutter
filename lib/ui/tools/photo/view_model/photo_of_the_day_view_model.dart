@@ -330,8 +330,16 @@ class PhotoOfTheDayViewModel extends ChangeNotifier {
       toolId: 'photo',
       toolName: 'Photo of the Day',
     );
-    if (!await _uploadPending()) {
+    // The photo is kept the moment it is on disk. Compressing and uploading
+    // take seconds and happen behind the user's back, so "Keep this one"
+    // never waits for them.
+    unawaited(_uploadAfterSaving());
+  }
+
+  Future<void> _uploadAfterSaving() async {
+    if (!await _uploadPending() && !_disposed) {
       _message = 'Saved on your phone. It will upload later.';
+      _notify();
     }
   }
 
