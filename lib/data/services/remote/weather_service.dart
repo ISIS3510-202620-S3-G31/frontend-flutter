@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import '../../models/weather_model.dart';
 
@@ -23,36 +24,32 @@ class WeatherException implements Exception {
   String toString() => 'WeatherException(${failure.name}: $message)';
 }
 
-/// What the app needs from a weather API. An interface so a test can answer
-/// without opening an [HttpClient], the same trick [LocationGateway] uses for
-/// the platform calls.
+/// What the app needs from a weather API
 abstract interface class WeatherFetcher {
   Future<Weather> currentWeather({
     required double latitude,
     required double longitude,
   });
 
-  /// Releases the client behind the fetcher. Fakes have nothing to release.
+  /// Releases whatever the fetcher holds between reads. Fakes have nothing to release.
   void close();
 }
 
+/// Reads the weather from Open-Meteo.
 class WeatherService implements WeatherFetcher {
   WeatherService({
-    HttpClient? httpClient,
+    String? baseUrl,
     DateTime Function()? now,
     Duration? timeLimit,
-  }) : _client = httpClient ?? HttpClient(),
+  }) : _baseUrl = baseUrl ?? 'https://api.open-meteo.com/v1/forecast',
        _now = now ?? DateTime.now,
        timeLimit = timeLimit ?? const Duration(seconds: 8);
-
-  static const _baseUrl = 'https://api.open-meteo.com/v1/forecast';
 
   static const _currentFields =
       'temperature_2m,precipitation,weather_code,is_day';
 
-  final HttpClient _client;
+  final String _baseUrl;
   final DateTime Function() _now;
-
 
   final Duration timeLimit;
 
@@ -66,13 +63,28 @@ class WeatherService implements WeatherFetcher {
       '&longitude=${longitude.toStringAsFixed(2)}'
       '&current=$_currentFields',
     );
+    // readAt is computed here, in this isolate, so the closure sent to the background isolate captures only sendable values (Uri, Duration, DateTime) and the static [_read].
+    final readAt = _now();
+    return Isolate.run(
+      () => _read(uri, timeLimit, readAt),
+      debugName: 'weather-read',
+    );
+  }
+
+  /// The read itself, executed inside [Isolate.run].
+  static Future<Weather> _read(
+    Uri uri,
+    Duration timeLimit,
+    DateTime readAt,
+  ) async {
+    final client = HttpClient();
     try {
-      final body = await _get(uri).timeout(timeLimit);
+      final body = await _get(client, uri).timeout(timeLimit);
       final json = jsonDecode(body);
       if (json is! Map<String, dynamic>) {
         throw const FormatException('Open-Meteo did not answer an object.');
       }
-      return Weather.fromOpenMeteoJson(json, readAt: _now());
+      return Weather.fromOpenMeteoJson(json, readAt: readAt);
     } on SocketException catch (error) {
       throw WeatherException(WeatherFailure.offline, error.message);
     } on IOException catch (error) {
@@ -84,16 +96,17 @@ class WeatherService implements WeatherFetcher {
       );
     } on FormatException catch (error) {
       throw WeatherException(WeatherFailure.unavailable, error.message);
+    } finally {
+      client.close();
     }
   }
 
-  /// Releases the HTTP client, so a repository that is done does not leave it
-  /// open. Called by [WeatherRepository.dispose].
+  /// Nothing is held between reads, each one closes its own client inside its isolate, so there is nothing to release.
   @override
-  void close() => _client.close();
+  void close() {}
 
-  Future<String> _get(Uri uri) async {
-    final request = await _client.getUrl(uri);
+  static Future<String> _get(HttpClient client, Uri uri) async {
+    final request = await client.getUrl(uri);
     final response = await request.close();
     final body = await response.transform(utf8.decoder).join();
     if (response.statusCode != HttpStatus.ok) {
