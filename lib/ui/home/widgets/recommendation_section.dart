@@ -6,9 +6,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
 
 /// The "Today's Recommendations" block of the home screen: the personal
-/// suggestion plus the option of letting it pick at random. The weather-based
-/// suggestion is not here — it has its own section,
-/// [WeatherRecommendationSection].
+/// suggestion, the one saved from the previous session, plus the option of
+/// letting it pick at random. The weather-based suggestion is not here — it
+/// has its own section, [WeatherRecommendationSection].
 class RecommendationSection extends StatelessWidget {
   const RecommendationSection({
     super.key,
@@ -16,6 +16,8 @@ class RecommendationSection extends StatelessWidget {
     required this.isLoading,
     required this.onOpen,
     required this.onSurpriseMe,
+    this.lastRecommendation,
+    this.onOpenLast,
   });
 
   /// The personal recommendation. Null until it finishes loading.
@@ -27,9 +29,20 @@ class RecommendationSection extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onSurpriseMe;
 
+  /// The recommendation saved in the previous session. Hidden when it is the
+  /// same tool as today's, so the same card is not shown twice.
+  final Recommendation? lastRecommendation;
+  final VoidCallback? onOpenLast;
+
   @override
   Widget build(BuildContext context) {
     final suggested = recommendation;
+    final last = lastRecommendation;
+    final openLast = onOpenLast;
+    final showLast =
+        last != null &&
+        openLast != null &&
+        last.tool.id != suggested?.tool.id;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
@@ -54,8 +67,19 @@ class RecommendationSection extends StatelessWidget {
               onTap: onOpen,
             ),
             const SizedBox(height: 12),
-          ] else if (isLoading) ...[
+          ] else if (isLoading && !showLast) ...[
             const RecommendationLoadingCard(),
+            const SizedBox(height: 12),
+          ],
+          if (last != null && openLast != null && showLast) ...[
+            RecommendationCard(
+              eyebrow: 'YOUR LAST RECOMMENDATION',
+              eyebrowColor: AppColors.accent,
+              iconAsset: last.tool.iconAsset,
+              title: last.tool.title,
+              subtitle: last.reason,
+              onTap: openLast,
+            ),
             const SizedBox(height: 12),
           ],
           RecommendationCard(

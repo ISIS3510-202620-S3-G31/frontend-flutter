@@ -78,6 +78,9 @@ class FakeRecommendationLogRepository extends RecommendationLogRepository {
 
 class FakeAuthRepository extends AuthRepository {
   @override
+  String? get currentUserId => 'test-user';
+
+  @override
   Future<UserModel?> getCurrentUserProfile() async => null;
 }
 
@@ -128,6 +131,7 @@ Future<void> showHome(
           viewModel: vm,
           onOpenRecommendation: onOpenRecommendation ?? () {},
           onOpenWeatherRecommendation: () {},
+          onOpenLastRecommendation: () {},
           onSurpriseMe: onSurpriseMe ?? () {},
         ),
       ),

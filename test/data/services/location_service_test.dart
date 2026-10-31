@@ -1,67 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:frontend_flutter/data/services/location_gateway.dart';
 import 'package:frontend_flutter/data/services/location_service.dart';
 
-/// Stands in for the phone: answers what a test tells it to.
-class FakeLocationGateway implements LocationGateway {
-  FakeLocationGateway({
-    this.serviceEnabled = true,
-    this.permission = LocationPermissionStatus.granted,
-    this.position,
-    this.lastKnown,
-    this.failsToRead = false,
-  });
-
-  bool serviceEnabled;
-  LocationPermissionStatus permission;
-  Position? position;
-  Position? lastKnown;
-  bool failsToRead;
-
-  int reads = 0;
-  int openedLocationSettings = 0;
-  int openedAppSettings = 0;
-
-  @override
-  Future<bool> isServiceEnabled() async => serviceEnabled;
-
-  @override
-  Future<LocationPermissionStatus> requestPermission() async => permission;
-
-  @override
-  Future<Position> currentPosition({Duration? timeLimit}) async {
-    reads++;
-    if (failsToRead) throw const _ReadFailed();
-    return position!;
-  }
-
-  @override
-  Future<Position?> lastKnownPosition() async => lastKnown;
-
-  @override
-  Future<void> openLocationSettings() async => openedLocationSettings++;
-
-  @override
-  Future<void> openAppSettings() async => openedAppSettings++;
-}
-
-class _ReadFailed implements Exception {
-  const _ReadFailed();
-}
-
-Position positionAt(double lat, double lon, DateTime when) => Position(
-  latitude: lat,
-  longitude: lon,
-  timestamp: when,
-  accuracy: 100,
-  altitude: 0,
-  altitudeAccuracy: 0,
-  heading: 0,
-  headingAccuracy: 0,
-  speed: 0,
-  speedAccuracy: 0,
-);
+import 'location_fakes.dart';
 
 void main() {
   final today = DateTime(2026, 10, 29, 12);
@@ -244,5 +185,43 @@ void main() {
         expect(reading.isStale, isTrue);
       },
     );
+  });
+
+  group('reading only if already allowed', () {
+    test('never shows the prompt when the permission was not given', () async {
+      final gateway = FakeLocationGateway(
+        permission: LocationPermissionStatus.denied,
+        position: positionAt(4.6, -74.08, today),
+      );
+
+      expect(await serviceWith(gateway).locationIfAllowed(), isNull);
+      expect(gateway.prompts, 0);
+      expect(gateway.reads, 0);
+    });
+
+    test('reads where the user is once it was allowed', () async {
+      final gateway = FakeLocationGateway(
+        position: positionAt(4.6, -74.08, today),
+      );
+
+      final location = await serviceWith(gateway).locationIfAllowed();
+
+      expect(location?.latitude, 4.6);
+    });
+
+    test('an old position the phone kept is not good enough', () async {
+      // The fix fails and only a two-day-old position is left: it could be
+      // from another city, so it is not used.
+      final gateway = FakeLocationGateway(
+        failsToRead: true,
+        lastKnown: positionAt(
+          6.24,
+          -75.58,
+          today.subtract(const Duration(days: 2)),
+        ),
+      );
+
+      expect(await serviceWith(gateway).locationIfAllowed(), isNull);
+    });
   });
 }

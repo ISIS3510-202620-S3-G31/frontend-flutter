@@ -107,6 +107,9 @@ class FakeAuthRepository extends AuthRepository {
   FakeAuthRepository() : super();
 
   @override
+  String? get currentUserId => 'test-user';
+
+  @override
   Future<UserModel?> getCurrentUserProfile() async => null;
 }
 
