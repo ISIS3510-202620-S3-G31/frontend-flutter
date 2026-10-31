@@ -2,14 +2,6 @@ import 'breathing_music_model.dart';
 export 'breathing_music_model.dart';
 
 enum BreathingPattern {
-  twoStep(
-    'Calm',
-    'assets/icons/ic_two_step.svg',
-    false,
-    defaultInhale: 4,
-    defaultHold: 4,
-    defaultExhale: 4,
-  ),
   threeStep(
     'Box',
     'assets/icons/ic_three_step.svg',
@@ -18,24 +10,21 @@ enum BreathingPattern {
     defaultHold: 4,
     defaultExhale: 4,
   ),
+  twoStep(
+    'Calm',
+    'assets/icons/ic_two_step.svg',
+    false,
+    defaultInhale: 4,
+    defaultHold: 4,
+    defaultExhale: 4,
+  ),
   fourSevenEight(
-    '4-7-8',
+    'Deep',
     'assets/icons/ic_sleep_step.svg',
     true,
     defaultInhale: 4,
     defaultHold: 7,
     defaultExhale: 8,
-    showInSelector: false,
-  ),
-
-
-  custom(
-    'Custom',
-    'assets/icons/ic_tool_breathing.svg',
-    true,
-    defaultInhale: 5,
-    defaultHold: 2,
-    defaultExhale: 6,
   );
 
   const BreathingPattern(
@@ -58,16 +47,11 @@ enum BreathingPattern {
   /// Whether this pattern appears in the pattern selector tabs.
   final bool showInSelector;
 
-  bool get isCustom => this == BreathingPattern.custom;
-
   /// Only the patterns meant to be shown in the selector.
   static List<BreathingPattern> get selectablePatterns =>
       values.where((p) => p.showInSelector).toList();
 }
 
-
-const int customMinBreathSeconds = 2;
-const int customMaxSeconds = 10;
 
 enum BreathingPhase {
   inhale('Breathe in', 'Inhale'),

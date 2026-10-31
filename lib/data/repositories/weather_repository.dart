@@ -38,7 +38,12 @@ class WeatherReading {
 }
 
 
-
+/// The weather where the user is, from the phone's location and the weather
+/// API.
+///
+/// Create it once and reuse it: it is not a singleton and every instance opens
+/// its own HTTP client, so one made per read would pile them up. [dispose]
+/// releases that client.
 class WeatherRepository {
   WeatherRepository({
     LocationService? location,
@@ -101,14 +106,6 @@ class WeatherRepository {
         location: reading,
       );
     }
-  }
-
-  Stream<bool> get onlineChanges {
-    final connectivity = _connectivity;
-    if (connectivity is ConnectivityService) {
-      return connectivity.onlineChanges;
-    }
-    return const Stream.empty();
   }
 
   /// The last weather that was read, so a failed fetch still has something to

@@ -23,7 +23,9 @@ class WeatherException implements Exception {
   String toString() => 'WeatherException(${failure.name}: $message)';
 }
 
-
+/// What the app needs from a weather API. An interface so a test can answer
+/// without opening an [HttpClient], the same trick [LocationGateway] uses for
+/// the platform calls.
 abstract interface class WeatherFetcher {
   Future<Weather> currentWeather({
     required double latitude,

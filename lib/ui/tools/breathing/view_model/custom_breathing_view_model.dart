@@ -60,11 +60,6 @@ class CustomBreathingViewModel extends ChangeNotifier {
   /// Reset only makes sense once something has happened.
   bool get canReset => !isReady;
 
-  /// False until the user taps Done in the Custom rhythm sheet, so choosing
-  /// Custom the first time opens the sheet.
-  bool get isCustomConfigured =>
-      _customTimings.containsKey(BreathingPattern.custom);
-
   /// Message to show once in a snack bar.
   String? get message => _message;
 
@@ -171,8 +166,7 @@ class CustomBreathingViewModel extends ChangeNotifier {
 
     switch (_state.phase) {
       case BreathingPhase.inhale:
-        // A Custom rhythm with a 0 s hold skips the hold.
-        next = _state.pattern.hasHold && _state.holdSeconds > 0
+        next = _state.pattern.hasHold
             ? BreathingPhase.hold
             : BreathingPhase.exhale;
       case BreathingPhase.hold:
@@ -437,19 +431,6 @@ class CustomBreathingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-
-  void saveCustomRhythm({
-    required int inhale,
-    required int hold,
-    required int exhale,
-  }) {
-    _customTimings[BreathingPattern.custom] = (
-      inhale: inhale.clamp(customMinBreathSeconds, customMaxSeconds),
-      hold: hold.clamp(0, customMaxSeconds),
-      exhale: exhale.clamp(customMinBreathSeconds, customMaxSeconds),
-    );
-    selectPattern(BreathingPattern.custom);
-  }
 
   void changeStep(BreathingStep step, int delta) {
     final seconds = (_state.secondsOf(step) + delta).clamp(

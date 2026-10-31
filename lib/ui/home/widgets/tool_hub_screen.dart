@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -61,8 +59,6 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
   Future<void> _startHome() async {
     await _askForCheckIn();
     if (!mounted) return;
-
-    unawaited(_viewModel.loadWeatherSuggestion());
     await _viewModel.loadRecommendation();
   }
 
@@ -127,7 +123,6 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
                 onOpenRecommendation: _openRecommendation,
                 onOpenWeatherRecommendation: _openWeatherRecommendation,
                 onSurpriseMe: _openRandomTool,
-                onOpenWeatherSuggestion: _openWeatherSuggestion,
               ),
               HomeTab.tools => _buildTools(),
               HomeTab.profile => const ProfileScreen(),
@@ -143,11 +138,6 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     if (recommendation == null) return;
     _viewModel.openRecommendation();
     _openTool(recommendation.tool);
-  }
-
-  void _openWeatherSuggestion() {
-    final suggestion = _viewModel.weatherSuggestion;
-    if (suggestion != null) _openTool(suggestion.tool);
   }
 
   void _openWeatherRecommendation() {

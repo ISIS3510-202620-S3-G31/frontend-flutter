@@ -4,6 +4,7 @@ import '../../data/models/tool_model.dart';
 import '../../data/models/tool_session_model.dart';
 import '../../data/models/weather_model.dart';
 
+/// What the app knows about the user when it picks a tool.
 class UserHistory {
   const UserHistory({
     required this.recentCheckIns,
@@ -17,7 +18,9 @@ class UserHistory {
   /// Tools the user finished in the last month.
   final List<ToolSession> sessions;
 
-
+  /// The current weather where the user is, when it could be read. Null when
+  /// there is no location or no connection, so no weather recommendation is
+  /// made and only the personal strategies decide.
   final Weather? weather;
 
   int usesOf(String toolId) =>

@@ -9,7 +9,6 @@ import '../view_model/custom_breathing_view_model.dart';
 import 'breathing_circle.dart';
 import 'breathing_music_sheet.dart';
 import 'breathing_round_button.dart';
-import 'custom_rhythm_sheet.dart';
 import 'duration_pills.dart';
 import 'pattern_selector.dart';
 import 'session_controls.dart';
@@ -75,29 +74,6 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
     });
   }
 
-  /// Choosing Custom the first time opens the sheet to set the rhythm.
-  void _selectPattern(BreathingPattern pattern) {
-    _viewModel.selectPattern(pattern);
-    if (pattern.isCustom && !_viewModel.isCustomConfigured) {
-      _editCustomRhythm();
-    }
-  }
-
-  void _editCustomRhythm() {
-    final state = _viewModel.state;
-    showCustomRhythmSheet(
-      context,
-      inhale: state.inhaleSeconds,
-      hold: state.holdSeconds,
-      exhale: state.exhaleSeconds,
-      onDone: (inhale, hold, exhale) => _viewModel.saveCustomRhythm(
-        inhale: inhale,
-        hold: hold,
-        exhale: exhale,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -133,8 +109,7 @@ class _CustomBreathingScreenState extends State<CustomBreathingScreen> {
                               child: isReady
                                   ? PatternSelector(
                                       selected: state.pattern,
-                                      onSelected: _selectPattern,
-                                      onEditCustom: _editCustomRhythm,
+                                      onSelected: _viewModel.selectPattern,
                                     )
                                   : _CyclesText(
                                       count: _viewModel.completedCycles,

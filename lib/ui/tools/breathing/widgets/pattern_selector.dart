@@ -10,16 +10,13 @@ class PatternSelector extends StatelessWidget {
     super.key,
     required this.selected,
     required this.onSelected,
-    this.onEditCustom,
   });
 
   final BreathingPattern selected;
   final ValueChanged<BreathingPattern> onSelected;
-  final VoidCallback? onEditCustom;
 
   @override
   Widget build(BuildContext context) {
-    final editCustom = onEditCustom;
     final patterns = BreathingPattern.selectablePatterns;
 
     return Container(
@@ -35,9 +32,7 @@ class PatternSelector extends StatelessWidget {
               child: _PatternOption(
                 pattern: pattern,
                 selected: pattern == selected,
-                onTap: pattern.isCustom && pattern == selected && editCustom != null
-                    ? editCustom
-                    : () => onSelected(pattern),
+                onTap: () => onSelected(pattern),
               ),
             ),
         ],
@@ -59,12 +54,10 @@ class _PatternOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showEdit = selected && pattern.isCustom;
-
     return Semantics(
       button: true,
       selected: selected,
-      label: showEdit ? 'Custom, edit rhythm' : pattern.label,
+      label: pattern.label,
       excludeSemantics: true,
       child: Material(
         color: selected ? AppColors.secondary : AppColors.background,
@@ -75,16 +68,7 @@ class _PatternOption extends StatelessWidget {
           child: Center(
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(pattern.label, style: AppText.body, maxLines: 1),
-                  if (showEdit) ...[
-                    const SizedBox(width: 4),
-                    const Icon(Icons.edit, size: 14, color: AppColors.text),
-                  ],
-                ],
-              ),
+              child: Text(pattern.label, style: AppText.body, maxLines: 1),
             ),
           ),
         ),

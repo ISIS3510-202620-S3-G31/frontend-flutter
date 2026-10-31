@@ -1,5 +1,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 
+/// What the app needs to know about the network. An interface so a test can
+/// answer without the plugin.
 abstract interface class ConnectivityChecker {
   Future<bool> isOnline();
 }

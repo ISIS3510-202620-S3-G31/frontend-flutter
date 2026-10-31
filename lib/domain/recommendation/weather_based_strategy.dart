@@ -2,7 +2,9 @@ import '../../data/models/recommendation_model.dart';
 import '../../data/models/tool_model.dart';
 import 'recommendation_strategy.dart';
 
-
+/// Picks a tool for the weather where the user is right now: rain and cold call
+/// for staying in, sun for going out. Mild weather has no opinion and returns
+/// null, so no weather recommendation is shown.
 class WeatherBasedStrategy implements RecommendationStrategy {
   const WeatherBasedStrategy();
 

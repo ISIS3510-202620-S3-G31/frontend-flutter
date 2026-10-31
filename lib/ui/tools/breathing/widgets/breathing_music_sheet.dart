@@ -23,9 +23,9 @@ class BreathingMusicSheet extends StatelessWidget {
         final isOnline = state.isOnline;
 
         return DraggableScrollableSheet(
-          initialChildSize: 0.72,
-          minChildSize: 0.4,
-          maxChildSize: 0.92,
+          initialChildSize: 0.5,
+          minChildSize: 0.35,
+          maxChildSize: 0.9,
           builder: (context, scrollController) {
             return Container(
               decoration: const BoxDecoration(
@@ -53,33 +53,12 @@ class BreathingMusicSheet extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Ambient Music',
-                              style: AppText.h2.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Tap play to preview any track',
-                              style: AppText.bodyMuted.copyWith(fontSize: 13),
-                            ),
-                          ],
-                        ),
+                        Text('Ambient music', style: AppText.h2),
                         Row(
                           children: [
                             Text(
-                              state.isMusicEnabled ? 'Music On' : 'Music Off',
-                              style: AppText.body.copyWith(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: state.isMusicEnabled
-                                    ? AppColors.secondary
-                                    : AppColors.textMuted,
-                              ),
+                              state.isMusicEnabled ? 'Music on' : 'Music off',
+                              style: AppText.body,
                             ),
                             const SizedBox(width: 8),
                             Switch.adaptive(
@@ -188,16 +167,13 @@ class BreathingMusicSheet extends StatelessWidget {
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.text,
-                            side: BorderSide(
-                              color: AppColors.text.withValues(alpha: 0.2),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            minimumSize: const Size.fromHeight(42),
+                            side: const BorderSide(color: AppColors.secondary),
+                            shape: const StadiumBorder(),
+                            minimumSize: const Size.fromHeight(48),
+                            textStyle: AppText.body,
                           ),
-                          icon: const Icon(Icons.refresh, size: 18),
-                          label: const Text('Refresh Jamendo Catalog'),
+                          icon: const Icon(Icons.refresh, size: 20),
+                          label: const Text('Refresh Jamendo catalog'),
                           onPressed: state.isLoadingMusic
                               ? null
                               : () => viewModel.refreshTracks(),
@@ -234,24 +210,17 @@ class _CategoryChip extends StatelessWidget {
       label: '${category.label} music',
       excludeSemantics: true,
       child: Material(
-        color: selected ? AppColors.secondary : Colors.transparent,
-        shape: StadiumBorder(
-          side: BorderSide(
-            color: selected ? AppColors.secondary : AppColors.text.withValues(alpha: 0.2),
-          ),
+        color: selected ? AppColors.secondary : AppColors.background,
+        shape: const StadiumBorder(
+          side: BorderSide(color: AppColors.secondary),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onSelected,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Text(
-              category.label,
-              style: AppText.body.copyWith(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? AppColors.background : AppColors.text,
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Center(
+              child: Text(category.label, style: AppText.body),
             ),
           ),
         ),
@@ -448,6 +417,17 @@ class _TrackTile extends StatelessWidget {
   final VoidCallback onDownload;
   final VoidCallback onDeleteCache;
 
+  void _needsInternet(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'This track is not cached yet. Connect to the internet to listen and save it.',
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final canPlay = track.isCached || isOnline;
@@ -455,199 +435,52 @@ class _TrackTile extends StatelessWidget {
     return Semantics(
       button: true,
       selected: isSelected,
-      label: '${track.title} by ${track.artist}',
+      label: track.title,
       child: Material(
-        color: isSelected
-            ? AppColors.secondary.withValues(alpha: 0.12)
-            : isPreviewing
-            ? AppColors.primary.withValues(alpha: 0.08)
-            : AppColors.surfaceDim.withValues(alpha: 0.5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+        color: isSelected ? AppColors.secondary : AppColors.background,
+        shape: StadiumBorder(
           side: BorderSide(
-            color: isSelected
+            color: isPreviewing && !isSelected
                 ? AppColors.secondary
-                : isPreviewing
-                ? AppColors.primary
                 : Colors.transparent,
-            width: isSelected || isPreviewing ? 1.5 : 1.0,
           ),
         ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: canPlay
-              ? onSelect
-              : () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'This track is not cached yet. Connect to the internet to listen and save it.',
-                      ),
-                      duration: Duration(seconds: 2),
+          onTap: canPlay ? onSelect : () => _needsInternet(context),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: isPreviewPlaying
+                        ? 'Pause preview of ${track.title}'
+                        : 'Play preview of ${track.title}',
+                    icon: Icon(
+                      isPreviewPlaying ? Icons.graphic_eq : Icons.music_note,
+                      color: AppColors.text,
+                      size: 22,
                     ),
-                  );
-                },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                // Interactive Play / Preview button
-                Semantics(
-                  button: true,
-                  label: isPreviewPlaying
-                      ? 'Pause preview of ${track.title}'
-                      : 'Play preview of ${track.title}',
-                  child: Material(
-                    color: isPreviewPlaying
-                        ? AppColors.secondary
-                        : isPreviewing
-                        ? AppColors.secondary.withValues(alpha: 0.7)
-                        : isSelected
-                        ? AppColors.secondary.withValues(alpha: 0.25)
-                        : AppColors.text.withValues(alpha: 0.08),
-                    shape: const CircleBorder(),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: canPlay
-                          ? onTogglePreview
-                          : () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Connect to the internet to preview this track.',
-                                  ),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                      child: SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Icon(
-                          isPreviewPlaying
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                          color: isPreviewPlaying
-                              ? AppColors.background
-                              : isSelected
-                              ? AppColors.secondary
-                              : AppColors.text,
-                          size: 24,
-                        ),
+                    onPressed: canPlay
+                        ? onTogglePreview
+                        : () => _needsInternet(context),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      track.title,
+                      style: AppText.body.copyWith(
+                        color: canPlay ? AppColors.text : AppColors.textMuted,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-
-                // Title and Artist
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              track.title,
-                              style: AppText.body.copyWith(
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                                color: canPlay
-                                    ? AppColors.text
-                                    : AppColors.textMuted,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isPreviewPlaying) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.secondary.withValues(
-                                  alpha: 0.15,
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.graphic_eq_rounded,
-                                    size: 11,
-                                    color: AppColors.secondary,
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    'Preview',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.secondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              track.artist,
-                              style: AppText.bodyMuted.copyWith(fontSize: 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (track.duration > 0) ...[
-                            Text(
-                              ' • ${(track.duration ~/ 60)}:${(track.duration % 60).toString().padLeft(2, '0')}',
-                              style: AppText.bodyMuted.copyWith(fontSize: 12),
-                            ),
-                          ],
-                          if (isSelected) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 5,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.secondary.withValues(
-                                  alpha: 0.12,
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'Active',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.secondary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // Cache / Download Action Button
-                _buildActionWidget(context),
-              ],
+                  _buildActionWidget(),
+                ],
+              ),
             ),
           ),
         ),
@@ -655,61 +488,29 @@ class _TrackTile extends StatelessWidget {
     );
   }
 
-  Widget _buildActionWidget(BuildContext context) {
+  Widget _buildActionWidget() {
     if (isDownloading) {
-      return const SizedBox(
-        width: 32,
-        height: 32,
+      return const SizedBox.square(
+        dimension: 48,
         child: Padding(
-          padding: EdgeInsets.all(6),
+          padding: EdgeInsets.all(14),
           child: CircularProgressIndicator(
             strokeWidth: 2.5,
-            color: AppColors.secondary,
+            color: AppColors.text,
           ),
         ),
       );
     }
 
     if (track.isCached) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2E7D32).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.download_done_rounded,
-                  size: 14,
-                  color: Color(0xFF2E7D32),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Saved',
-                  style: AppText.body.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF2E7D32),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Remove from local cache',
-            icon: Icon(
-              Icons.delete_outline_rounded,
-              size: 18,
-              color: AppColors.textMuted,
-            ),
-            onPressed: onDeleteCache,
-          ),
-        ],
+      return IconButton(
+        tooltip: 'Saved offline. Tap to remove it',
+        icon: const Icon(
+          Icons.download_done_rounded,
+          size: 22,
+          color: AppColors.text,
+        ),
+        onPressed: onDeleteCache,
       );
     }
 
@@ -719,37 +520,21 @@ class _TrackTile extends StatelessWidget {
         icon: const Icon(
           Icons.download_rounded,
           size: 22,
-          color: AppColors.secondary,
+          color: AppColors.text,
         ),
         onPressed: onDownload,
       );
     }
 
-    // Offline and not cached
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.accent.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.cloud_off_rounded,
-            size: 13,
-            color: AppColors.accent,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            'Needs net',
-            style: AppText.body.copyWith(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.accent,
-            ),
-          ),
-        ],
+    return Semantics(
+      label: 'Needs internet',
+      child: SizedBox.square(
+        dimension: 48,
+        child: Icon(
+          Icons.cloud_off_rounded,
+          size: 22,
+          color: AppColors.textMuted,
+        ),
       ),
     );
   }

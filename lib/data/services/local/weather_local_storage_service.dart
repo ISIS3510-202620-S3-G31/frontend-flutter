@@ -3,14 +3,20 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../models/weather_model.dart';
 
-
+/// Where the last known weather is kept. An interface so a test can answer
+/// without a database.
 abstract interface class WeatherStorage {
   Future<void> saveLastWeather(Weather weather);
 
   Future<Weather?> lastWeather();
 }
 
-
+/// Keeps the last weather the app managed to read, so a later offline moment
+/// still has something to show. The weather API has no cache of its own: every
+/// read hits the network, so this is the only memory of the last one.
+///
+/// sqflite when the database opens, memory when it does not, like
+/// [BreathingLocalDatabaseService].
 class WeatherLocalStorageService implements WeatherStorage {
   WeatherLocalStorageService({Database? database}) : _db = database;
 
