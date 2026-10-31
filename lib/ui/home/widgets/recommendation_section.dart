@@ -11,12 +11,17 @@ class RecommendationSection extends StatelessWidget {
   const RecommendationSection({
     super.key,
     required this.recommendation,
+    required this.isLoading,
     required this.onOpen,
     required this.onSurpriseMe,
   });
 
   /// Null until the recommendation finishes loading.
   final Recommendation? recommendation;
+
+  /// True while the recommendation is being loaded, so a placeholder can be
+  /// shown instead of an empty gap.
+  final bool isLoading;
   final VoidCallback onOpen;
   final VoidCallback onSurpriseMe;
 
@@ -46,6 +51,9 @@ class RecommendationSection extends StatelessWidget {
               subtitle: suggested.reason,
               onTap: onOpen,
             ),
+            const SizedBox(height: 12),
+          ] else if (isLoading) ...[
+            const RecommendationLoadingCard(),
             const SizedBox(height: 12),
           ],
           RecommendationCard(
@@ -155,6 +163,88 @@ class RecommendationCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Placeholder shown in place of the suggested card while the recommendation
+/// is loading: same shape as [RecommendationCard], with a spinner where the
+/// tool icon would be.
+class RecommendationLoadingCard extends StatelessWidget {
+  const RecommendationLoadingCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Loading your recommendation',
+      child: Material(
+        color: AppColors.surfaceDim,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: SizedBox.square(
+                    dimension: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: AppColors.background,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'SUGGESTED FOR TODAY',
+                      style: AppText.body.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Finding your match...',
+                      style: AppText.h3.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text,
+                        fontSize: 17,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Checking the weather and your recent check-ins.',
+                      style: AppText.body.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

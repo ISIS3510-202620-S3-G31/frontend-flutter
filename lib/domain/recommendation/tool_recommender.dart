@@ -4,6 +4,7 @@ import 'default_strategy.dart';
 import 'frequency_based_strategy.dart';
 import 'mood_based_strategy.dart';
 import 'recommendation_strategy.dart';
+import 'weather_based_strategy.dart';
 
 /// Chooses how to recommend a tool from what the app knows about the user, then lets that strategy pick the tool.
 class ToolRecommender {
@@ -14,19 +15,25 @@ class ToolRecommender {
   /// The strategy that picked the last recommendation.
   RecommendationStrategy get strategy => _strategy;
 
+  /// The first strategy that has something to say wins: the weather where the
+  /// user is, then their last check-in, then their habits, and the default as
+  /// the last resort.
   Recommendation? recommend(UserHistory history, List<ToolItem> tools) {
-    _strategy = _strategyFor(history);
-    final recommendation = _strategy.recommend(history, tools);
-    if (recommendation != null) return recommendation;
+    for (final strategy in _strategiesFor(history)) {
+      final recommendation = strategy.recommend(history, tools);
+      if (recommendation != null) {
+        _strategy = strategy;
+        return recommendation;
+      }
+    }
     _strategy = const DefaultStrategy();
-    return _strategy.recommend(history, tools);
+    return null;
   }
 
-  RecommendationStrategy _strategyFor(UserHistory history) {
-    if (history.recentCheckIns.isNotEmpty) return const MoodBasedStrategy();
-    if (history.sessions.length >= _minSessions) {
-      return const FrequencyBasedStrategy();
-    }
-    return const DefaultStrategy();
-  }
+  List<RecommendationStrategy> _strategiesFor(UserHistory history) => [
+    if (history.weather != null) const WeatherBasedStrategy(),
+    if (history.recentCheckIns.isNotEmpty) const MoodBasedStrategy(),
+    if (history.sessions.length >= _minSessions) const FrequencyBasedStrategy(),
+    const DefaultStrategy(),
+  ];
 }

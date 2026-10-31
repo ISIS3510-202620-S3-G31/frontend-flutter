@@ -6,6 +6,7 @@ import '../../core/theme/app_text.dart';
 import '../view_model/tool_hub_view_model.dart';
 import 'recommendation_section.dart';
 import 'user_avatar.dart';
+import 'weather_context_line.dart';
 
 /// Home tab: the greeting and what the app suggests doing today.
 class HomeScreen extends StatelessWidget {
@@ -66,9 +67,18 @@ class HomeScreen extends StatelessWidget {
                     style: AppText.breathingTitle.copyWith(fontSize: 26),
                   ),
                 ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: WeatherContextLine(
+                    reading: viewModel.weatherReading,
+                    onFixLocation: viewModel.fixLocationAccess,
+                  ),
+                ),
                 const SizedBox(height: 28),
                 RecommendationSection(
                   recommendation: viewModel.recommendation,
+                  isLoading: viewModel.isRecommendationLoading,
                   onOpen: onOpenRecommendation,
                   onSurpriseMe: onSurpriseMe,
                 ),
