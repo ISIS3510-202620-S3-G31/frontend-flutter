@@ -69,6 +69,10 @@ class ToolHubViewModel extends ChangeNotifier {
   String? _strategy;
   String? _recommendationLogId;
   bool _recommendationOpened = false;
+  Recommendation? _weatherRecommendation;
+  String? _weatherStrategy;
+  String? _weatherRecommendationLogId;
+  bool _weatherRecommendationOpened = false;
   int _loads = 0;
   String? _userName;
   WeatherReading? _weatherReading;
@@ -78,8 +82,14 @@ class ToolHubViewModel extends ChangeNotifier {
   ToolCategory get selectedCategory => _selectedCategory;
   HomeTab get selectedTab => _selectedTab;
 
-  /// Null until [loadRecommendation] finishes.
+  /// The personal recommendation (check-in, habits, default). Null until
+  /// [loadRecommendation] finishes.
   Recommendation? get recommendation => _recommendation;
+
+  /// The weather-based recommendation, shown next to [recommendation]. Null
+  /// until [loadRecommendation] finishes, and when the weather has no opinion
+  /// or could not be read.
+  Recommendation? get weatherRecommendation => _weatherRecommendation;
 
   /// The last weather read, null until [loadRecommendation] finishes. Carries
   /// the outcome, so the screen can tell current weather, last known weather
@@ -87,7 +97,7 @@ class ToolHubViewModel extends ChangeNotifier {
   WeatherReading? get weatherReading => _weatherReading;
 
   /// True while [loadRecommendation] is in flight, so the screen can show
-  /// that the recommendation — the weather read included — is still loading.
+  /// that the recommendations — the weather read included — are still loading.
   bool get isRecommendationLoading => _recommendationLoading;
 
   /// Null until [loadUserName] finishes, and when the profile cannot be read.
@@ -145,8 +155,8 @@ class ToolHubViewModel extends ChangeNotifier {
       );
       if (_disposed || load != _loads) return;
 
-      // The weather decides first when it could be read; a failure here must
-      // not cost the recommendation, so it degrades to no weather at all.
+      // The weather feeds its own recommendation; a failure here must not
+      // cost the personal one, so it degrades to no weather at all.
       WeatherReading? reading;
       try {
         reading = await _weather.currentWeather();
@@ -165,14 +175,22 @@ class ToolHubViewModel extends ChangeNotifier {
         sessions: data.sessions,
         weather: reading == null ? null : _usableWeather(reading),
       );
-      final recommendation = _recommender.recommend(history, _openableTools());
-      final strategy = _strategyName();
+      final tools = _openableTools();
+      // Two recommendations at once: the personal one and the one for the
+      // weather, so the screen can show both cards.
+      final recommendation = _recommender.recommend(history, tools);
+      final strategy = _strategyName(_recommender.strategy);
+      final weatherRecommendation = _recommender.weatherRecommendation(
+        history,
+        tools,
+      );
+      final weatherStrategy = _strategyName(_recommender.weatherStrategy);
 
       if (recommendation == null) {
         _recommendation = null;
         _strategy = null;
         _recommendationLogId = null;
-      } else if (!_isOnScreen(recommendation, strategy)) {
+      } else if (!_isOnScreen(_recommendation, _strategy, recommendation, strategy)) {
         _recommendation = recommendation;
         _strategy = strategy;
         _recommendationLogId = _recommendationLog.logShown(
@@ -180,6 +198,25 @@ class ToolHubViewModel extends ChangeNotifier {
           strategy: strategy,
         );
         _recommendationOpened = false;
+      }
+
+      if (weatherRecommendation == null) {
+        _weatherRecommendation = null;
+        _weatherStrategy = null;
+        _weatherRecommendationLogId = null;
+      } else if (!_isOnScreen(
+        _weatherRecommendation,
+        _weatherStrategy,
+        weatherRecommendation,
+        weatherStrategy,
+      )) {
+        _weatherRecommendation = weatherRecommendation;
+        _weatherStrategy = weatherStrategy;
+        _weatherRecommendationLogId = _recommendationLog.logShown(
+          weatherRecommendation,
+          strategy: weatherStrategy,
+        );
+        _weatherRecommendationOpened = false;
       }
     } finally {
       // A newer load owns the flag once it has started, and a disposed view
@@ -196,6 +233,16 @@ class ToolHubViewModel extends ChangeNotifier {
     final recommendation = _recommendation;
     if (id == null || recommendation == null || _recommendationOpened) return;
     _recommendationOpened = true;
+    _recommendationLog.logOpened(id, toolId: recommendation.tool.id);
+  }
+
+  void openWeatherRecommendation() {
+    final id = _weatherRecommendationLogId;
+    final recommendation = _weatherRecommendation;
+    if (id == null || recommendation == null || _weatherRecommendationOpened) {
+      return;
+    }
+    _weatherRecommendationOpened = true;
     _recommendationLog.logOpened(id, toolId: recommendation.tool.id);
   }
 
@@ -245,15 +292,19 @@ class ToolHubViewModel extends ChangeNotifier {
     ];
   }
 
-  bool _isOnScreen(Recommendation recommendation, String strategy) {
-    final current = _recommendation;
+  bool _isOnScreen(
+    Recommendation? current,
+    String? currentStrategy,
+    Recommendation recommendation,
+    String strategy,
+  ) {
     return current != null &&
         current.tool.id == recommendation.tool.id &&
         current.reason == recommendation.reason &&
-        _strategy == strategy;
+        currentStrategy == strategy;
   }
 
-  String _strategyName() => switch (_recommender.strategy) {
+  String _strategyName(RecommendationStrategy strategy) => switch (strategy) {
     WeatherBasedStrategy() => 'Weather based',
     MoodBasedStrategy() => 'Mood based',
     FrequencyBasedStrategy() => 'Frequency based',

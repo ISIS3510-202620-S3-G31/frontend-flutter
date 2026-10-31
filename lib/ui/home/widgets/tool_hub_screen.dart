@@ -126,6 +126,7 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
               HomeTab.home => HomeScreen(
                 viewModel: _viewModel,
                 onOpenRecommendation: _openRecommendation,
+                onOpenWeatherRecommendation: _openWeatherRecommendation,
                 onSurpriseMe: _openRandomTool,
               ),
               HomeTab.tools => _buildTools(),
@@ -141,6 +142,13 @@ class _ToolHubScreenState extends State<ToolHubScreen> {
     final recommendation = _viewModel.recommendation;
     if (recommendation == null) return;
     _viewModel.openRecommendation();
+    _openTool(recommendation.tool);
+  }
+
+  void _openWeatherRecommendation() {
+    final recommendation = _viewModel.weatherRecommendation;
+    if (recommendation == null) return;
+    _viewModel.openWeatherRecommendation();
     _openTool(recommendation.tool);
   }
 

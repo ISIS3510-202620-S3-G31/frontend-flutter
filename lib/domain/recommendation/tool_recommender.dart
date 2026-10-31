@@ -11,13 +11,19 @@ class ToolRecommender {
   static const _minSessions = 3;
 
   RecommendationStrategy _strategy = const DefaultStrategy();
+  RecommendationStrategy _weatherStrategy = const WeatherBasedStrategy();
 
-  /// The strategy that picked the last recommendation.
+  /// The strategy that picked the last personal recommendation.
   RecommendationStrategy get strategy => _strategy;
 
-  /// The first strategy that has something to say wins: the weather where the
-  /// user is, then their last check-in, then their habits, and the default as
-  /// the last resort.
+  /// The strategy that picked the last weather recommendation.
+  RecommendationStrategy get weatherStrategy => _weatherStrategy;
+
+  /// The personal recommendation: the first strategy that has something to
+  /// say wins — their last check-in, then their habits, and the default as the
+  /// last resort. The weather is not part of this chain: it gets its own
+  /// recommendation through [weatherRecommendation], so both can be shown at
+  /// the same time.
   Recommendation? recommend(UserHistory history, List<ToolItem> tools) {
     for (final strategy in _strategiesFor(history)) {
       final recommendation = strategy.recommend(history, tools);
@@ -30,8 +36,18 @@ class ToolRecommender {
     return null;
   }
 
+  /// The recommendation for the weather where the user is, or null when the
+  /// weather has no opinion (mild weather) or could not be read.
+  Recommendation? weatherRecommendation(
+    UserHistory history,
+    List<ToolItem> tools,
+  ) {
+    const strategy = WeatherBasedStrategy();
+    _weatherStrategy = strategy;
+    return strategy.recommend(history, tools);
+  }
+
   List<RecommendationStrategy> _strategiesFor(UserHistory history) => [
-    if (history.weather != null) const WeatherBasedStrategy(),
     if (history.recentCheckIns.isNotEmpty) const MoodBasedStrategy(),
     if (history.sessions.length >= _minSessions) const FrequencyBasedStrategy(),
     const DefaultStrategy(),

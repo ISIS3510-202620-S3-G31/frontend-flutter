@@ -19,7 +19,8 @@ class UserHistory {
   final List<ToolSession> sessions;
 
   /// The current weather where the user is, when it could be read. Null when
-  /// there is no location or no connection, so the other strategies decide.
+  /// there is no location or no connection, so no weather recommendation is
+  /// made and only the personal strategies decide.
   final Weather? weather;
 
   int usesOf(String toolId) =>
