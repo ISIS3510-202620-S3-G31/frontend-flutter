@@ -35,12 +35,13 @@ class UsageFlowViewModel extends ChangeNotifier {
 
   /// Opens the tool: remembers when it started and begins its analytics
   /// session, so completion and abandonment can be measured.
-  Future<void> startTool() async {
+  Future<void> startTool({ToolEntryPoint? entryPoint}) async {
     if (currentStep is! ToolStep) return;
     _toolStep.startedAt = _now();
     await _analytics.startToolSession(
       toolId: tool.id,
       toolName: tool.title,
+      entryPoint: entryPoint,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend_flutter/data/models/pending_write_model.dart';
 import 'package:frontend_flutter/data/models/tool_feedback_model.dart';
 import 'package:frontend_flutter/data/repositories/feedback_repository.dart';
 import 'package:frontend_flutter/ui/feedback/view_model/tool_feedback_view_model.dart';
@@ -10,7 +11,10 @@ class FakeFeedbackRepository extends FeedbackRepository {
   final saved = <ToolFeedback>[];
 
   @override
-  Future<void> save(ToolFeedback feedback) async => saved.add(feedback);
+  Future<SaveOutcome> save(ToolFeedback feedback) async {
+    saved.add(feedback);
+    return SaveOutcome.saved;
+  }
 }
 
 void main() {

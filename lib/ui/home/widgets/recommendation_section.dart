@@ -18,6 +18,7 @@ class RecommendationSection extends StatelessWidget {
     required this.onSurpriseMe,
     this.lastRecommendation,
     this.onOpenLast,
+    this.isOffline = false,
   });
 
   /// The personal recommendation. Null until it finishes loading.
@@ -33,6 +34,10 @@ class RecommendationSection extends StatelessWidget {
   /// same tool as today's, so the same card is not shown twice.
   final Recommendation? lastRecommendation;
   final VoidCallback? onOpenLast;
+
+  /// Without a connection no new recommendation is worked out: the last saved
+  /// one is shown, with a line that says why.
+  final bool isOffline;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +62,10 @@ class RecommendationSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          if (isOffline) ...[
+            _OfflineNote(hasLastRecommendation: last != null),
+            const SizedBox(height: 12),
+          ],
           if (suggested != null) ...[
             RecommendationCard(
               eyebrow: 'SUGGESTED FOR TODAY',
@@ -67,7 +76,7 @@ class RecommendationSection extends StatelessWidget {
               onTap: onOpen,
             ),
             const SizedBox(height: 12),
-          ] else if (isLoading && !showLast) ...[
+          ] else if (isLoading && !showLast && !isOffline) ...[
             const RecommendationLoadingCard(),
             const SizedBox(height: 12),
           ],
@@ -92,6 +101,32 @@ class RecommendationSection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Tells the user why the home shows the last saved recommendation.
+class _OfflineNote extends StatelessWidget {
+  const _OfflineNote({required this.hasLastRecommendation});
+
+  final bool hasLastRecommendation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.cloud_off_rounded, size: 18, color: AppColors.textMuted),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            hasLastRecommendation
+                ? "You're offline. Here is your last saved recommendation."
+                : "You're offline. New recommendations will show up when you "
+                      'reconnect.',
+            style: AppText.bodyMuted,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/models/check_in_model.dart';
+import '../../../data/models/pending_write_model.dart';
 import '../../../data/repositories/check_in_repository.dart';
 import '../../../data/services/microphone_service.dart';
 import '../../../data/services/network/network_connectivity_service.dart';
@@ -50,14 +51,11 @@ class CheckInViewModel extends ChangeNotifier {
   bool _isListening = false;
   String? _dictationMessage;
 
-  /// Where the dictated words start in [_note] and how many of them there are.
-  /// Each result replaces that stretch, so the rest of the note is never
-  /// touched and the user keeps whatever they typed by hand.
+
   int _spanStart = 0;
   int _spanLength = 0;
 
-  /// Whether the current attempt started without a connection, which decides
-  /// what a failure means.
+
   bool _offline = false;
 
   Set<Emotion> get emotions => Set.unmodifiable(_emotions);
@@ -228,7 +226,7 @@ class CheckInViewModel extends ChangeNotifier {
     if (_isListening) await _speech.stop();
     if (isReadingNote) await _activeVoice?.stop();
     try {
-      await _repository.save(
+      final outcome = await _repository.save(
         CheckIn(
           emotions: [for (final leaf in mood.emotions) leaf.emotion],
           intensity: mood.intensity.round(),
@@ -237,7 +235,9 @@ class CheckInViewModel extends ChangeNotifier {
         ),
       );
       _saved = true;
-      _message = 'Check-in saved. See you tomorrow.';
+      _message = outcome == SaveOutcome.saved
+          ? 'Check-in saved. See you tomorrow.'
+          : 'Saved on your phone. It will sync when you are back online.';
     } on Exception {
       _message = 'Could not save your check-in. Check your connection.';
     } finally {

@@ -1,3 +1,4 @@
+import '../models/tool_model.dart';
 import '../services/analytics_service.dart';
 import 'tool_session_repository.dart';
 
@@ -51,6 +52,7 @@ class AnalyticsRepository {
   Future<void> startToolSession({
     required String toolId,
     required String toolName,
+    ToolEntryPoint? entryPoint,
     Map<String, Object>? additionalParams,
   }) async {
     final session = _ActiveSession(DateTime.now());
@@ -60,6 +62,7 @@ class AnalyticsRepository {
       parameters: {
         'tool_id': toolId,
         'tool_name': toolName,
+        'entry_point': ?entryPoint?.name,
         ...?additionalParams,
       },
     );

@@ -91,6 +91,7 @@ class HomeScreen extends StatelessWidget {
                   recommendation: viewModel.recommendation,
                   lastRecommendation: viewModel.lastRecommendation,
                   isLoading: viewModel.isRecommendationLoading,
+                  isOffline: viewModel.isOffline,
                   onOpen: onOpenRecommendation,
                   onOpenLast: onOpenLastRecommendation,
                   onSurpriseMe: onSurpriseMe,
