@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart' show XFile;
 import 'package:flutter/foundation.dart';
 
 import '../models/photo_model.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/photo_compressor.dart';
 import '../services/local/photo_cache.dart';
 import '../services/local/photo_dao.dart';
 import '../services/local/photo_storage_service.dart';
@@ -17,12 +20,14 @@ class PhotoRepository {
     PhotoRemoteService? remote,
     ConnectivityService? connectivity,
     AuthService? auth,
+    PhotoCompressor? compressor,
   }) : _storage = storage ?? PhotoStorageService(),
        _dao = dao ?? PhotoDao(),
        _cache = cache ?? PhotoCache(),
        _remote = remote ?? PhotoRemoteService(),
        _connectivity = connectivity ?? ConnectivityService(),
-       _auth = auth ?? AuthService();
+       _auth = auth ?? AuthService(),
+       _compressor = compressor ?? const PhotoCompressor();
 
   final PhotoStorageService _storage;
   final PhotoDao _dao;
@@ -30,6 +35,7 @@ class PhotoRepository {
   final PhotoRemoteService _remote;
   final ConnectivityService _connectivity;
   final AuthService _auth;
+  final PhotoCompressor _compressor;
 
   bool _uploading = false;
   bool _leftoversChecked = false;
@@ -123,7 +129,6 @@ class PhotoRepository {
     return DailyPhoto(day: day, file: file);
   }
 
-
   /// Uploads the photos that are only on the phone. Returns false when there
   /// is no internet, so they stay pending for later.
   ///
@@ -139,13 +144,31 @@ class PhotoRepository {
       for (final day in await _dao.notSyncedDays(userId)) {
         final file = await _storage.photoFor(userId, day);
         if (file == null) continue;
-        await _remote.upload(userId, day, file);
+        await _remote.upload(userId, day, await _uploadCopyOf(file));
         await _dao.markSynced(userId, day);
       }
     } finally {
       _uploading = false;
     }
     return true;
+  }
+
+  /// What goes up for [file]: a smaller copy made on a background isolate.
+  ///
+  /// If the photo cannot be compressed the original goes up instead, so it
+  /// still reaches Firebase rather than staying pending forever.
+  Future<Uint8List> _uploadCopyOf(File file) async {
+    try {
+      return await _compressor.compress(file.path);
+    } on Object catch (error) {
+      // The decoder parses whatever the gallery handed over, and a damaged
+      // file can fail with an Error as well as an Exception. Either way the
+      // answer is the same: send the original.
+      debugPrint(
+        '[PhotoOfTheDay] Uploading the original, not compressed: $error',
+      );
+      return file.readAsBytes();
+    }
   }
 
   /// Clears what the app left behind when photos were shared by every account

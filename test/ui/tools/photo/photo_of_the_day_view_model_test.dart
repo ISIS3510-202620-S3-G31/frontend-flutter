@@ -65,7 +65,15 @@ class FakePhotoRepository implements PhotoRepository {
   }
 
   @override
-  Future<bool> uploadPending() async => true;
+  Future<bool> uploadPending() async {
+    // Hold the upload back the way compressing and a slow network do.
+    if (uploadGate != null) await uploadGate!.future;
+    uploads++;
+    return true;
+  }
+
+  Completer<void>? uploadGate;
+  int uploads = 0;
 
   @override
   Future<void> discardSharedLeftovers() async {}
@@ -157,6 +165,23 @@ void main() {
 
       expect(repository.saved, isEmpty);
       expect(viewModel.mode, PhotoViewMode.camera);
+    });
+
+    test('keeping it does not wait for the compression and upload', () async {
+      final gate = Completer<void>();
+      repository.uploadGate = gate;
+      await viewModel.pickFromGallery();
+
+      await viewModel.confirmPhoto();
+
+      // Kept and shown while the copy is still being made and sent.
+      expect(viewModel.mode, PhotoViewMode.saved);
+      expect(viewModel.isBusy, isFalse);
+      expect(repository.uploads, 0);
+
+      gate.complete();
+      await pumpEventQueue();
+      expect(repository.uploads, 1);
     });
 
     test('keeping it is what saves the day', () async {

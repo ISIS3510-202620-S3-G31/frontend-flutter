@@ -18,6 +18,7 @@ void main() {
   late FakeRemote remote;
   late FakeConnectivity connectivity;
   late PhotoCache cache;
+  late FakeCompressor compressor;
   late PhotoRepository repository;
 
   final monday = DateTime(2026, 10, 26);
@@ -31,6 +32,7 @@ void main() {
     remote = FakeRemote();
     connectivity = FakeConnectivity();
     cache = PhotoCache(folder: Directory('${root.path}/cache'));
+    compressor = FakeCompressor();
     repository = PhotoRepository(
       storage: storage,
       dao: dao,
@@ -38,6 +40,7 @@ void main() {
       remote: remote,
       connectivity: connectivity,
       auth: auth,
+      compressor: compressor,
     );
   });
 
@@ -100,6 +103,38 @@ void main() {
 
     await repository.uploadPending();
     expect(await dao.notSyncedDays('ana'), isEmpty);
+  });
+
+  group('uploading a smaller copy', () {
+    test('what goes up is the compressed copy', () async {
+      await repository.savePhoto(monday, await somePhoto());
+
+      await repository.uploadPending();
+
+      expect(compressor.compressed, hasLength(1));
+      expect(remote.stored['ana/2026-10-26'], 'small(an image)');
+    });
+
+    test('the photo on the phone stays the original', () async {
+      await repository.savePhoto(monday, await somePhoto());
+
+      await repository.uploadPending();
+
+      final kept = await repository.photoOf(monday);
+      expect(await kept!.file.readAsString(), 'an image');
+    });
+
+    test('a photo that cannot be compressed goes up as it is', () async {
+      await repository.savePhoto(monday, await somePhoto());
+      // Decoders can fail with an Error, not only an Exception.
+      compressor.failure = RangeError('damaged file');
+
+      await repository.uploadPending();
+
+      expect(remote.stored['ana/2026-10-26'], 'an image');
+      // And it is not left pending forever.
+      expect(await dao.notSyncedDays('ana'), isEmpty);
+    });
   });
 
   group('a photo this phone did not take', () {
