@@ -3,7 +3,7 @@ export 'breathing_music_model.dart';
 
 enum BreathingPattern {
   twoStep(
-    '2-step',
+    'Calm',
     'assets/icons/ic_two_step.svg',
     false,
     defaultInhale: 4,
@@ -11,7 +11,7 @@ enum BreathingPattern {
     defaultExhale: 4,
   ),
   threeStep(
-    '3-step',
+    'Box',
     'assets/icons/ic_three_step.svg',
     true,
     defaultInhale: 4,
@@ -25,6 +25,7 @@ enum BreathingPattern {
     defaultInhale: 4,
     defaultHold: 7,
     defaultExhale: 8,
+    showInSelector: false,
   ),
 
 
@@ -44,6 +45,7 @@ enum BreathingPattern {
     this.defaultInhale = 4,
     this.defaultHold = 4,
     this.defaultExhale = 4,
+    this.showInSelector = true,
   });
 
   final String label;
@@ -53,7 +55,14 @@ enum BreathingPattern {
   final int defaultHold;
   final int defaultExhale;
 
+  /// Whether this pattern appears in the pattern selector tabs.
+  final bool showInSelector;
+
   bool get isCustom => this == BreathingPattern.custom;
+
+  /// Only the patterns meant to be shown in the selector.
+  static List<BreathingPattern> get selectablePatterns =>
+      values.where((p) => p.showInSelector).toList();
 }
 
 
@@ -111,6 +120,7 @@ class CustomBreathingState {
     this.downloadingTrackId,
     this.previewTrack,
     this.isPreviewPlaying = false,
+    this.musicCategory = AmbientCategory.all,
   });
 
   final BreathingPattern pattern;
@@ -130,6 +140,7 @@ class CustomBreathingState {
   final String? downloadingTrackId;
   final BreathingMusicTrack? previewTrack;
   final bool isPreviewPlaying;
+  final AmbientCategory musicCategory;
 
   int secondsOf(BreathingStep step) {
     switch (step) {
@@ -161,6 +172,11 @@ class CustomBreathingState {
       .where((step) => step != BreathingStep.hold || pattern.hasHold)
       .toList();
 
+  /// Tracks filtered by the selected ambient category.
+  List<BreathingMusicTrack> get filteredTracks => musicCategory == AmbientCategory.all
+      ? availableTracks
+      : availableTracks.where((t) => t.category == musicCategory).toList();
+
   CustomBreathingState copyWith({
     BreathingPattern? pattern,
     int? inhaleSeconds,
@@ -181,6 +197,7 @@ class CustomBreathingState {
     BreathingMusicTrack? previewTrack,
     bool clearPreviewTrack = false,
     bool? isPreviewPlaying,
+    AmbientCategory? musicCategory,
   }) {
     return CustomBreathingState(
       pattern: pattern ?? this.pattern,
@@ -204,6 +221,7 @@ class CustomBreathingState {
           ? null
           : (previewTrack ?? this.previewTrack),
       isPreviewPlaying: isPreviewPlaying ?? this.isPreviewPlaying,
+      musicCategory: musicCategory ?? this.musicCategory,
     );
   }
 }

@@ -483,6 +483,12 @@ class CustomBreathingViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Selects a music category to filter the available tracks.
+  void selectMusicCategory(AmbientCategory category) {
+    _state = _state.copyWith(musicCategory: category);
+    notifyListeners();
+  }
+
   void clearMessage() => _message = null;
 
   @override

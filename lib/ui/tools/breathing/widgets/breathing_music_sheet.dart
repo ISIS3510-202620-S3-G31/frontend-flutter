@@ -16,7 +16,7 @@ class BreathingMusicSheet extends StatelessWidget {
       listenable: viewModel,
       builder: (context, _) {
         final state = viewModel.state;
-        final tracks = state.availableTracks;
+        final tracks = state.filteredTracks;
         final selectedTrack = state.selectedTrack;
         final previewTrack = state.previewTrack;
         final isPreviewPlaying = state.isPreviewPlaying;
@@ -57,7 +57,7 @@ class BreathingMusicSheet extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Session Music',
+                              'Ambient Music',
                               style: AppText.h2.copyWith(
                                 fontWeight: FontWeight.w700,
                               ),
@@ -93,12 +93,43 @@ class BreathingMusicSheet extends StatelessWidget {
                     ),
                   ),
 
+                  // Ambient category filter chips
+                  SizedBox(
+                    height: 40,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      children: [
+                        for (final category in AmbientCategory.values) ...[
+                          _CategoryChip(
+                            category: category,
+                            selected: state.musicCategory == category,
+                            onSelected: () =>
+                                viewModel.selectMusicCategory(category),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
                   // Tracks List
                   Expanded(
                     child: state.isLoadingMusic && tracks.isEmpty
                         ? const Center(
                             child: CircularProgressIndicator(
                               color: AppColors.secondary,
+                            ),
+                          )
+                        : tracks.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                'No tracks in this category.',
+                                style: AppText.bodyMuted,
+                              ),
                             ),
                           )
                         : ListView.separated(
@@ -179,6 +210,52 @@ class BreathingMusicSheet extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+/// Chip for selecting an ambient music category.
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.category,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final AmbientCategory category;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${category.label} music',
+      excludeSemantics: true,
+      child: Material(
+        color: selected ? AppColors.secondary : Colors.transparent,
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: selected ? AppColors.secondary : AppColors.text.withValues(alpha: 0.2),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onSelected,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Text(
+              category.label,
+              style: AppText.body.copyWith(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppColors.background : AppColors.text,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

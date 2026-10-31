@@ -20,6 +20,7 @@ class PatternSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final editCustom = onEditCustom;
+    final patterns = BreathingPattern.selectablePatterns;
 
     return Container(
       height: 48,
@@ -29,7 +30,7 @@ class PatternSelector extends StatelessWidget {
       ),
       child: Row(
         children: [
-          for (final pattern in BreathingPattern.values)
+          for (final pattern in patterns)
             Expanded(
               child: _PatternOption(
                 pattern: pattern,
