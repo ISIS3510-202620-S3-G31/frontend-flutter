@@ -92,6 +92,29 @@ void main() {
     expect(place?.city, 'Bogotá');
   });
 
+  test('Bogotá is one city, with or without its district label', () {
+    for (final name in [
+      'Bogotá',
+      'Bogotá, D.C.',
+      'Bogotá D.C.',
+      'Bogotá DC',
+      'Bogotá, Distrito Capital',
+      'Distrito Capital de Bogotá',
+      '  Bogotá, D.C.  ',
+    ]) {
+      final place = PlaceService.placeOf(
+        Placemark(subAdministrativeArea: name, country: 'Colombia'),
+      );
+      expect(place?.city, 'Bogotá', reason: name);
+    }
+  });
+
+  test('a city whose name merely contains the letters dc is left alone', () {
+    expect(PlaceService.canonicalCity('Madrid'), 'Madrid');
+    expect(PlaceService.canonicalCity('Medellín'), 'Medellín');
+    expect(PlaceService.canonicalCity('Washington'), 'Washington');
+  });
+
   test('a place with no country is not worth keeping', () {
     expect(PlaceService.placeOf(const Placemark(locality: 'Bogotá')), isNull);
   });

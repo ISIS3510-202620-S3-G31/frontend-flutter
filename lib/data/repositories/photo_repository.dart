@@ -164,7 +164,7 @@ class PhotoRepository {
       // The decoder parses whatever the gallery handed over, and a damaged
       // file can fail with an Error as well as an Exception. Either way the
       // answer is the same: send the original.
-      debugPrint(
+      debugPrint(``
         '[PhotoOfTheDay] Uploading the original, not compressed: $error',
       );
       return file.readAsBytes();
