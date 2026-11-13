@@ -5,12 +5,9 @@ import 'dart:isolate';
 
 import '../../models/weather_model.dart';
 
-/// Why the weather could not be read.
 enum WeatherFailure {
-  /// No connection: asking again once it comes back should work.
   offline,
 
-  /// The service took too long, failed, or answered something unreadable.
   unavailable,
 }
 
@@ -24,7 +21,6 @@ class WeatherException implements Exception {
   String toString() => 'WeatherException(${failure.name}: $message)';
 }
 
-/// What the app needs from a weather API
 abstract interface class WeatherFetcher {
   Future<Weather> currentWeather({
     required double latitude,
@@ -35,7 +31,6 @@ abstract interface class WeatherFetcher {
   void close();
 }
 
-/// Reads the weather from Open-Meteo.
 class WeatherService implements WeatherFetcher {
   WeatherService({
     String? baseUrl,
@@ -71,7 +66,6 @@ class WeatherService implements WeatherFetcher {
     );
   }
 
-  /// The read itself, executed inside [Isolate.run].
   static Future<Weather> _read(
     Uri uri,
     Duration timeLimit,
@@ -101,7 +95,6 @@ class WeatherService implements WeatherFetcher {
     }
   }
 
-  /// Nothing is held between reads, each one closes its own client inside its isolate, so there is nothing to release.
   @override
   void close() {}
 

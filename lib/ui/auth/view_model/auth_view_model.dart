@@ -133,12 +133,6 @@ class AuthViewModel extends ChangeNotifier {
     if (userId != null) await _forgetCachedPhotos(userId);
   }
 
-  /// Drops the photos this phone downloaded for the account that just left.
-  ///
-  /// They can all be fetched from Firebase again, so keeping them would only
-  /// hold disk for someone who is no longer using this phone. It runs after
-  /// the sign-out and swallows its own errors: the user is already out, and
-  /// failing to delete a file is no reason to tell them otherwise.
   Future<void> _forgetCachedPhotos(String userId) async {
     try {
       await _photos.forgetCached(userId);

@@ -35,10 +35,7 @@ class OfflineSyncRepository {
   StreamSubscription<bool>? _onlineChanges;
   bool _flushing = false;
 
-  /// [write] was already handed to Firestore by its service. Online that is
-  /// enough. Offline it also goes to the queue, so it reaches the server when
-  /// the connection comes back, even if the app is closed first, and the
-  /// screen can say it was saved on the phone.
+
   Future<SaveOutcome> track(PendingWrite write) async {
     if (await _isOnline()) return SaveOutcome.saved;
     try {
@@ -76,8 +73,7 @@ class OfflineSyncRepository {
     }
   }
 
-  /// When the check itself fails (no plugin in tests, for one), the write is
-  /// treated as online: Firestore still keeps it.
+
   Future<bool> _isOnline() async {
     try {
       return await _connectivity.isOnline();

@@ -30,7 +30,6 @@ class StatsRepository {
     final feedbackRead = _orEmpty(_feedback.since(from));
     final checkInsRead = _orEmpty(_checkIns.since(from));
     await Future.wait([feedbackRead, checkInsRead]);
-    // Both are done by now, so these awaits only hand over the lists.
     final feedback = await feedbackRead;
     final checkIns = await checkInsRead;
     if (kDebugMode) {
@@ -42,7 +41,6 @@ class StatsRepository {
     );
   }
 
-  /// A failed read should not look like a different history.
   static Future<List<T>> _orEmpty<T>(Future<List<T>> read) async {
     try {
       return await read;

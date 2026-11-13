@@ -110,7 +110,8 @@ class FakeAuthRepository extends AuthRepository {
   String? get currentUserId => 'test-user';
 
   @override
-  Future<UserModel?> getCurrentUserProfile() async => null;
+  Future<UserModel?> getCurrentUserProfile({bool refresh = false}) async =>
+      null;
 }
 
 WeatherReading ready(Weather weather) =>

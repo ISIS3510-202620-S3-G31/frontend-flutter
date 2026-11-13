@@ -29,10 +29,7 @@ class CheckInRepository {
     return _service.forDay(userId, DateTime.now());
   }
 
-  /// Saves the check-in and tells whether it went out or stayed on the phone
-  /// ([SaveOutcome.savedOffline]): without a connection it also goes to the
-  /// offline queue, which sends it when the connection comes back. Throws
-  /// [AuthException] when nobody is signed in.
+  //
   Future<SaveOutcome> save(CheckIn checkIn) async {
     final userId = _auth.currentUserId;
     if (userId == null) {
@@ -41,7 +38,7 @@ class CheckInRepository {
     await _service.save(userId, checkIn);
     // BQ10: where the user was. Finding it takes the GPS and the network, so
     // it is added afterwards and the check-in never waits for it.
-    unawaited(_addPlace(userId, checkIn.timestamp));
+    unawaited(_addPlace(userId, checkIn.timestamp)); 
     return _sync.track(
       PendingWrite(
         path: _service.pathFor(userId, checkIn),

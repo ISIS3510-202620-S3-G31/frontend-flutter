@@ -34,11 +34,7 @@ class CheckInFirestoreService {
   String pathFor(String userId, CheckIn checkIn) =>
       'users/$userId/check_ins/${_dayFormat.format(checkIn.timestamp)}';
 
-  /// Saving the same day again replaces it, so the user can correct it.
-  ///
-  /// Not awaited: a Firestore write only completes once the server confirms
-  /// it, so without a connection the check-in sheet spun forever. Firestore
-  /// keeps the check-in on the phone and sends it when it can.
+
   Future<void> save(String userId, CheckIn checkIn) async {
     unawaited(
       _checkIns(userId)

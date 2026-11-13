@@ -13,16 +13,21 @@ void main() {
   final today = DateTime(2026, 10, 28, 12);
 
   Future<void> show(WidgetTester tester, FakeStatsRepository repository) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: StatsScreen(
-            onOpenToolbox: () {},
-            viewModel: StatsViewModel(repository: repository, now: () => today),
+    // The charts are worked out on a real background isolate, which the fake
+    // clock of widget tests never lets finish, so this part runs in real time.
+    await tester.runAsync(() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatsScreen(
+              onOpenToolbox: () {},
+              viewModel: StatsViewModel(repository: repository, now: () => today),
+            ),
           ),
         ),
-      ),
-    );
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    });
     await tester.pumpAndSettle();
   }
 

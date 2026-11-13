@@ -188,11 +188,8 @@ class ToolHubViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Follows the connection while the home is open: losing it shows the last
-  /// saved recommendation, and getting it back works out a new one.
   void watchConnection() {
     _connectionChanges ??= _connectivity.onlineChanges.listen((online) {
-      // The first event only says how things are; nothing changed.
       if (_disposed || online == !_offline) return;
       _offline = !online;
       notifyListeners();

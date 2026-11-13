@@ -23,11 +23,20 @@ class ReadAloudViewModel extends ChangeNotifier {
   SpeechState get state =>
       _speech.text == text ? _speech.state.value : SpeechState.idle;
 
-  Future<void> _checkAvailable() async {
-    final available = await _speech.initialize();
-    if (_disposed) return;
-    _available = available;
-    notifyListeners();
+
+  void _checkAvailable() {
+    _speech.initialize().then(
+      (available) {
+        if (_disposed) return;
+        _available = available;
+        notifyListeners();
+      },
+      onError: (Object error) {
+        if (_disposed) return;
+        _available = false;
+        notifyListeners();
+      },
+    );
   }
 
   /// The main button: listen, pause or resume, depending on the state.

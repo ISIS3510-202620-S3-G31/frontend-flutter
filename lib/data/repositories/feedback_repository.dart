@@ -17,9 +17,6 @@ class FeedbackRepository {
   final AuthService _auth;
   final OfflineSyncRepository _sync;
 
-  /// Saves the answer and tells whether it went out or stayed on the phone
-  /// ([SaveOutcome.savedOffline]). Throws [AuthException] when nobody is
-  /// signed in.
   Future<SaveOutcome> save(ToolFeedback feedback) async {
     final userId = _auth.currentUserId;
     if (userId == null) {

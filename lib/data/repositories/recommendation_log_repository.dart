@@ -45,8 +45,6 @@ class RecommendationLogRepository {
     );
   }
 
-  /// Logs the tap on the recommended card, tied to its impression by [id],
-  /// so the recommendation-engagement metric counts interactions, not shows.
   void logTapped(String id, {required String toolId}) {
     unawaited(
       _analytics.logEvent(
@@ -56,7 +54,6 @@ class RecommendationLogRepository {
     );
   }
 
-  /// Twenty random letters and digits, like the ids Firestore makes.
   static String _newId() => String.fromCharCodes([
     for (var i = 0; i < 20; i++)
       _idChars.codeUnitAt(_random.nextInt(_idChars.length)),

@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../data/models/check_in_model.dart';
@@ -33,8 +35,7 @@ class StatsViewModel extends ChangeNotifier {
     DateTime Function()? now,
   }) : _repository = repository ?? StatsRepository(),
        _toolRepository = toolRepository ?? const ToolRepository(),
-       _now = now ?? DateTime.now,
-       _insightsEngine = UsefulInsightsEngine(now: now);
+       _now = now ?? DateTime.now;
 
   static const _maxToolsShown = 4;
   static const _maxInsightsShown = 3;
@@ -42,7 +43,6 @@ class StatsViewModel extends ChangeNotifier {
   final StatsRepository _repository;
   final ToolRepository _toolRepository;
   final DateTime Function() _now;
-  final UsefulInsightsEngine _insightsEngine;
 
   /// Analytics of the sessions opened from an insight; the shared repository
   /// is created on first use, so plain view model tests never touch Firebase.
@@ -122,7 +122,6 @@ class StatsViewModel extends ChangeNotifier {
     try {
       await _load();
     } finally {
-      // Whatever happens, the screen must stop waiting.
       _loading = false;
       _notify();
     }
@@ -130,44 +129,69 @@ class StatsViewModel extends ChangeNotifier {
 
   Future<void> _load() async {
     final now = _now();
-    final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
     final monthAgo = DateTime(now.year, now.month, now.day - 29);
-
     final data = await _repository.dataSince(monthAgo);
-    // Measured to decide on compute(): a month of history is worked out in a
-    // fraction of a millisecond, less than starting an isolate would cost.
-    final aggregation = Stopwatch()..start();
-    final checkIns = data.checkIns;
-    final sessions = data.sessions;
     _isEmpty = data.isEmpty;
     final toolNames = {
       for (final tool in _toolRepository.allTools()) tool.id: tool.title,
     };
-
-    final thisWeek = [
-      for (final checkIn in checkIns)
-        if (!checkIn.timestamp.isBefore(monday)) checkIn,
-    ];
-    _weekCheckIns = thisWeek.length;
-    _topFeeling = _mostFrequentEmotion(thisWeek);
-    _week = [
-      for (var i = 0; i < 7; i++)
-        _moodOf(thisWeek, DateTime(monday.year, monday.month, monday.day + i)),
-    ];
-    _toolShares = _sharesOf(sessions, toolNames);
-    _insights = _insightsEngine
-        .generate(checkIns: checkIns, sessions: sessions, toolNames: toolNames)
-        .take(_maxInsightsShown)
-        .toList();
+    final aggregation = Stopwatch()..start();
+    final summary = await _aggregateInBackground(
+      data.checkIns,
+      data.sessions,
+      toolNames,
+      now,
+    );
+    if (_disposed) return;
+    _weekCheckIns = summary.weekCheckIns;
+    _topFeeling = summary.topFeeling;
+    _week = summary.week;
+    _toolShares = summary.toolShares;
+    _insights = summary.insights;
     if (kDebugMode) {
       debugPrint(
-        '[Stats] Charts worked out in ${aggregation.elapsedMicroseconds} µs '
-        'from ${checkIns.length} check-ins and ${sessions.length} sessions',
+        '[Stats] Charts worked out in a background isolate in '
+        '${aggregation.elapsedMicroseconds} µs from ${data.checkIns.length} '
+        'check-ins and ${data.sessions.length} sessions',
       );
     }
   }
 
-  DayMood? _moodOf(List<CheckIn> checkIns, DateTime day) {
+
+  static Future<_StatsSummary> _aggregateInBackground(
+    List<CheckIn> checkIns,
+    List<ToolSession> sessions,
+    Map<String, String> toolNames,
+    DateTime now,
+  ) => Isolate.run(() => _aggregate(checkIns, sessions, toolNames, now));
+
+  static _StatsSummary _aggregate(
+    List<CheckIn> checkIns,
+    List<ToolSession> sessions,
+    Map<String, String> toolNames,
+    DateTime now,
+  ) {
+    final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    final thisWeek = [
+      for (final checkIn in checkIns)
+        if (!checkIn.timestamp.isBefore(monday)) checkIn,
+    ];
+    return _StatsSummary(
+      weekCheckIns: thisWeek.length,
+      topFeeling: _mostFrequentEmotion(thisWeek),
+      week: [
+        for (var i = 0; i < 7; i++)
+          _moodOf(thisWeek, DateTime(monday.year, monday.month, monday.day + i)),
+      ],
+      toolShares: _sharesOf(sessions, toolNames),
+      insights: UsefulInsightsEngine(now: () => now)
+          .generate(checkIns: checkIns, sessions: sessions, toolNames: toolNames)
+          .take(_maxInsightsShown)
+          .toList(),
+    );
+  }
+
+  static DayMood? _moodOf(List<CheckIn> checkIns, DateTime day) {
     final sameDay = [
       for (final checkIn in checkIns)
         if (checkIn.timestamp.year == day.year &&
@@ -182,7 +206,7 @@ class StatsViewModel extends ChangeNotifier {
   }
 
   /// On a tie, the first emotion of the enum wins, so the result is stable.
-  Emotion? _mostFrequentEmotion(List<CheckIn> checkIns) {
+  static Emotion? _mostFrequentEmotion(List<CheckIn> checkIns) {
     final counts = <Emotion, int>{};
     for (final checkIn in checkIns) {
       for (final emotion in checkIn.emotions.toSet()) {
@@ -198,7 +222,7 @@ class StatsViewModel extends ChangeNotifier {
   }
 
   /// The most used tools; when there are more than fit, the rest are grouped.
-  List<ToolShare> _sharesOf(
+  static List<ToolShare> _sharesOf(
     List<ToolSession> sessions,
     Map<String, String> toolNames,
   ) {
@@ -257,4 +281,22 @@ class StatsViewModel extends ChangeNotifier {
     _disposed = true;
     super.dispose();
   }
+}
+
+/// Everything [StatsViewModel._aggregate] works out, sent back from the
+/// background isolate in one message.
+class _StatsSummary {
+  const _StatsSummary({
+    required this.weekCheckIns,
+    required this.topFeeling,
+    required this.week,
+    required this.toolShares,
+    required this.insights,
+  });
+
+  final int weekCheckIns;
+  final Emotion? topFeeling;
+  final List<DayMood?> week;
+  final List<ToolShare> toolShares;
+  final List<Insight> insights;
 }

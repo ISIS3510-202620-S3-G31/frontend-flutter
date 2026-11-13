@@ -7,7 +7,6 @@ class UserProfileCache {
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
-  /// One cache for the whole app: every screen makes its own repository.
   static final shared = UserProfileCache();
 
   final Duration ttl;
@@ -16,7 +15,6 @@ class UserProfileCache {
   UserModel? _profile;
   DateTime? _savedAt;
 
-  /// The profile of [uid] while it is younger than [ttl], otherwise null.
   UserModel? get(String uid) {
     final profile = _profile;
     final savedAt = _savedAt;
