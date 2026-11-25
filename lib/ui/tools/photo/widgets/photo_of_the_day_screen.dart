@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/circle_icon_button.dart';
+import '../../../core/widgets/cover_sized_image.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../view_model/photo_of_the_day_view_model.dart';
 import 'shutter_button.dart';
@@ -70,7 +71,7 @@ class _PhotoOfTheDayScreenState extends State<PhotoOfTheDayScreen>
         final onCamera = _viewModel.mode == PhotoViewMode.camera;
 
         final Widget? content = photo != null
-            ? Image.file(photo, fit: BoxFit.cover, key: ValueKey(photo.path))
+            ? CoverFileImage(photo, key: ValueKey(photo.path))
             : _viewModel.loadingDay
             ? const Center(child: CircularProgressIndicator())
             : camera != null && onCamera
