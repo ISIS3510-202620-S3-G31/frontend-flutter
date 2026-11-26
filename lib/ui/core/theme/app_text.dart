@@ -3,13 +3,18 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
-/// Text styles from the design system. All weights are 400.
-///
-/// H1 should be "Sorean"; Figma uses Sora as a stand-in until the font files
-/// are available.
+/// Text styles from the design system, the same as the Kotlin app's: every
+/// title in Sorean, everything else in Figtree. All weights are 400.
 abstract final class AppText {
-  static TextStyle get h1 =>
-      GoogleFonts.sora(fontSize: 28, height: 1.2, color: AppColors.text);
+  /// The design's headline font, bundled in assets/fonts.
+  static const headlineFamily = 'Sorean';
+
+  static TextStyle get h1 => const TextStyle(
+    fontFamily: headlineFamily,
+    fontSize: 28,
+    height: 1.2,
+    color: AppColors.text,
+  );
   static TextStyle get h2 =>
       GoogleFonts.figtree(fontSize: 22, height: 1.3, color: AppColors.text);
   static TextStyle get h3 =>
@@ -21,15 +26,9 @@ abstract final class AppText {
   static TextStyle get bodyMuted =>
       body.copyWith(color: AppColors.text.withValues(alpha: 0.7));
 
-  /// "Scream Tank" title only.
-  static TextStyle get wordmark =>
-      GoogleFonts.sonsieOne(fontSize: 30, height: 1.2, color: AppColors.text);
+  /// "Scream Tank" title.
+  static TextStyle get wordmark => h1.copyWith(fontSize: 30);
 
-  /// "Custom breathing" retro display serif title.
-  static TextStyle get breathingTitle => GoogleFonts.fraunces(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        height: 1.2,
-        color: AppColors.text,
-      );
+  /// "Custom breathing" title.
+  static TextStyle get breathingTitle => h1;
 }

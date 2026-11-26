@@ -8,7 +8,6 @@ import '../services/connectivity_service.dart';
 import '../services/local/pending_write_storage.dart';
 import '../services/remote/pending_write_firestore_service.dart';
 
-
 class OfflineSyncRepository {
   OfflineSyncRepository({
     PendingWriteStorage? storage,
@@ -50,7 +49,6 @@ class OfflineSyncRepository {
     return SaveOutcome.savedOffline;
   }
 
-
   void start() {
     if (_onlineChanges != null) return;
     _onlineChanges = _connectivity.onlineChanges
@@ -58,7 +56,6 @@ class OfflineSyncRepository {
         .listen((_) => unawaited(flush()));
     unawaited(flush());
   }
-
 
   Future<void> flush() async {
     final userId = _auth.currentUserId;

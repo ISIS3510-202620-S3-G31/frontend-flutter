@@ -1,4 +1,3 @@
-
 class PendingWrite {
   const PendingWrite({
     required this.path,
@@ -9,11 +8,9 @@ class PendingWrite {
 
   final String path;
 
-
   final String userId;
   final Map<String, Object?> data;
   final DateTime createdAt;
 }
-
 
 enum SaveOutcome { saved, savedOffline }

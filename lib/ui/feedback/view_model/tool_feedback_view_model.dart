@@ -21,7 +21,6 @@ class ToolFeedbackViewModel extends ChangeNotifier {
 
   int _rating = 5;
   String _comment = '';
-  bool _favorite = false;
   bool _saving = false;
   bool _saved = false;
   String? _message;
@@ -29,7 +28,6 @@ class ToolFeedbackViewModel extends ChangeNotifier {
 
   int get rating => _rating;
   String get comment => _comment;
-  bool get favorite => _favorite;
   bool get saving => _saving;
 
   /// True once the feedback is stored, so the screen can close itself.
@@ -62,11 +60,6 @@ class ToolFeedbackViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleFavorite() {
-    _favorite = !_favorite;
-    notifyListeners();
-  }
-
   Future<void> save() async {
     if (_saving) return;
     _saving = true;
@@ -79,7 +72,6 @@ class ToolFeedbackViewModel extends ChangeNotifier {
           startedAt: startedAt,
           durationSeconds: durationSeconds,
           comment: _comment.trim(),
-          favorite: _favorite,
         ),
       );
       _saved = true;

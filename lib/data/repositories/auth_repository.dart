@@ -60,7 +60,6 @@ class AuthRepository {
   /// Forgets the cached profile. For any write that changes `users/{uid}`.
   void invalidateProfile() => _profileCache.clear();
 
-
   Future<UserModel> signIn({
     required String email,
     required String password,

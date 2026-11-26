@@ -34,9 +34,7 @@ class CheckIn {
   /// What the user wrote about the day, empty when they wrote nothing.
   final String note;
 
-
   static const maxNoteLength = 280;
-
 
   static String limitNote(String note) =>
       note.characters.take(maxNoteLength).toString();

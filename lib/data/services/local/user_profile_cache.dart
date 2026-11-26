@@ -1,6 +1,5 @@
 import '../../models/user_model.dart';
 
-
 class UserProfileCache {
   UserProfileCache({
     this.ttl = const Duration(minutes: 10),

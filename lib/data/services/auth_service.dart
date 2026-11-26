@@ -204,9 +204,7 @@ class AuthService {
     }
   }
 
-
   String _mapFirebaseError(FirebaseAuthException error) => switch (error.code) {
-
     'invalid-credential' ||
     'user-not-found' ||
     'wrong-password' => 'Incorrect email or password.',

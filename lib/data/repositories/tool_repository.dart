@@ -36,4 +36,11 @@ const _tools = [
     iconAsset: 'assets/icons/ic_tool_scream.svg',
     category: ToolCategory.release,
   ),
+  ToolItem(
+    id: 'fortune_cookie',
+    title: 'Fortune cookie',
+    description: 'Open a cookie and take a moment with its message.',
+    iconAsset: 'assets/icons/ic_tool_fortune.svg',
+    category: ToolCategory.reflect,
+  ),
 ];

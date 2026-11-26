@@ -2,7 +2,6 @@ import 'package:intl/intl.dart';
 
 import '../../domain/auth/registration_rules.dart';
 
-
 class UserModel {
   const UserModel({
     required this.uid,
@@ -29,7 +28,6 @@ class UserModel {
     return RegistrationRules.ageOn(birthDate, DateTime.now());
   }
 
-
   Map<String, dynamic> toMap() => {
     'name': name,
     'email': email,
@@ -53,7 +51,6 @@ class UserModel {
       day == null ? null : _dayFormat.format(day);
 
   static String _text(Object? value) => value is String ? value : '';
-
 
   static int? _readAge(Object? value) {
     final age = switch (value) {

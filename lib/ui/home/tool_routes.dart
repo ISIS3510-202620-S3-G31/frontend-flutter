@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tools/breathing/widgets/custom_breathing_screen.dart';
+import '../tools/fortune/widgets/fortune_cookie_screen.dart';
 import '../tools/photo/widgets/photo_of_the_day_screen.dart';
 import '../tools/scream_tank/widgets/scream_tank_screen.dart';
 
@@ -10,8 +11,10 @@ const Map<String, WidgetBuilder> toolScreens = {
   'photo': _photoScreen,
   'breathing': _breathingScreen,
   'scream': _screamScreen,
+  'fortune_cookie': _fortuneScreen,
 };
 
 Widget _photoScreen(BuildContext context) => const PhotoOfTheDayScreen();
 Widget _breathingScreen(BuildContext context) => const CustomBreathingScreen();
 Widget _screamScreen(BuildContext context) => const ScreamTankScreen();
+Widget _fortuneScreen(BuildContext context) => const FortuneCookieScreen();

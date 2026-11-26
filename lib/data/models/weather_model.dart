@@ -8,7 +8,6 @@ class Weather {
     required this.readAt,
   });
 
-
   factory Weather.fromOpenMeteoJson(
     Map<String, dynamic> json, {
     required DateTime readAt,
@@ -35,14 +34,12 @@ class Weather {
     );
   }
 
-
   static const coldBelowC = 12.0;
   static const minRainMm = 0.1;
 
   final double temperatureC;
 
   final double precipitationMm;
-
 
   final int weatherCode;
 
