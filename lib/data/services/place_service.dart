@@ -65,6 +65,29 @@ class PlaceService {
     }
   }
 
+  /// The legal status some geocoders add to a capital district: "D.C." in
+  /// "Bogotá, D.C.", or "Distrito Capital" written out before or after it.
+  static final _districtSuffix = RegExp(
+    r'[,\s]*\b(D\.?\s?C\.?|Distrito Capital)$',
+    caseSensitive: false,
+  );
+  static final _districtPrefix = RegExp(
+    r'^Distrito Capital de\s+',
+    caseSensitive: false,
+  );
+
+  /// One name per city, whatever the phone's geocoder calls it.
+  ///
+  /// The same city can come back as "Bogotá" on one phone and "Bogotá, D.C."
+  /// on another, and the dashboard would count them as two cities. The
+  /// district label is the city's legal status, not part of its name, so it
+  /// is dropped.
+  static String canonicalCity(String name) => name
+      .trim()
+      .replaceFirst(_districtPrefix, '')
+      .replaceFirst(_districtSuffix, '')
+      .trim();
+
   /// The city is the municipality. Around towns the locality the geocoder
   /// gives can be a rural district (a vereda like Tiquisa, in Chía) too small
   /// for a map to find, while the municipality always is a city. The locality
@@ -83,7 +106,7 @@ class PlaceService {
     if (city == null || country == null || country.trim().isEmpty) return null;
     final code = placemark.isoCountryCode?.trim();
     return Place(
-      city: city.trim(),
+      city: canonicalCity(city),
       country: country.trim(),
       countryCode: code == null || code.isEmpty ? null : code,
     );
