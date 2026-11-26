@@ -77,6 +77,12 @@ class FortuneCache {
         ].take(recentCapacity).toList();
       });
 
+  /// Replaces the recents with [recents] merged with the account's.
+  Future<void> setRecents(String userId, List<Fortune> recents) => _update(
+    _recentFile(userId),
+    (_) => recents.take(recentCapacity).toList(),
+  );
+
   /// The phrases that come with the app.
   Future<List<Fortune>> seeds() async {
     final text = await _assets.loadString('assets/data/fortune_seed.json');

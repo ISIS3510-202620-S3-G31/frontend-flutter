@@ -19,22 +19,47 @@ class FortuneChancesStorage {
   final Future<SharedPreferences> Function() _preferences;
   final DateTime Function() _now;
 
-  String _today() => _dayFormat.format(_now());
+  /// Today as 2026-11-26, which is also the name of the day's document in
+  /// the cloud.
+  String today() => _dayFormat.format(_now());
 
   Future<int> chancesLeft(String userId) async {
     final preferences = await _preferences();
-    if (preferences.getString('last_date_$userId') != _today()) {
+    if (preferences.getString('last_date_$userId') != today()) {
       return dailyChances;
     }
     return preferences.getInt('chances_left_$userId') ?? dailyChances;
   }
 
-  /// Spends one cookie of today and returns how many are left.
+  /// Cookies opened today on this phone, or learned from another one.
+  Future<int> usedToday(String userId) async =>
+      dailyChances - await chancesLeft(userId);
+
+  /// Spends one cookie of today and returns how many are left. It stays
+  /// pending until the account knows.
   Future<int> spendOne(String userId) async {
     final preferences = await _preferences();
     final left = (await chancesLeft(userId) - 1).clamp(0, dailyChances);
-    await preferences.setString('last_date_$userId', _today());
+    await preferences.setString('last_date_$userId', today());
     await preferences.setInt('chances_left_$userId', left);
+    await preferences.setBool('daily_pending_$userId', true);
     return left;
   }
+
+  /// Takes what another phone opened today. Never gives a cookie back: the
+  /// larger count wins.
+  Future<void> raiseUsedToday(String userId, int used) async {
+    final safe = used.clamp(0, dailyChances);
+    if (safe <= await usedToday(userId)) return;
+    final preferences = await _preferences();
+    await preferences.setString('last_date_$userId', today());
+    await preferences.setInt('chances_left_$userId', dailyChances - safe);
+  }
+
+  /// Whether today's count changed here and the account does not know yet.
+  Future<bool> isPending(String userId) async =>
+      (await _preferences()).getBool('daily_pending_$userId') ?? false;
+
+  Future<void> markSent(String userId) async =>
+      (await _preferences()).setBool('daily_pending_$userId', false);
 }

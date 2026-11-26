@@ -4,7 +4,7 @@ import 'package:sqflite/sqflite.dart';
 /// The Fortune Cookie's sqflite database, with one table per list: the
 /// fortunes kept and the cards shared. Rows carry the account they belong to.
 abstract final class FortuneDatabase {
-  static const _version = 2;
+  static const _version = 3;
 
   static Future<Database> open() async => openDatabase(
     join(await getDatabasesPath(), 'fortune.db'),
@@ -18,9 +18,16 @@ abstract final class FortuneDatabase {
     await _createCards(db);
   }
 
-  /// Version 1 only had the kept fortunes.
+  /// Version 1 only had the kept fortunes; version 2 had no removed cards.
   static Future<void> upgrade(Database db, int from, int to) async {
-    if (from < 2) await _createCards(db);
+    if (from < 2) {
+      await _createCards(db);
+    } else if (from < 3) {
+      await db.execute(
+        'ALTER TABLE saved_fortune_cards '
+        'ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+      );
+    }
   }
 
   static Future<void> _createFavorites(Database db) => db.execute('''
@@ -35,7 +42,8 @@ abstract final class FortuneDatabase {
       PRIMARY KEY (user_id, id)
     )''');
 
-  /// One card per fortune: its image is drawn once and reused.
+  /// One card per fortune: its image is drawn once and reused. A card
+  /// removed offline stays as `is_deleted` until the cloud forgets it too.
   static Future<void> _createCards(Database db) => db.execute('''
     CREATE TABLE saved_fortune_cards (
       user_id TEXT NOT NULL,
@@ -44,6 +52,7 @@ abstract final class FortuneDatabase {
       local_path TEXT NOT NULL,
       saved_at INTEGER NOT NULL,
       is_synced INTEGER NOT NULL DEFAULT 0,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (user_id, cookie_id)
     )''');
 }

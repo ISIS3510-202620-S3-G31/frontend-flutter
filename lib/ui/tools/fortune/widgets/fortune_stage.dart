@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../view_model/fortune_cookie_view_model.dart';
+import 'fortune_paper.dart';
 
 const _whole = AssetImage('assets/illustrations/fortune_cookie_whole.webp');
 const _left = AssetImage('assets/illustrations/fortune_cookie_left.webp');
@@ -25,7 +26,8 @@ const _largestScale = 1.4;
 /// that open to the sides, and the paper comes out between them.
 ///
 /// The cookies are images, so the animation only moves, scales, turns and
-/// fades them: nothing is drawn again frame by frame.
+/// fades them; only the paper and the crumbs, a few small shapes, are drawn
+/// frame by frame while they move.
 class FortuneStage extends StatefulWidget {
   const FortuneStage({
     super.key,
@@ -34,7 +36,7 @@ class FortuneStage extends StatefulWidget {
     required this.hasChances,
     required this.previewing,
     required this.onCrack,
-    required this.paper,
+    required this.quote,
   });
 
   final FortunePhase phase;
@@ -46,8 +48,8 @@ class FortuneStage extends StatefulWidget {
   final bool previewing;
   final ValueChanged<int> onCrack;
 
-  /// The paper with the phrase, or null while there is none.
-  final Widget? paper;
+  /// The phrase written on the paper, or null while there is none.
+  final String? quote;
 
   @override
   State<FortuneStage> createState() => _FortuneStageState();
@@ -192,8 +194,9 @@ class _FortuneStageState extends State<FortuneStage>
                 children: [
                   for (var i = 0; i < 3; i++) _light(i, slot(i), cookieSize),
                   for (var i = 0; i < 3; i++) _cookie(i, slot(i), cookieSize),
-                  ?_paper(),
+                  ?_paper(width),
                   ?_halves(width, cookieSize),
+                  ?_crumbs(cookieSize),
                 ],
               ),
             ),
@@ -284,16 +287,32 @@ class _FortuneStageState extends State<FortuneStage>
     );
   }
 
-  /// The paper unrolls from the middle with the phrase already written on
-  /// it, so the text is read as the paper opens, not after.
-  Widget? _paper() {
-    final paper = widget.paper;
+  /// The paper comes out of the cookie narrow and very wavy, stretches to
+  /// both sides, then grows to its height and flattens to a gentle wave,
+  /// with the phrase showing as it flattens.
+  Widget? _paper(double width) {
+    final quote = widget.quote;
     final progress = widget.previewing ? _preview.value : _ribbon.value;
-    if (paper == null || progress == 0) return null;
-    return ClipRect(
-      child: Align(
-        widthFactor: 0.08 + 0.92 * progress,
-        child: Opacity(opacity: (progress * 4).clamp(0.0, 1.0), child: paper),
+    if (quote == null || progress == 0) return null;
+    final grow = ((progress - 0.55) / 0.45).clamp(0.0, 1.0);
+    final restingWave = 112 * fortunePaperRestingWave;
+    return FortunePaper(
+      quote: quote,
+      wave: width * 0.05 * (1 - progress) + restingWave * progress,
+      widthFactor: 0.15 + 0.85 * progress,
+      heightFactor: 0.18 + 0.82 * grow,
+      textOpacity: Curves.easeIn.transform(grow),
+    );
+  }
+
+  /// Crumbs flying off while the cookie splits.
+  Widget? _crumbs(double cookieSize) {
+    final split = _split.value;
+    if (widget.previewing || split <= 0 || split >= 1) return null;
+    return IgnorePointer(
+      child: CustomPaint(
+        size: Size.square(cookieSize * _largestScale),
+        painter: CookieShardsPainter(split),
       ),
     );
   }

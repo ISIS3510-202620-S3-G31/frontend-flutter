@@ -71,6 +71,8 @@ class FortuneCookieViewModel extends ChangeNotifier {
       }
       _sharing = false;
       _notify();
+      // The card goes up to the account in the background.
+      if (result.isNew) unawaited(_sync());
       await _repository.openShareSheet(result.card);
     } on Exception catch (error) {
       debugPrint('[Fortune] Could not make the card: $error');
@@ -87,6 +89,7 @@ class FortuneCookieViewModel extends ChangeNotifier {
     _cards = await _repository.cards();
     _message = 'Removed from Shared';
     _notify();
+    unawaited(_sync());
   }
 
   FortunePhase get phase => _phase;
@@ -149,11 +152,21 @@ class FortuneCookieViewModel extends ChangeNotifier {
     unawaited(_sync());
   }
 
+  /// Syncs with the account and shows what changed: what another phone kept,
+  /// shared or opened today.
   Future<void> _sync() async {
     await _repository.sync();
     final kept = await _repository.favorites();
+    final cards = await _repository.cards();
+    final recents = await _repository.recents();
+    final chances = await _repository.chancesLeft();
     if (_disposed) return;
     _kept = kept;
+    _cards = cards;
+    _recents = recents;
+    // The phone already took the larger count of the two, so cookies opened
+    // on another phone are spent here too.
+    _chancesLeft = chances;
     _notify();
   }
 
@@ -235,6 +248,9 @@ class FortuneCookieViewModel extends ChangeNotifier {
     unawaited(
       _analytics.completeToolSession(toolId: toolId, toolName: toolName),
     );
+    // Today's count and the recents reach the account, so another phone
+    // knows this cookie was opened.
+    unawaited(_sync());
   }
 
   void openRecent(Fortune fortune) {

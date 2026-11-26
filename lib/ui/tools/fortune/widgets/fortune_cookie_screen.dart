@@ -137,9 +137,7 @@ class _FortuneCookieScreenState extends State<FortuneCookieScreen> {
                               hasChances: _viewModel.hasChances,
                               previewing: previewing,
                               onCrack: _viewModel.crack,
-                              paper: shown == null
-                                  ? null
-                                  : FortunePaper(quote: shown.quote),
+                              quote: shown?.quote,
                             ),
                           ),
                           Padding(

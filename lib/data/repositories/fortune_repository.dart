@@ -104,31 +104,122 @@ class FortuneRepository {
     return keep;
   }
 
-  /// Sends the pending changes up, then brings what other phones kept.
-  /// Without a connection or a signed-in account it does nothing, and the
-  /// changes stay pending for the next time.
+  /// Brings the phone and the account together: sends what changed here and
+  /// takes what changed on another phone. Kept fortunes, shared cards,
+  /// today's count and the recents each go on their own, so one failing does
+  /// not hold back the others. Without a connection or a signed-in account it
+  /// does nothing, and everything stays pending for the next time.
   Future<void> sync() =>
       _syncing ??= _sync().whenComplete(() => _syncing = null);
 
   Future<void> _sync() async {
     final userId = _currentUserId();
     if (userId == null || !await _connectivity.isOnline()) return;
+    await _step('Favorites', () => _syncFavorites(userId));
+    await _step('Cards', () => _syncCards(userId));
+    await _step("Today's cookies", () => _syncDaily(userId));
+    await _step('Recents', () => _syncRecents(userId));
+  }
+
+  /// The connection dropped or the cloud took too long: what is left stays
+  /// pending on the phone.
+  Future<void> _step(String what, Future<void> Function() run) async {
     try {
-      for (final change in await _favorites.pending(userId)) {
-        final id = change.fortune.id;
-        if (change.removed) {
-          await _remote.remove(userId, id);
-          await _favorites.delete(userId, id);
-        } else {
-          await _remote.keep(userId, change.fortune);
-          await _favorites.markSynced(userId, id);
-        }
-      }
-      await _favorites.addFromAccount(userId, await _remote.favorites(userId));
+      await run();
     } on Exception catch (error) {
-      // The connection dropped or Firestore took too long: what is left stays
-      // pending in sqflite.
-      debugPrint('[Fortune] Favorites stay pending: $error');
+      debugPrint('[Fortune] $what stay pending: $error');
+    }
+  }
+
+  Future<void> _syncFavorites(String userId) async {
+    for (final change in await _favorites.pending(userId)) {
+      final id = change.fortune.id;
+      if (change.removed) {
+        await _remote.remove(userId, id);
+        await _favorites.delete(userId, id);
+      } else {
+        await _remote.keep(userId, change.fortune);
+        await _favorites.markSynced(userId, id);
+      }
+    }
+    await _favorites.addFromAccount(userId, await _remote.favorites(userId));
+  }
+
+  /// Uploads new cards and deletes removed ones, then downloads the cards
+  /// shared on another phone that this one does not have.
+  Future<void> _syncCards(String userId) async {
+    for (final change in await _cards.pending(userId)) {
+      final card = change.card;
+      if (change.removed) {
+        await _remote.removeCard(userId, card.cookieId);
+        await _cards.delete(userId, card.cookieId);
+        continue;
+      }
+      final file = File(card.localPath);
+      if (!await file.exists()) continue;
+      await _remote.uploadCard(
+        userId,
+        cookieId: card.cookieId,
+        quote: card.quote,
+        savedAt: card.savedAt,
+        png: await file.readAsBytes(),
+      );
+      await _cards.markSynced(userId, card.cookieId);
+    }
+
+    final known = await _cards.knownIds(userId);
+    for (final remote in await _remote.cards(userId)) {
+      if (known.contains(remote.cookieId)) continue;
+      final png = await _remote.downloadCard(userId, remote.cookieId);
+      if (png == null) continue;
+      final file = await _share.keepCopy(userId, remote.cookieId, png);
+      await _cards.save(
+        userId,
+        FortuneCard(
+          cookieId: remote.cookieId,
+          quote: remote.quote,
+          localPath: file.path,
+          savedAt: remote.savedAt,
+        ),
+        synced: true,
+      );
+    }
+  }
+
+  /// Takes the larger of today's two counts, here and in the account, and
+  /// sends this phone's when it is the larger or has not gone up yet.
+  Future<void> _syncDaily(String userId) async {
+    final day = _chances.today();
+    final remote = await _remote.usedOn(userId, day);
+    await _chances.raiseUsedToday(userId, remote);
+    final local = await _chances.usedToday(userId);
+    if (local > remote || await _chances.isPending(userId)) {
+      await _remote.raiseUsed(userId, day, local);
+    }
+    await _chances.markSent(userId);
+  }
+
+  /// The five most recently opened, on either phone, kept on both.
+  Future<void> _syncRecents(String userId) async {
+    final remote = await _remote.recents(userId);
+    final local = await _cache.recents(userId);
+    final newest = <int, Fortune>{};
+    for (final fortune in [...local, ...remote]) {
+      final seen = newest[fortune.id];
+      if (seen == null || fortune.savedAt.isAfter(seen.savedAt)) {
+        newest[fortune.id] = fortune;
+      }
+    }
+    final merged =
+        (newest.values.toList()..sort((a, b) => b.savedAt.compareTo(a.savedAt)))
+            .take(FortuneCache.recentCapacity)
+            .toList();
+    await _cache.setRecents(userId, merged);
+    if (!listEquals(
+      merged.map((f) => f.id).toList(),
+      remote.map((f) => f.id).toList(),
+    )) {
+      await _remote.setRecents(userId, merged);
     }
   }
 
@@ -141,6 +232,8 @@ class FortuneRepository {
       if (await File(card.localPath).exists()) {
         cards.add(card);
       } else {
+        // Lost from the app's folder (the user cleared its data): the cloud
+        // copy brings it back on the next sync.
         await _cards.delete(userId, card.cookieId);
       }
     }
@@ -178,9 +271,10 @@ class FortuneRepository {
       _share.openShareSheet(card.localPath);
 
   /// Takes the card out of the Shared list and deletes the app's copy. The
-  /// one in the gallery belongs to the user and stays.
+  /// cloud forgets it on the next sync; the copy in the gallery belongs to the
+  /// user and stays.
   Future<void> removeCard(FortuneCard card) async {
-    await _cards.delete(_userId, card.cookieId);
+    await _cards.markRemoved(_userId, card.cookieId);
     final file = File(card.localPath);
     if (await file.exists()) await file.delete();
   }
