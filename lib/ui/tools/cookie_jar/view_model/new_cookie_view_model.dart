@@ -48,9 +48,27 @@ class NewCookieViewModel extends ChangeNotifier {
   bool _isListening = false;
   bool _offline = false;
 
+  /// True while the mic is held down.
+  bool _holding = false;
+
+  int _session = 0;
+  int _restarts = 0;
+  Timer? _restartTimer;
+  String _textBeforeHold = '';
+  int _caretBeforeHold = 0;
+
   /// The stretch of [_text] the current dictation is writing.
   int _spanStart = 0;
   int _spanLength = 0;
+
+  static const _maxRestarts = 30;
+
+  static const _silenceErrors = {
+    'error_no_match',
+    'error_speech_timeout',
+    'error_client',
+    'error_busy',
+  };
 
   String get title => _title;
   String get text => _text;
@@ -62,6 +80,7 @@ class NewCookieViewModel extends ChangeNotifier {
 
   bool get canDictate => _canDictate;
   bool get isListening => _isListening;
+  bool get isRecording => _holding;
 
   /// Where the caret belongs after a dictated update: right after the words.
   int get textCaret => _spanStart + _spanLength;
@@ -106,7 +125,7 @@ class NewCookieViewModel extends ChangeNotifier {
 
   void setText(String value) {
     _text = _limit(value);
-    if (!_isListening) _spanLength = 0;
+    if (!_holding) _spanLength = 0;
     _notify();
   }
 
@@ -116,7 +135,7 @@ class NewCookieViewModel extends ChangeNotifier {
 
   Future<void> prepareDictation() async {
     _canDictate = await _speech.initialize(
-      onError: (_) => _failDictation(),
+      onError: _onSpeechError,
       onStatus: (listening) {
         _isListening = listening;
         _notify();
@@ -125,43 +144,116 @@ class NewCookieViewModel extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> toggleDictation({required int at}) async {
-    if (_isListening) {
-      await _speech.stop();
-      return;
-    }
-    if (!_canDictate) return;
-    if (await _microphone.requestPermission() != MicPermission.granted) {
-      _message = CookieMessages.allowMicrophone;
-      _notify();
-      return;
-    }
-    _spanStart = at.clamp(0, _text.length);
+  Future<void> startDictation({required int at}) async {
+    if (!_canDictate || _holding || _saving) return;
+    final session = ++_session;
+    _holding = true;
+    _restarts = 0;
+    _textBeforeHold = _text;
+    _spanStart = _caretBeforeHold = at.clamp(0, _text.length);
     _spanLength = 0;
+    _notify();
+    if (await _microphone.requestPermission() != MicPermission.granted) {
+      if (session == _session) {
+        _holding = false;
+        _message = CookieMessages.allowMicrophone;
+        _notify();
+      }
+      return;
+    }
     _offline = !await _connectivity.isOnline();
+    if (session != _session || !_holding) return;
+    await _listen(session);
+    if (!_holding && session == _session) unawaited(_speech.stop());
+  }
+
+  /// Mic released: keeps what was dictated.
+  Future<void> finishDictation() async {
+    if (!_holding) return;
+    _holding = false;
+    _restartTimer?.cancel();
+    _notify();
+    await _speech.stop();
+  }
+
+  /// Slid off the mic: drops what this hold dictated.
+  Future<void> cancelDictation() async {
+    if (!_holding) return;
+    _holding = false;
+    _session++;
+    _restartTimer?.cancel();
+    _text = _textBeforeHold;
+    _spanStart = _caretBeforeHold;
+    _spanLength = 0;
+    _notify();
+    await _speech.stop();
+  }
+
+  Future<void> _listen(int session) async {
     try {
-      await _speech.listen(onWords: _onWords, preferOnDevice: _offline);
+      await _speech.listen(
+        onWords: (words, isFinal) {
+          if (session == _session) _onWords(words, isFinal);
+        },
+        preferOnDevice: _offline,
+      );
     } on Exception {
       _failDictation();
     }
   }
 
+  /// While the mic is held, listens again after the phone stops on a pause.
+  void _keepListeningWhileHeld() {
+    if (!_holding || _restarts >= _maxRestarts) return;
+    _restartTimer?.cancel();
+    _restartTimer = Timer(const Duration(milliseconds: 200), () {
+      if (!_holding || _disposed) return;
+      _restarts++;
+      _spanStart += _spanLength;
+      _spanLength = 0;
+      unawaited(_listen(_session));
+    });
+  }
+
   void _onWords(String words, bool isFinal) {
     final before = _text.substring(0, _spanStart);
     final after = _text.substring(_spanStart + _spanLength);
-    final merged = '$before$words$after';
+    final gap = words.isNotEmpty && before.isNotEmpty && !before.endsWith(' ')
+        ? ' '
+        : '';
+    final merged = '$before$gap$words$after';
     _text = _limit(merged);
-    if (_text.length < merged.length && _isListening) unawaited(_speech.stop());
-    _spanLength = _text.length - before.length - after.length;
+    final full = _text.length < merged.length;
+    _spanLength = (_text.length - before.length - after.length).clamp(
+      0,
+      _text.length - before.length,
+    );
     if (isFinal) {
       _spanStart += _spanLength;
       _spanLength = 0;
     }
+    if (full) {
+      _holding = false;
+      _restartTimer?.cancel();
+      unawaited(_speech.stop());
+    } else if (isFinal) {
+      _keepListeningWhileHeld();
+    }
     _notify();
   }
 
+  void _onSpeechError(String error) {
+    if (_silenceErrors.contains(error)) {
+      _keepListeningWhileHeld();
+      return;
+    }
+    _failDictation();
+  }
+
   void _failDictation() {
+    _holding = false;
     _isListening = false;
+    _restartTimer?.cancel();
     _message = _offline
         ? CookieMessages.offlineVoiceNotReady
         : CookieMessages.dictationStopped;
@@ -197,7 +289,7 @@ class NewCookieViewModel extends ChangeNotifier {
     }
     _saving = true;
     _notify();
-    if (_isListening) await _speech.stop();
+    if (_holding) await finishDictation();
     try {
       _saved = await _repository.create(
         title: _title,
@@ -221,7 +313,9 @@ class NewCookieViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    if (_isListening) unawaited(_speech.stop());
+    _restartTimer?.cancel();
+    if (_holding || _isListening) unawaited(_speech.stop());
+    _holding = false;
     super.dispose();
   }
 }

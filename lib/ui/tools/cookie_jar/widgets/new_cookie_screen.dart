@@ -1,9 +1,12 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../../domain/cookie_jar/cookie_messages.dart';
 import '../../../../domain/cookie_jar/cookie_rules.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../core/widgets/circle_icon_button.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../view_model/new_cookie_view_model.dart';
 
@@ -11,6 +14,8 @@ class NewCookieScreen extends StatefulWidget {
   const NewCookieScreen({super.key, this.viewModel});
 
   final NewCookieViewModel? viewModel;
+
+  static const micKey = ValueKey('cookie-mic');
 
   @override
   State<NewCookieScreen> createState() => _NewCookieScreenState();
@@ -65,11 +70,109 @@ class _NewCookieScreenState extends State<NewCookieScreen> {
     }
   }
 
-  void _toggleDictation() {
-    final caret = _text.selection.isValid
-        ? _text.selection.baseOffset
-        : _text.text.length;
-    _viewModel.toggleDictation(at: caret);
+  /// True while the finger slid far enough left to drop the dictation.
+  bool _cancelling = false;
+  static const _cancelDistance = 80.0;
+
+  int get _caret =>
+      _text.selection.isValid ? _text.selection.baseOffset : _text.text.length;
+
+  void _startDictation() {
+    _cancelling = false;
+    HapticFeedback.mediumImpact();
+    _viewModel.startDictation(at: _caret);
+  }
+
+  void _moveDictation(LongPressMoveUpdateDetails details) {
+    final cancelling = details.offsetFromOrigin.dx < -_cancelDistance;
+    if (cancelling != _cancelling) setState(() => _cancelling = cancelling);
+  }
+
+  void _endDictation() {
+    if (_cancelling) {
+      HapticFeedback.lightImpact();
+      _viewModel.cancelDictation();
+    } else {
+      _viewModel.finishDictation();
+    }
+    setState(() => _cancelling = false);
+  }
+
+  void _explainDictation() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(CookieMessages.holdToDictate),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  Widget _micButton() {
+    final recording = _viewModel.isRecording;
+    final background = !recording
+        ? AppColors.primary
+        : _cancelling
+        ? AppColors.surfaceDim
+        : AppColors.accent;
+    return Semantics(
+      key: NewCookieScreen.micKey,
+      button: true,
+      label: recording ? 'Release to stop dictating' : 'Hold to dictate',
+      child: Listener(
+        onPointerCancel: (_) => _viewModel.finishDictation(),
+        child: RawGestureDetector(
+          gestures: {
+            LongPressGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<
+                  LongPressGestureRecognizer
+                >(
+                  () => LongPressGestureRecognizer(
+                    duration: const Duration(milliseconds: 150),
+                  ),
+                  (recognizer) => recognizer
+                    ..onLongPressStart = ((_) => _startDictation())
+                    ..onLongPressMoveUpdate = _moveDictation
+                    ..onLongPressEnd = ((_) => _endDictation()),
+                ),
+            TapGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+                  TapGestureRecognizer.new,
+                  (recognizer) => recognizer..onTap = _explainDictation,
+                ),
+          },
+          child: AnimatedScale(
+            scale: recording ? 1.3 : 1,
+            duration: const Duration(milliseconds: 150),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: background,
+                shape: BoxShape.circle,
+              ),
+              child: recording && _cancelling
+                  ? const Icon(Icons.delete_outline, color: AppColors.text)
+                  : SvgPicture.asset(
+                      'assets/icons/ic_mic.svg',
+                      width: 22,
+                      height: 22,
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? get _dictationHelp {
+    if (!_viewModel.isRecording) return null;
+    return _cancelling
+        ? 'Release to cancel'
+        : '● Listening… release to finish, slide ← to cancel';
   }
 
   @override
@@ -82,8 +185,8 @@ class _NewCookieScreenState extends State<NewCookieScreen> {
           builder: (context, _) => Column(
             children: [
               ScreenHeader(
-                title: Text('New cookie', style: AppText.h1),
-                subtitle: 'A memory or a win you want to keep',
+                title: Text('Bake a cookie', style: AppText.h1),
+                subtitle: 'Mix in a memory or a win you want to keep',
               ),
               Expanded(
                 child: ListView(
@@ -106,19 +209,12 @@ class _NewCookieScreenState extends State<NewCookieScreen> {
                     Row(
                       children: [
                         Expanded(child: Text('Your memory', style: AppText.h3)),
-                        if (_viewModel.canDictate)
-                          CircleIconButton(
-                            asset: 'assets/icons/ic_mic.svg',
-                            semanticLabel: _viewModel.isListening
-                                ? 'Stop dictation'
-                                : 'Dictate',
-                            background: _viewModel.isListening
-                                ? AppColors.accent
-                                : AppColors.primary,
-                            size: 44,
-                            iconSize: 20,
-                            onPressed: _toggleDictation,
-                          ),
+                        if (_viewModel.canDictate) ...[
+                          if (!_viewModel.isRecording)
+                            Text('Hold to dictate', style: AppText.bodyMuted),
+                          const SizedBox(width: 12),
+                          _micButton(),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -132,9 +228,7 @@ class _NewCookieScreenState extends State<NewCookieScreen> {
                       decoration: _decoration(
                         hint: 'What happened and why it matters to you',
                         error: _viewModel.textError,
-                        helper: _viewModel.isListening
-                            ? 'Listening… tap the mic when you finish.'
-                            : null,
+                        helper: _dictationHelp,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -157,7 +251,7 @@ class _NewCookieScreenState extends State<NewCookieScreen> {
                     ),
                     child: _viewModel.saving
                         ? const CircularProgressIndicator()
-                        : Text('Save cookie 🍪', style: AppText.h3),
+                        : Text('Bake cookie 🍪', style: AppText.h3),
                   ),
                 ),
               ),

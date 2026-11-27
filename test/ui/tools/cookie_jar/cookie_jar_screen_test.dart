@@ -86,7 +86,7 @@ void main() {
     tester,
   ) async {
     await pumpJar(tester, []);
-    expect(find.textContaining('Add your first cookie'), findsOneWidget);
+    expect(find.textContaining('Bake your first cookie'), findsOneWidget);
   });
 
   testWidgets('eating a cookie offers Undo, which returns it to the jar', (

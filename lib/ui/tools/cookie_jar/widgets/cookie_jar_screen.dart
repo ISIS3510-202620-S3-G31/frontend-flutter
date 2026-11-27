@@ -111,7 +111,7 @@ class _CookieJarScreenState extends State<CookieJarScreen> {
                   child: FilledButton.icon(
                     onPressed: _newCookie,
                     icon: const Icon(Icons.add),
-                    label: Text('New cookie', style: AppText.h3),
+                    label: Text('Bake a cookie', style: AppText.h3),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.text,
@@ -141,8 +141,8 @@ class _CookieJarScreenState extends State<CookieJarScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 48),
             child: Text(
               _viewModel.eaten.isEmpty
-                  ? 'Your jar is empty.\nAdd your first cookie: a memory or a win you want to keep.'
-                  : 'Your jar is empty.\nAdd a new cookie or return one you ate.',
+                  ? 'Your jar is empty.\nBake your first cookie: a memory or a win you want to keep.'
+                  : 'Your jar is empty.\nBake a new cookie or return one you ate.',
               style: AppText.body,
               textAlign: TextAlign.center,
             ),
