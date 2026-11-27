@@ -17,7 +17,6 @@ class FeedbackFirestoreService {
   CollectionReference<Map<String, dynamic>> _feedback(String userId) =>
       _firestore.collection('users/$userId/tool_feedback');
 
-
   /// Saves one answer in a new document and returns its path right away. The
   /// id is made on the phone, so the offline queue can send the same document
   /// again without duplicating it.

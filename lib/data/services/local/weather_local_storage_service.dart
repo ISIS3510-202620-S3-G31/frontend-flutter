@@ -60,18 +60,14 @@ class WeatherLocalStorageService implements WeatherStorage {
       _inMemoryFallback = weather;
       return;
     }
-    await db.insert(
-      'last_weather',
-      {
-        'id': 1,
-        'temperature_c': weather.temperatureC,
-        'precipitation_mm': weather.precipitationMm,
-        'weather_code': weather.weatherCode,
-        'is_day': weather.isDay ? 1 : 0,
-        'read_at': weather.readAt.millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('last_weather', {
+      'id': 1,
+      'temperature_c': weather.temperatureC,
+      'precipitation_mm': weather.precipitationMm,
+      'weather_code': weather.weatherCode,
+      'is_day': weather.isDay ? 1 : 0,
+      'read_at': weather.readAt.millisecondsSinceEpoch,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   @override

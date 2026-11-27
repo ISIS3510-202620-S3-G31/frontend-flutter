@@ -4,7 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 /// Service for monitoring network connectivity status.
 class NetworkConnectivityService {
   NetworkConnectivityService({Connectivity? connectivity})
-      : _connectivity = connectivity ?? Connectivity();
+    : _connectivity = connectivity ?? Connectivity();
 
   final Connectivity _connectivity;
 
@@ -21,9 +21,7 @@ class NetworkConnectivityService {
 
   /// Stream of network connectivity state changes (true = online, false = offline).
   Stream<bool> get onConnectivityChanged {
-    return _connectivity.onConnectivityChanged
-        .map(_isAnyConnected)
-        .distinct();
+    return _connectivity.onConnectivityChanged.map(_isAnyConnected).distinct();
   }
 
   bool _isAnyConnected(List<ConnectivityResult> results) {

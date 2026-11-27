@@ -2,20 +2,20 @@ import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-
 class PhotoDao {
   static final _dayFormat = DateFormat('yyyy-MM-dd');
 
   final Map<String, Database> _databases = {};
 
-  Future<Database> _open(String userId) async =>
-      _databases[userId] ??= await openDatabase(
-        join(await getDatabasesPath(), 'photo_of_the_day_$userId.db'),
-        version: 1,
-        onCreate: (db, version) => db.execute(
-          'CREATE TABLE photos (day TEXT PRIMARY KEY, is_synced INTEGER NOT NULL)',
-        ),
-      );
+  Future<Database> _open(
+    String userId,
+  ) async => _databases[userId] ??= await openDatabase(
+    join(await getDatabasesPath(), 'photo_of_the_day_$userId.db'),
+    version: 1,
+    onCreate: (db, version) => db.execute(
+      'CREATE TABLE photos (day TEXT PRIMARY KEY, is_synced INTEGER NOT NULL)',
+    ),
+  );
 
   Future<void> insert(String userId, DateTime day) async {
     final db = await _open(userId);

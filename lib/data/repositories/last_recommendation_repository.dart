@@ -5,7 +5,6 @@ import '../models/recommendation_model.dart';
 import '../models/tool_model.dart';
 import '../services/local/last_recommendation_storage.dart';
 
-
 class LastRecommendationRepository {
   LastRecommendationRepository({LastRecommendationStorage? storage})
     : _storage = storage ?? LastRecommendationStorage();
@@ -14,7 +13,6 @@ class LastRecommendationRepository {
 
   static String _keyFor(String? userId) =>
       'last_recommendation_${userId ?? 'guest'}';
-
 
   Future<Recommendation?> load({
     required List<ToolItem> tools,

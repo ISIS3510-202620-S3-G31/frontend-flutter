@@ -9,7 +9,6 @@ enum ToolCategory {
   final String label;
 }
 
-
 enum ToolEntryPoint {
   /// The list in the Tools tab.
   toolbox,

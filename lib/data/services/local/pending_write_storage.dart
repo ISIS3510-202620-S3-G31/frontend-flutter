@@ -5,7 +5,6 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../models/pending_write_model.dart';
 
-
 /// [WeatherLocalStorageService].
 class PendingWriteStorage {
   PendingWriteStorage({Database? database}) : _db = database;

@@ -39,15 +39,12 @@ class TextToSpeechService {
   /// What the voice is doing, for screens to follow.
   ValueListenable<SpeechState> get state => _state;
 
-
   String? get text => _text;
-
 
   Future<bool> initialize() => _ready ??= _setUp();
 
   Future<bool> _setUp() async {
     try {
-
       await _tts.awaitSpeakCompletion(true);
       _tts.setErrorHandler((_) => _finish());
       if (await _tts.isLanguageAvailable(language) != true) return false;
@@ -67,7 +64,6 @@ class TextToSpeechService {
     _next = 0;
     await _readOn();
   }
-
 
   Future<void> pause() async {
     if (_state.value != SpeechState.speaking) return;

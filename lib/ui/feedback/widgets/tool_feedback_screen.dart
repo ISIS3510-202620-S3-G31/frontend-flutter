@@ -101,9 +101,7 @@ class _ToolFeedbackScreenState extends State<ToolFeedbackScreen> {
                     ),
                   ),
                   _BottomBar(
-                    favorite: _viewModel.favorite,
                     saving: _viewModel.saving,
-                    onFavorite: _viewModel.toggleFavorite,
                     onSave: _viewModel.canSave ? _viewModel.save : null,
                   ),
                 ],
@@ -117,16 +115,9 @@ class _ToolFeedbackScreenState extends State<ToolFeedbackScreen> {
 }
 
 class _BottomBar extends StatelessWidget {
-  const _BottomBar({
-    required this.favorite,
-    required this.saving,
-    required this.onFavorite,
-    required this.onSave,
-  });
+  const _BottomBar({required this.saving, required this.onSave});
 
-  final bool favorite;
   final bool saving;
-  final VoidCallback onFavorite;
 
   /// Null while the feedback is being saved.
   final VoidCallback? onSave;
@@ -137,29 +128,6 @@ class _BottomBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
       child: Row(
         children: [
-          Semantics(
-            button: true,
-            selected: favorite,
-            label: 'Mark this tool as a favourite',
-            child: Material(
-              color: AppColors.surfaceDim,
-              shape: CircleBorder(
-                side: BorderSide(color: AppColors.text.withValues(alpha: 0.15)),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: onFavorite,
-                child: SizedBox.square(
-                  dimension: 56,
-                  child: Icon(
-                    favorite ? Icons.favorite : Icons.favorite_border,
-                    color: favorite ? AppColors.accent : AppColors.text,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: FilledButton(
               onPressed: saving ? null : onSave,

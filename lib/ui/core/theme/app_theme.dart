@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
@@ -12,6 +13,9 @@ abstract final class AppTheme {
   static ThemeData get light => ThemeData(
     colorScheme: _scheme,
     scaffoldBackgroundColor: AppColors.background,
+    // Buttons, snack bars, fields and any text without its own style use
+    // Figtree too, not the system font.
+    textTheme: GoogleFonts.figtreeTextTheme(),
     // Tick marks and the value bubble also come from the scheme, and are
     // easy to miss because they only show while the slider is being dragged.
     sliderTheme: SliderThemeData(

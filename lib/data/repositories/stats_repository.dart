@@ -24,7 +24,6 @@ class StatsRepository {
   final FeedbackRepository _feedback;
   final CheckInRepository _checkIns;
 
-
   Future<StatsData> dataSince(DateTime from) async {
     final watch = Stopwatch()..start();
     final feedbackRead = _orEmpty(_feedback.since(from));

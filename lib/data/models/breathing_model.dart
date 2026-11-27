@@ -130,12 +130,11 @@ class CustomBreathingState {
 
   int get cycleDuration =>
       inhaleSeconds + (pattern.hasHold ? holdSeconds : 0) + exhaleSeconds;
-    
+
   int get totalCycles =>
-      (sessionMinutes * 60 / cycleDuration).round().clamp(1,99);
-  
-  int get secondsLeft =>
-      (secondsOfPhase(phase) * (1 - progress)).ceil();
+      (sessionMinutes * 60 / cycleDuration).round().clamp(1, 99);
+
+  int get secondsLeft => (secondsOfPhase(phase) * (1 - progress)).ceil();
 
   List<BreathingStep> get visibleSteps => BreathingStep.values
       .where((step) => step != BreathingStep.hold || pattern.hasHold)
