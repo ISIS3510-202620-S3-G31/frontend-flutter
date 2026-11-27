@@ -176,6 +176,16 @@ class _CookieRow extends StatelessWidget {
                 child: const Text('🎁'),
               ),
             ),
+          if (!cookie.isSynced)
+            Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: Icon(
+                Icons.hourglass_top,
+                size: 18,
+                color: AppColors.textMuted,
+                semanticLabel: 'Waiting to upload',
+              ),
+            ),
           if (showHistoryActions) ...[
             IconButton(
               tooltip: 'Return to jar',

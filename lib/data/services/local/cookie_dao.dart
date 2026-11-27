@@ -11,6 +11,8 @@ class CookieDao {
 
   static const table = 'cookies';
 
+  static const pendingDeletesTable = 'pending_deletes';
+
   final DatabaseFactory? _factory;
 
   final String? _folder;
@@ -26,11 +28,27 @@ class CookieDao {
     final path = join(folder, 'cookie_jar_$userId.db');
     return factory.openDatabase(
       path,
-      options: OpenDatabaseOptions(version: 1, onCreate: _create),
+      options: OpenDatabaseOptions(
+        version: 2,
+        onCreate: _create,
+        onUpgrade: _upgrade,
+      ),
     );
   }
 
-  static Future<void> _create(Database db, int version) => db.execute('''
+  static Future<void> _create(Database db, int version) async {
+    await _createCookies(db);
+    await _createPendingDeletes(db);
+  }
+
+  static Future<void> _upgrade(Database db, int from, int to) async {
+    if (from < 2) await _createPendingDeletes(db);
+  }
+
+  static Future<void> _createPendingDeletes(Database db) =>
+      db.execute('CREATE TABLE $pendingDeletesTable (id TEXT PRIMARY KEY)');
+
+  static Future<void> _createCookies(Database db) => db.execute('''
     CREATE TABLE $table (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -99,6 +117,25 @@ class CookieDao {
     final db = await _open(userId);
     final rows = await db.query(table, where: 'is_synced = 0');
     return rows.map(CookieModel.fromDb).toList();
+  }
+
+  /// Remembers that [id] must be deleted from the cloud.
+  Future<void> addPendingDelete(String userId, String id) async {
+    final db = await _open(userId);
+    await db.insert(pendingDeletesTable, {
+      'id': id,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  Future<Set<String>> pendingDeletes(String userId) async {
+    final db = await _open(userId);
+    final rows = await db.query(pendingDeletesTable);
+    return {for (final row in rows) row['id']! as String};
+  }
+
+  Future<void> removePendingDelete(String userId, String id) async {
+    final db = await _open(userId);
+    await db.delete(pendingDeletesTable, where: 'id = ?', whereArgs: [id]);
   }
 
   /// Closes every open database, on sign-out and in tests.

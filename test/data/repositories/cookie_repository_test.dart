@@ -9,6 +9,8 @@ import 'package:frontend_flutter/data/services/local/cookie_image_store.dart';
 import 'package:frontend_flutter/data/services/local/cookie_memory_cache.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'cookie_fakes.dart';
+
 void main() {
   sqfliteFfiInit();
 
@@ -28,17 +30,27 @@ void main() {
     clock = DateTime(2026, 11, 26, 10);
   });
 
+  final created = <CookieRepository>[];
+
   tearDown(() async {
+    for (final repo in created) {
+      await repo.whenIdle();
+    }
+    created.clear();
     await dao.close();
     folder.deleteSync(recursive: true);
   });
 
-  CookieRepository repository() => CookieRepository(
-    dao: dao,
-    images: images,
-    memory: memory,
-    currentUserId: () => user,
-    now: () => clock,
+  CookieRepository repository() => _track(
+    created,
+    CookieRepository(
+      dao: dao,
+      images: images,
+      memory: memory,
+      connectivity: FakeConnectivity(online: false),
+      currentUserId: () => user,
+      now: () => clock,
+    ),
   );
 
   Uint8List jpeg() => Uint8List.fromList(List.filled(64, 7));
@@ -99,9 +111,11 @@ void main() {
 
   test('only eaten cookies can be deleted forever', () async {
     final repo = repository();
-    final id = (await repo.create(title: 'A', text: 't', photo: jpeg()))
-        .cookie
-        .id;
+    final id = (await repo.create(
+      title: 'A',
+      text: 't',
+      photo: jpeg(),
+    )).cookie.id;
 
     expect(() => repo.deleteForever(id), throwsA(isA<CookieRuleException>()));
 
@@ -154,4 +168,9 @@ void main() {
     expect(morning, hasLength(10));
     expect(night, morning);
   });
+}
+
+CookieRepository _track(List<CookieRepository> created, CookieRepository repo) {
+  created.add(repo);
+  return repo;
 }
