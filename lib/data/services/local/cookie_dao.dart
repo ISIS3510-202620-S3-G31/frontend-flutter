@@ -1,0 +1,112 @@
+// here the cookies are saved in SQLite with sqflite.
+
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
+import '../../models/cookie_model.dart';
+
+
+class CookieDao {
+  CookieDao({this._factory, this._folder});
+
+  static const table = 'cookies';
+
+  final DatabaseFactory? _factory;
+
+  final String? _folder;
+
+  final Map<String, Future<Database>> _databases = {};
+
+  Future<Database> _open(String userId) =>
+      _databases[userId] ??= _openFresh(userId);
+
+  Future<Database> _openFresh(String userId) async {
+    final factory = _factory ?? databaseFactory;
+    final folder = _folder ?? await getDatabasesPath();
+    final path = join(folder, 'cookie_jar_$userId.db');
+    return factory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(version: 1, onCreate: _create),
+    );
+  }
+
+  static Future<void> _create(Database db, int version) => db.execute('''
+    CREATE TABLE $table (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      title_key TEXT NOT NULL UNIQUE,
+      text TEXT NOT NULL,
+      state TEXT NOT NULL,
+      has_image INTEGER NOT NULL,
+      local_image_path TEXT,
+      remote_image_url TEXT,
+      last_opened_at INTEGER NOT NULL,
+      received_from TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      is_synced INTEGER NOT NULL
+    )
+  ''');
+
+  /// Every cookie, newest first.
+  Future<List<CookieModel>> all(String userId) async {
+    final db = await _open(userId);
+    final rows = await db.query(table, orderBy: 'created_at DESC');
+    return rows.map(CookieModel.fromDb).toList();
+  }
+
+  Future<CookieModel?> byId(String userId, String id) async {
+    final db = await _open(userId);
+    final rows = await db.query(table, where: 'id = ?', whereArgs: [id]);
+    return rows.isEmpty ? null : CookieModel.fromDb(rows.first);
+  }
+
+  Future<Set<String>> titleKeys(String userId) async {
+    final db = await _open(userId);
+    final rows = await db.query(table, columns: ['title_key']);
+    return {for (final row in rows) row['title_key']! as String};
+  }
+
+  /// Throws a [DatabaseException] when the title already exists.
+  Future<void> insert(CookieModel cookie) async {
+    final db = await _open(cookie.userId);
+    await db.insert(
+      table,
+      cookie.toDb(),
+      conflictAlgorithm: ConflictAlgorithm.abort,
+    );
+  }
+
+  /// Replaces the row with the same id.
+  Future<void> update(CookieModel cookie) async {
+    final db = await _open(cookie.userId);
+    await db.update(
+      table,
+      cookie.toDb(),
+      where: 'id = ?',
+      whereArgs: [cookie.id],
+    );
+  }
+
+  Future<void> delete(String userId, String id) async {
+    final db = await _open(userId);
+    await db.delete(table, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Cookies with something still waiting to upload.
+  Future<List<CookieModel>> unsynced(String userId) async {
+    final db = await _open(userId);
+    final rows = await db.query(table, where: 'is_synced = 0');
+    return rows.map(CookieModel.fromDb).toList();
+  }
+
+  /// Closes every open database, on sign-out and in tests.
+  Future<void> close() async {
+    final open = _databases.values.toList();
+    _databases.clear();
+    for (final db in open) {
+      await (await db).close();
+    }
+  }
+}
