@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 
 import '../../../../data/models/cookie_model.dart';
@@ -36,16 +34,34 @@ class CookieDetailDialog extends StatefulWidget {
 }
 
 class _CookieDetailDialogState extends State<CookieDetailDialog> {
-  /// Read once when the dialog opens: from RAM, then the private file.
-  late final Future<Uint8List?> _photo = widget.viewModel.photoOf(
-    widget.cookie,
-  );
+  /// RAM, then the private file, then the cloud.
+  late Future<PhotoLoad> _photo = _load();
+  PhotoStatus? _status;
+
+  Future<PhotoLoad> _load() async {
+    final load = await widget.viewModel.loadPhoto(widget.cookie);
+    _status = load.status;
+    return load;
+  }
 
   @override
   void initState() {
     super.initState();
     widget.viewModel.opened(widget.cookie);
+    widget.viewModel.addListener(_onViewModelChanged);
   }
+
+  @override
+  void dispose() {
+    widget.viewModel.removeListener(_onViewModelChanged);
+    super.dispose();
+  }
+
+  void _onViewModelChanged() {
+    if (_status == PhotoStatus.offline && widget.viewModel.isOnline) _retry();
+  }
+
+  void _retry() => setState(() => _photo = _load());
 
   Future<void> _run(Future<void> Function(CookieModel) action) async {
     final cookie = widget.cookie;
@@ -102,7 +118,7 @@ class _CookieDetailDialogState extends State<CookieDetailDialog> {
                     ),
                   if (cookie.hasImage) ...[
                     const SizedBox(height: 16),
-                    _CookiePhoto(photo: _photo),
+                    _CookiePhoto(photo: _photo, onRetry: _retry),
                   ],
                   const SizedBox(height: 16),
                   Text(cookie.text, style: AppText.body.copyWith(fontSize: 16)),
@@ -140,9 +156,10 @@ class _CookieDetailDialogState extends State<CookieDetailDialog> {
 }
 
 class _CookiePhoto extends StatelessWidget {
-  const _CookiePhoto({required this.photo});
+  const _CookiePhoto({required this.photo, required this.onRetry});
 
-  final Future<Uint8List?> photo;
+  final Future<PhotoLoad> photo;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -150,10 +167,11 @@ class _CookiePhoto extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: AspectRatio(
         aspectRatio: 4 / 3,
-        child: FutureBuilder<Uint8List?>(
+        child: FutureBuilder<PhotoLoad>(
           future: photo,
           builder: (context, snapshot) {
-            final bytes = snapshot.data;
+            final load = snapshot.data;
+            final bytes = load?.bytes;
             if (bytes != null) {
               return Image.memory(
                 bytes,
@@ -165,20 +183,37 @@ class _CookiePhoto extends StatelessWidget {
             return ColoredBox(
               color: AppColors.surfaceDim,
               child: Center(
-                child: snapshot.connectionState == ConnectionState.done
-                    ? Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          CookieMessages.pictureNotHere,
-                          style: AppText.bodyMuted,
-                          textAlign: TextAlign.center,
-                        ),
-                      )
-                    : const CircularProgressIndicator(),
+                child: load == null
+                    ? const CircularProgressIndicator()
+                    : _notice(load.status),
               ),
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _notice(PhotoStatus status) {
+    final text = switch (status) {
+      PhotoStatus.offline => CookieMessages.pictureWhenOnline,
+      PhotoStatus.failed => CookieMessages.pictureFailed,
+      _ => CookieMessages.pictureNotHere,
+    };
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cookie_outlined, size: 40),
+          const SizedBox(height: 8),
+          Text(text, style: AppText.bodyMuted, textAlign: TextAlign.center),
+          if (status == PhotoStatus.failed)
+            TextButton(
+              onPressed: onRetry,
+              child: const Text(CookieMessages.retry),
+            ),
+        ],
       ),
     );
   }

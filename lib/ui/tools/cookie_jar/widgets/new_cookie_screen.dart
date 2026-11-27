@@ -244,7 +244,9 @@ class _NewCookieScreenState extends State<NewCookieScreen> {
                   width: double.infinity,
                   height: 56,
                   child: FilledButton(
-                    onPressed: _viewModel.saving ? null : _viewModel.save,
+                    onPressed: _viewModel.saving || _viewModel.preparingPhoto
+                        ? null
+                        : _viewModel.save,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.text,
@@ -264,6 +266,26 @@ class _NewCookieScreenState extends State<NewCookieScreen> {
 
   Widget _photo() {
     final photo = _viewModel.photo;
+    if (_viewModel.preparingPhoto) {
+      return Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceDim,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox.square(
+              dimension: 24,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(width: 12),
+            Text(CookieMessages.preparingPhoto, style: AppText.body),
+          ],
+        ),
+      );
+    }
     if (photo == null) {
       return OutlinedButton.icon(
         onPressed: _viewModel.takePhoto,

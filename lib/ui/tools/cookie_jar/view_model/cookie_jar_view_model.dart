@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../data/models/cookie_model.dart';
 import '../../../../data/repositories/cookie_repository.dart';
+import '../../../../data/services/connectivity_service.dart';
 import '../../../../domain/cookie_jar/cookie_messages.dart';
 
 /// A notice to show once as a Snackbar.
@@ -24,25 +25,43 @@ class CookieMessage {
   final void Function()? onAction;
 }
 
+/// Why a photo is or is not on screen.
+enum PhotoStatus { ready, offline, failed, missing }
+
+class PhotoLoad {
+  const PhotoLoad(this.status, [this.bytes]);
+
+  final PhotoStatus status;
+  final Uint8List? bytes;
+}
+
 /// State and actions of the jar screen, its list sheet and the detail dialog.
 class CookieJarViewModel extends ChangeNotifier {
-  CookieJarViewModel({CookieRepository? repository})
+  CookieJarViewModel({CookieRepository? repository, this._onlineChanges})
     : _repository = repository ?? CookieRepository.shared;
 
+  static const connectionDebounce = Duration(seconds: 2);
+
   final CookieRepository _repository;
+  final Stream<bool> Function()? _onlineChanges;
   final _messages = StreamController<CookieMessage>.broadcast();
   StreamSubscription<List<CookieModel>>? _cookiesSubscription;
+  StreamSubscription<bool>? _connectionSubscription;
+  Timer? _debounce;
   bool _disposed = false;
 
   List<CookieModel> _cookies = const [];
   List<CookieModel> _today = const [];
   bool _loading = true;
   bool _budgetChecked = false;
+  bool _isOnline = true;
 
   Stream<CookieMessage> get messages => _messages.stream;
 
   /// True until the first read of the database arrives.
   bool get loading => _loading;
+
+  bool get isOnline => _isOnline;
 
   /// Today's cookies, the ones the jar draws (10 at most).
   List<CookieModel> get today => _today;
@@ -53,8 +72,22 @@ class CookieJarViewModel extends ChangeNotifier {
   /// Eaten cookies, for the history tab.
   List<CookieModel> get eaten => _cookies.where((c) => !c.isActive).toList();
 
+  /// Cookies with something still waiting to upload (shown with ⏳).
+  int get pendingCount => _cookies.where((c) => !c.isSynced).length;
+
   void start() {
     _cookiesSubscription ??= _repository.watchCookies().listen(_onCookies);
+    _connectionSubscription ??=
+        (_onlineChanges?.call() ?? ConnectivityService().onlineChanges).listen(
+          _onConnectionChanged,
+        );
+    unawaited(_firstLoad());
+  }
+
+  Future<void> _firstLoad() async {
+    _isOnline = await _repository.isOnline();
+    _notify();
+    await _syncWithCloud();
   }
 
   void _onCookies(List<CookieModel> cookies) {
@@ -68,6 +101,58 @@ class CookieJarViewModel extends ChangeNotifier {
     }
   }
 
+  void _onConnectionChanged(bool online) {
+    _debounce?.cancel();
+    _debounce = Timer(connectionDebounce, () {
+      if (online == _isOnline) return;
+      _isOnline = online;
+      _notify();
+      if (online) {
+        _show(const CookieMessage(CookieMessages.backOnline));
+        unawaited(_syncWithCloud(afterReconnect: true));
+      } else {
+        _show(const CookieMessage(CookieMessages.wentOffline, long: true));
+      }
+    });
+  }
+
+  Future<void> _syncWithCloud({bool afterReconnect = false}) async {
+    final hadPending = pendingCount > 0;
+    final sync = await _repository.sync();
+    final refresh = await _repository.refreshFromCloud();
+    if (_disposed) return;
+
+    if (refresh.offline && refresh.neverDownloaded) {
+      _show(
+        CookieMessage(
+          CookieMessages.cookiesInCloud,
+          long: true,
+          actionLabel: CookieMessages.retry,
+          onAction: () => unawaited(_syncWithCloud()),
+        ),
+      );
+    } else if (refresh.failed || sync.failed) {
+      _show(const CookieMessage(CookieMessages.syncFailed));
+    }
+    if (refresh.arrived > 0) {
+      _show(
+        CookieMessage(CookieMessages.arrivedFromOtherDevices(refresh.arrived)),
+      );
+    }
+    for (final (title, finalTitle) in refresh.renamed) {
+      _show(
+        CookieMessage(
+          CookieMessages.existedOnTwoPhones(title, finalTitle),
+          long: true,
+        ),
+      );
+    }
+    if (afterReconnect && hadPending && sync.allBackedUp) {
+      _show(const CookieMessage(CookieMessages.allBackedUp));
+    }
+    await _repository.prefetchToday(_today);
+  }
+
   /// The latest version of a cookie (a dialog may hold an older copy).
   CookieModel? cookieById(String id) {
     for (final cookie in _cookies) {
@@ -79,7 +164,24 @@ class CookieJarViewModel extends ChangeNotifier {
   /// Called when the detail opens, for the disk budget's LRU order.
   Future<void> opened(CookieModel cookie) => _repository.markOpened(cookie.id);
 
-  Future<Uint8List?> photoOf(CookieModel cookie) => _repository.photoOf(cookie);
+  /// The photo for the detail: RAM, then the private file, then the cloud.
+  Future<PhotoLoad> loadPhoto(CookieModel cookie) async {
+    if (!cookie.hasImage) return const PhotoLoad(PhotoStatus.missing);
+    final local = await _repository.photoOf(cookie);
+    if (local != null) return PhotoLoad(PhotoStatus.ready, local);
+    if (!await _repository.isOnline()) {
+      _show(const CookieMessage(CookieMessages.pictureNeedsInternet));
+      return const PhotoLoad(PhotoStatus.offline);
+    }
+    try {
+      final downloaded = await _repository.downloadPhoto(cookie);
+      return downloaded == null
+          ? const PhotoLoad(PhotoStatus.missing)
+          : PhotoLoad(PhotoStatus.ready, downloaded);
+    } on Exception {
+      return const PhotoLoad(PhotoStatus.failed);
+    }
+  }
 
   Future<void> eat(CookieModel cookie) async {
     await _repository.eat(cookie.id);
@@ -99,17 +201,29 @@ class CookieJarViewModel extends ChangeNotifier {
 
   Future<void> deleteForever(CookieModel cookie) async {
     await _repository.deleteForever(cookie.id);
-    _show(const CookieMessage(CookieMessages.deleted));
+    final online = await _repository.isOnline();
+    _show(
+      online
+          ? const CookieMessage(CookieMessages.deleted)
+          : const CookieMessage(CookieMessages.deletedOffline, long: true),
+    );
   }
 
-  void created(CreatedCookie created) {
+  Future<void> created(CreatedCookie created) async {
+    if (created.wasRenamed) {
+      _show(
+        CookieMessage(
+          CookieMessages.renamed(created.typedTitle, created.cookie.title),
+          long: true,
+        ),
+      );
+      return;
+    }
+    final online = await _repository.isOnline();
     _show(
-      created.wasRenamed
-          ? CookieMessage(
-              CookieMessages.renamed(created.typedTitle, created.cookie.title),
-              long: true,
-            )
-          : const CookieMessage(CookieMessages.added),
+      online
+          ? const CookieMessage(CookieMessages.added)
+          : const CookieMessage(CookieMessages.savedOffline, long: true),
     );
   }
 
@@ -124,7 +238,9 @@ class CookieJarViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _debounce?.cancel();
     _cookiesSubscription?.cancel();
+    _connectionSubscription?.cancel();
     _messages.close();
     super.dispose();
   }
