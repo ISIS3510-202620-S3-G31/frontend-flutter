@@ -38,6 +38,16 @@ class CameraService {
   Future<XFile> takePicture(CameraController controller) =>
       controller.takePicture();
 
+  Future<XFile?> takeWithSystemCamera({
+    double maxSide = 1440,
+    int quality = 85,
+  }) => ImagePicker().pickImage(
+    source: ImageSource.camera,
+    maxWidth: maxSide,
+    maxHeight: maxSide,
+    imageQuality: quality,
+  );
+
   Future<XFile?> pickFromGallery() => ImagePicker().pickImage(
     source: ImageSource.gallery,
     maxWidth: 2048,
