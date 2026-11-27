@@ -140,6 +140,7 @@ class AnalyticsRepository {
     required String toolId,
     required String stepName,
     int? stepIndex,
+    Map<String, Object>? extra,
   }) async {
     await _analytics.logEvent(
       name: 'tool_step',
@@ -147,6 +148,7 @@ class AnalyticsRepository {
         'tool_id': toolId,
         'step_name': stepName,
         'step_index': ?stepIndex,
+        ...?extra,
       },
     );
     final docId = _activeSessions[toolId]?.docId;

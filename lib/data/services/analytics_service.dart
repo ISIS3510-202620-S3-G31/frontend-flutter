@@ -28,6 +28,12 @@ class AnalyticsService {
   String? _userId;
   final Map<String, Object?> _userProperties = {};
 
+  /// The route on screen, as the navigator observer last saw it (BQ27).
+  String? _currentScreen;
+
+  /// The screen the user is on, or 'unknown' before the first named route.
+  String get currentScreen => _currentScreen ?? 'unknown';
+
   FirebaseAuth get _auth => _customAuth ?? FirebaseAuth.instance;
 
   /// The user the events belong to: the one set with [setUserId] if any, else the signed-in Firebase Auth user.
@@ -88,6 +94,32 @@ class AnalyticsService {
     );
   }
 
+  Future<void> logAppError(
+    Object error,
+    StackTrace? stack, {
+    required String kind,
+  }) async {
+    await logEvent(
+      name: 'app_error',
+      parameters: {
+        'screen_name': currentScreen,
+        'error_kind': kind,
+        'error_type': error.runtimeType.toString(),
+        'location': ?appFrameOf(stack),
+        'platform': 'flutter',
+      },
+    );
+  }
+
+  @visibleForTesting
+  static String? appFrameOf(StackTrace? stack) {
+    if (stack == null) return null;
+    final frame = RegExp(
+      r'package:frontend_flutter/([^\s:)]+):(\d+)',
+    ).firstMatch(stack.toString());
+    return frame == null ? null : '${frame.group(1)}:${frame.group(2)}';
+  }
+
   /// Logs the app_open event.
   Future<void> logAppOpen() async {
     await logEvent(name: 'app_open');
@@ -117,6 +149,7 @@ class _AnalyticsNavigatorObserver extends NavigatorObserver {
   void _logRoute(Route<dynamic> route) {
     final name = route.settings.name;
     if (name == null || name == '/') return;
+    _analytics._currentScreen = name;
     _analytics.logScreenView(screenName: name);
   }
 }

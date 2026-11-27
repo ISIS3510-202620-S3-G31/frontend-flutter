@@ -1,3 +1,5 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,9 +13,23 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await AnalyticsService().logAppOpen();
+  _reportErrors();
 
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const MainApp());
+}
+
+void _reportErrors() {
+  final analytics = AnalyticsService();
+  final previous = FlutterError.onError;
+  FlutterError.onError = (details) {
+    previous?.call(details);
+    analytics.logAppError(details.exception, details.stack, kind: 'flutter');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    analytics.logAppError(error, stack, kind: 'uncaught');
+    return false;
+  };
 }
 
 class MainApp extends StatelessWidget {
