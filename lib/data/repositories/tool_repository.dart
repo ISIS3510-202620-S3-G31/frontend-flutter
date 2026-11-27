@@ -50,4 +50,11 @@ const _tools = [
     iconAsset: 'assets/icons/ic_tool_rapunzel.svg',
     category: ToolCategory.release,
   ),
+  ToolItem(
+    id: 'cookie_jar',
+    title: 'Cookie jar',
+    description: 'Keep your memories and wins in a jar.',
+    iconAsset: 'assets/icons/ic_tool_cookie_jar.svg',
+    category: ToolCategory.reflect,
+  ),
 ];
