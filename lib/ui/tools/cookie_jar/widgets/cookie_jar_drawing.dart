@@ -15,10 +15,16 @@ class _Slot {
 }
 
 const _slots = [
-  _Slot(0.19, 0.86, -8), _Slot(0.50, 0.88, 6), _Slot(0.81, 0.86, -4),
-  _Slot(0.34, 0.64, 10), _Slot(0.66, 0.65, -7),
-  _Slot(0.19, 0.43, 4), _Slot(0.50, 0.44, -10), _Slot(0.81, 0.43, 7),
-  _Slot(0.34, 0.22, -5), _Slot(0.66, 0.22, 9),
+  _Slot(0.19, 0.86, -8),
+  _Slot(0.50, 0.88, 6),
+  _Slot(0.81, 0.86, -4),
+  _Slot(0.34, 0.64, 10),
+  _Slot(0.66, 0.65, -7),
+  _Slot(0.19, 0.43, 4),
+  _Slot(0.50, 0.44, -10),
+  _Slot(0.81, 0.43, 7),
+  _Slot(0.34, 0.22, -5),
+  _Slot(0.66, 0.22, 9),
 ];
 
 const _jarAspect = 0.78;
@@ -163,8 +169,12 @@ class CookiePainter extends CustomPainter {
   const CookiePainter();
 
   static const _chips = [
-    Offset(-0.35, -0.30), Offset(0.25, -0.42), Offset(0.40, 0.10),
-    Offset(-0.10, 0.05), Offset(-0.42, 0.30), Offset(0.12, 0.45),
+    Offset(-0.35, -0.30),
+    Offset(0.25, -0.42),
+    Offset(0.40, 0.10),
+    Offset(-0.10, 0.05),
+    Offset(-0.42, 0.30),
+    Offset(0.12, 0.45),
   ];
 
   @override

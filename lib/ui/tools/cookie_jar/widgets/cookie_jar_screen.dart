@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../data/repositories/cookie_repository.dart';
+import '../../../../domain/cookie_jar/cookie_messages.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/screen_header.dart';
@@ -97,6 +98,14 @@ class _CookieJarScreenState extends State<CookieJarScreen> {
                   ),
                 ),
               ),
+              if (_viewModel.pendingCount > 0)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                  child: Text(
+                    CookieMessages.waitingToUpload(_viewModel.pendingCount),
+                    style: AppText.bodyMuted,
+                  ),
+                ),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(32, 16, 32, 8),
@@ -134,7 +143,8 @@ class _CookieJarScreenState extends State<CookieJarScreen> {
       children: [
         CookieJarDrawing(
           cookies: today,
-          onCookieTap: (cookie) => showCookieDetail(context, _viewModel, cookie),
+          onCookieTap: (cookie) =>
+              showCookieDetail(context, _viewModel, cookie),
         ),
         if (today.isEmpty)
           Padding(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../data/models/tool_model.dart';
+import '../../../data/repositories/cookie_repository.dart';
 import '../../../data/repositories/offline_sync_repository.dart';
 import '../../auth/widgets/profile_screen.dart';
 import '../../check_in/daily_check_in_prompt.dart';
@@ -48,6 +49,7 @@ class _ToolHubScreenState extends State<ToolHubScreen>
     _viewModel.logScreenView();
 
     OfflineSyncRepository.shared.start();
+    CookieRepository.shared.startAutoSync();
   }
 
   @override

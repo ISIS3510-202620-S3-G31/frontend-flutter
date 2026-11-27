@@ -8,6 +8,7 @@ import '../../../../data/repositories/cookie_repository.dart';
 import '../../../../data/services/camera_service.dart';
 import '../../../../data/services/connectivity_service.dart';
 import '../../../../data/services/microphone_service.dart';
+import '../../../../data/services/photo_compressor.dart';
 import '../../../../data/services/speech_recognition_service.dart';
 import '../../../../domain/cookie_jar/cookie_messages.dart';
 import '../../../../domain/cookie_jar/cookie_rules.dart';
@@ -20,14 +21,19 @@ class NewCookieViewModel extends ChangeNotifier {
     SpeechRecognitionService? speech,
     MicrophoneService? microphone,
     ConnectivityChecker? connectivity,
+    PhotoCompressor? compressor,
   }) : _repository = repository ?? CookieRepository.shared,
        _camera = camera ?? const CameraService(),
+       _compressor = compressor ?? cookieCompressor,
        _speech = speech ?? SpeechRecognitionService(),
        _microphone = microphone ?? const MicrophoneService(),
        _connectivity = connectivity ?? ConnectivityService();
 
+  static const cookieCompressor = PhotoCompressor(maxSide: 1440, quality: 85);
+
   final CookieRepository _repository;
   final CameraService _camera;
+  final PhotoCompressor _compressor;
   final SpeechRecognitionService _speech;
   final MicrophoneService _microphone;
   final ConnectivityChecker _connectivity;
@@ -260,18 +266,27 @@ class NewCookieViewModel extends ChangeNotifier {
     _notify();
   }
 
+  bool _preparingPhoto = false;
+  bool get preparingPhoto => _preparingPhoto;
+
   /// Opens the camera; the photo replaces any previous one.
   Future<void> takePhoto() async {
     try {
       final shot = await _camera.takeWithSystemCamera();
       if (shot == null) return;
-      _photo = await shot.readAsBytes();
+      _preparingPhoto = true;
+      _notify();
+      _photo = await _compressor.compress(shot.path);
     } on PlatformException catch (error) {
       _message = error.code.contains('denied')
           ? CookieMessages.allowCamera
           : CookieMessages.cameraFailed;
+    } on FormatException {
+      _message = CookieMessages.cameraFailed;
+    } finally {
+      _preparingPhoto = false;
+      _notify();
     }
-    _notify();
   }
 
   void removePhoto() {
@@ -281,7 +296,7 @@ class NewCookieViewModel extends ChangeNotifier {
 
   /// Saves the cookie on the phone. On success [saved] is set.
   Future<void> save() async {
-    if (_saving) return;
+    if (_saving || _preparingPhoto) return;
     _triedToSave = true;
     if (CookieRules.validationError(_title, _text) != null) {
       _notify();

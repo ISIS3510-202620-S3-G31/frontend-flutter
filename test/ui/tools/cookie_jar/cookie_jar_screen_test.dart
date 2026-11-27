@@ -30,6 +30,18 @@ class FakeCookieRepository extends CookieRepository {
   Future<void> enforceImageBudget(List<CookieModel> today) async {}
 
   @override
+  Future<bool> isOnline() async => true;
+
+  @override
+  Future<SyncReport> sync() async => const SyncReport();
+
+  @override
+  Future<RefreshReport> refreshFromCloud() async => const RefreshReport();
+
+  @override
+  Future<int> prefetchToday(List<CookieModel> today) async => 0;
+
+  @override
   Future<CookieModel> eat(String cookieId) async {
     eatenIds.add(cookieId);
     return stored.firstWhere((c) => c.id == cookieId);
@@ -63,7 +75,10 @@ Future<FakeCookieRepository> pumpJar(
     MaterialApp(
       theme: AppTheme.light,
       home: CookieJarScreen(
-        viewModel: CookieJarViewModel(repository: repository),
+        viewModel: CookieJarViewModel(
+          repository: repository,
+          onlineChanges: () => const Stream.empty(),
+        ),
       ),
     ),
   );
@@ -107,6 +122,22 @@ void main() {
     await tester.tap(find.text('Undo'));
     await tester.pump();
     expect(repository.returnedIds, ['cookie-1']);
+  });
+
+  testWidgets('cookies waiting to upload are counted above the jar', (
+    tester,
+  ) async {
+    await pumpJar(tester, [
+      cookie(1),
+      CookieModel(
+        id: 'x',
+        userId: 'ana',
+        title: 'Synced',
+        text: 't',
+        isSynced: true,
+      ),
+    ]);
+    expect(find.text('⏳ 1 cookie waiting to upload'), findsOneWidget);
   });
 
   testWidgets('the list sheet splits the jar and the eaten history', (
