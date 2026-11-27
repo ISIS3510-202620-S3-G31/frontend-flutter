@@ -44,6 +44,13 @@ const _tools = [
     category: ToolCategory.reflect,
   ),
   ToolItem(
+    id: 'rapunzel',
+    title: "Rapunzel's lantern",
+    description: 'Write a wish and release its lantern into the night sky.',
+    iconAsset: 'assets/icons/ic_tool_rapunzel.svg',
+    category: ToolCategory.release,
+  ),
+  ToolItem(
     id: 'cookie_jar',
     title: 'Cookie jar',
     description: 'Keep your memories and wins in a jar.',
