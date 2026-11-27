@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../models/cookie_model.dart';
+import '../../models/cookie_social_models.dart';
 
 
 class CookieDao {
@@ -12,6 +13,9 @@ class CookieDao {
   static const table = 'cookies';
 
   static const pendingDeletesTable = 'pending_deletes';
+
+  /// Gifts this phone sent, kept only here (see `SentGift`).
+  static const sentGiftsTable = 'sent_gifts';
 
   final DatabaseFactory? _factory;
 
@@ -29,7 +33,7 @@ class CookieDao {
     return factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 2,
+        version: 3,
         onCreate: _create,
         onUpgrade: _upgrade,
       ),
@@ -39,11 +43,22 @@ class CookieDao {
   static Future<void> _create(Database db, int version) async {
     await _createCookies(db);
     await _createPendingDeletes(db);
+    await _createSentGifts(db);
   }
 
   static Future<void> _upgrade(Database db, int from, int to) async {
     if (from < 2) await _createPendingDeletes(db);
+    if (from < 3) await _createSentGifts(db);
   }
+
+  static Future<void> _createSentGifts(Database db) => db.execute('''
+    CREATE TABLE $sentGiftsTable (
+      share_id TEXT PRIMARY KEY,
+      to_username TEXT NOT NULL,
+      title TEXT NOT NULL,
+      sent_at INTEGER NOT NULL
+    )
+  ''');
 
   static Future<void> _createPendingDeletes(Database db) =>
       db.execute('CREATE TABLE $pendingDeletesTable (id TEXT PRIMARY KEY)');
@@ -136,6 +151,31 @@ class CookieDao {
   Future<void> removePendingDelete(String userId, String id) async {
     final db = await _open(userId);
     await db.delete(pendingDeletesTable, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> addSentGift(String userId, SentGift gift) async {
+    final db = await _open(userId);
+    await db.insert(
+      sentGiftsTable,
+      gift.toDb(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Newest first.
+  Future<List<SentGift>> sentGifts(String userId) async {
+    final db = await _open(userId);
+    final rows = await db.query(sentGiftsTable, orderBy: 'sent_at DESC');
+    return rows.map(SentGift.fromDb).toList();
+  }
+
+  Future<void> removeSentGift(String userId, String shareId) async {
+    final db = await _open(userId);
+    await db.delete(
+      sentGiftsTable,
+      where: 'share_id = ?',
+      whereArgs: [shareId],
+    );
   }
 
   /// Closes every open database, on sign-out and in tests.

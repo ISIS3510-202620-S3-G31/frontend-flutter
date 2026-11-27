@@ -4,9 +4,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend_flutter/data/models/cookie_model.dart';
+import 'package:frontend_flutter/data/models/cookie_social_models.dart';
 import 'package:frontend_flutter/data/repositories/cookie_repository.dart';
+import 'package:frontend_flutter/data/repositories/cookie_social_repository.dart';
 import 'package:frontend_flutter/ui/core/theme/app_theme.dart';
 import 'package:frontend_flutter/ui/tools/cookie_jar/view_model/cookie_jar_view_model.dart';
+import 'package:frontend_flutter/ui/tools/cookie_jar/view_model/cookie_social_view_model.dart';
 import 'package:frontend_flutter/ui/tools/cookie_jar/widgets/cookie_jar_screen.dart';
 
 /// The cookies this account has, without sqflite or Firebase.
@@ -54,6 +57,39 @@ class FakeCookieRepository extends CookieRepository {
   }
 }
 
+/// The age gate and the live inbox, without Firebase.
+class FakeSocialRepository extends CookieSocialRepository {
+  FakeSocialRepository({this.adult = false, this.gifts = const []});
+
+  final bool adult;
+  final List<Gift> gifts;
+
+  @override
+  Future<bool> isAdult() async => adult;
+
+  @override
+  Future<bool> isOnline() async => true;
+
+  @override
+  Stream<InboxSnapshot> watchInbox() =>
+      Stream.value(InboxSnapshot(gifts: gifts, fromCache: false));
+
+  @override
+  Future<bool> isAccepted(Gift gift) async => false;
+}
+
+Gift gift(String id) => Gift(
+  shareId: id,
+  from: 'luis',
+  fromUsername: 'luis',
+  to: 'ana',
+  title: 'Gift $id',
+  text: 't',
+  hasImage: false,
+  sentAt: 1,
+  expiresAt: DateTime.now().add(const Duration(days: 3)).millisecondsSinceEpoch,
+);
+
 CookieModel cookie(int n, {CookieState state = CookieState.active}) =>
     CookieModel(
       id: 'cookie-$n',
@@ -65,8 +101,9 @@ CookieModel cookie(int n, {CookieState state = CookieState.active}) =>
 
 Future<FakeCookieRepository> pumpJar(
   WidgetTester tester,
-  List<CookieModel> cookies,
-) async {
+  List<CookieModel> cookies, {
+  FakeSocialRepository? social,
+}) async {
   final repository = FakeCookieRepository(cookies);
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 2.625;
@@ -77,6 +114,10 @@ Future<FakeCookieRepository> pumpJar(
       home: CookieJarScreen(
         viewModel: CookieJarViewModel(
           repository: repository,
+          onlineChanges: () => const Stream.empty(),
+        ),
+        socialViewModel: CookieSocialViewModel(
+          repository: social ?? FakeSocialRepository(),
           onlineChanges: () => const Stream.empty(),
         ),
       ),
@@ -138,6 +179,37 @@ void main() {
       ),
     ]);
     expect(find.text('⏳ 1 cookie waiting to upload'), findsOneWidget);
+  });
+
+  testWidgets('a minor never sees friends, gifts or the inbox', (tester) async {
+    await pumpJar(tester, [cookie(1)]);
+    await tester.pump();
+    expect(find.byTooltip('Gift inbox'), findsNothing);
+    expect(find.byTooltip('Friends'), findsNothing);
+
+    await tester.tap(find.bySemanticsLabel('Cookie 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gift 🎁'), findsNothing);
+  });
+
+  testWidgets('an adult sees the live inbox badge and the waiting gifts', (
+    tester,
+  ) async {
+    await pumpJar(
+      tester,
+      [cookie(1)],
+      social: FakeSocialRepository(adult: true, gifts: [gift('a'), gift('b')]),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byTooltip('Gift inbox'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('You have 2 gifts waiting 🎁'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Cookie 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gift 🎁'), findsOneWidget);
   });
 
   testWidgets('the list sheet splits the jar and the eaten history', (

@@ -75,6 +75,74 @@ abstract final class CookieMessages {
   static String existedOnTwoPhones(String title, String finalTitle) =>
       '"$title" existed on two phones. One is now "$finalTitle"';
 
+  static const view = 'View';
+
+  /// a social action without network.
+  static const friendsNeedInternet =
+      'Friends and gifts need internet. Connect and try again';
+
+  static const noSuchUsername = 'No one has that username';
+
+  /// the network dropped during a social action.
+  static const connectionLost = 'Connection lost. Nothing was changed';
+
+  /// the network dropped while sending a gift.
+  static const giftNotSent = "Connection lost. Your gift wasn't sent";
+
+  /// tapping Gift without network.
+  static const giftsNeedInternet =
+      'Gifts need internet. Your cookie is still in your jar';
+
+  static const giftCanceled = 'Gift canceled';
+  static const giftCannotCancel = 'This gift can no longer be canceled';
+
+  /// the inbox without network.
+  static const giftsNeedConnection =
+      'Connect to the internet to see your gifts';
+
+  /// M30b: accepted on the phone, still to be removed from the backend.
+  static const giftSavedPending =
+      "Gift saved on this phone. It will finish when you're back online";
+
+  /// the network dropped while accepting, before saving.
+  static const giftStillInInbox =
+      'Connection lost. The gift is still in your inbox';
+
+  /// M32 and M33.
+  static const giftDeclined = 'Gift declined';
+  static const giftExpired = 'This gift expired';
+
+  static const friendsActivated = 'Friends are on ✓';
+  static const friendRemoved = 'Friend removed';
+  static const unblocked = 'Unblocked';
+
+  /// M19.
+  static String usernameTaken(String name) =>
+      '@$name is taken. Try another one';
+
+  /// M21.
+  static String requestSent(String name) => 'Friend request sent to @$name ✓';
+
+  static String alreadyFriends(String name) => '@$name is already your friend';
+
+  static String nowFriends(String name) => 'You and @$name are friends now';
+
+  static String blocked(String name) => '@$name is blocked';
+
+  /// only once the server confirmed the gift.
+  static String giftSent(String name) => 'Gift sent to @$name ✓';
+
+  /// a new gift arrived live.
+  static String newGift(String name) => 'New gift from @$name 🎁';
+
+  /// gifts were waiting when the tool opened.
+  static String giftsWaiting(int count) => count == 1
+      ? 'You have 1 gift waiting 🎁'
+      : 'You have $count gifts waiting 🎁';
+
+  /// M30.
+  static String giftAccepted(String title) => '"$title" is now in your jar 🍪';
+
   /// Above the jar while something waits to upload.
   static String waitingToUpload(int count) => count == 1
       ? '⏳ 1 cookie waiting to upload'

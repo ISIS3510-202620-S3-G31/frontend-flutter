@@ -5,16 +5,23 @@ import '../../../../domain/cookie_jar/cookie_messages.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../view_model/cookie_jar_view_model.dart';
+import '../view_model/cookie_social_view_model.dart';
+import 'gift_friend_picker.dart';
 import 'cookie_list_sheet.dart';
 
 Future<void> showCookieDetail(
   BuildContext context,
   CookieJarViewModel viewModel,
-  CookieModel cookie,
-) {
+  CookieModel cookie, {
+  CookieSocialViewModel? social,
+}) {
   return showDialog<void>(
     context: context,
-    builder: (_) => CookieDetailDialog(viewModel: viewModel, cookie: cookie),
+    builder: (_) => CookieDetailDialog(
+      viewModel: viewModel,
+      cookie: cookie,
+      social: social,
+    ),
   );
 }
 
@@ -24,10 +31,14 @@ class CookieDetailDialog extends StatefulWidget {
     super.key,
     required this.viewModel,
     required this.cookie,
+    this.social,
   });
 
   final CookieJarViewModel viewModel;
   final CookieModel cookie;
+
+  /// Null, or a user under 18: no Gift button.
+  final CookieSocialViewModel? social;
 
   @override
   State<CookieDetailDialog> createState() => _CookieDetailDialogState();
@@ -69,6 +80,23 @@ class _CookieDetailDialogState extends State<CookieDetailDialog> {
     await action(cookie);
   }
 
+  Future<void> _gift() async {
+    final social = widget.social!;
+    if (!social.isOnline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(CookieMessages.giftsNeedInternet),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final navigator = Navigator.of(context);
+    final cookie = widget.cookie;
+    navigator.pop();
+    await showGiftFriendPicker(navigator.context, social, cookie);
+  }
+
   Future<void> _deleteForever() async {
     if (!await confirmDeleteForever(context) || !mounted) return;
     await _run(widget.viewModel.deleteForever);
@@ -77,6 +105,7 @@ class _CookieDetailDialogState extends State<CookieDetailDialog> {
   @override
   Widget build(BuildContext context) {
     final cookie = widget.cookie;
+    final social = widget.social;
     return Dialog(
       backgroundColor: AppColors.background,
       insetPadding: const EdgeInsets.all(24),
@@ -123,13 +152,26 @@ class _CookieDetailDialogState extends State<CookieDetailDialog> {
                   const SizedBox(height: 16),
                   Text(cookie.text, style: AppText.body.copyWith(fontSize: 16)),
                   const SizedBox(height: 24),
-                  if (cookie.isActive)
+                  if (cookie.isActive) ...[
                     _ActionButton(
                       label: 'Eat 🍪',
                       color: AppColors.primary,
                       onPressed: () => _run(widget.viewModel.eat),
-                    )
-                  else ...[
+                    ),
+                    if (social != null && social.isAdult) ...[
+                      const SizedBox(height: 12),
+                      Opacity(
+                        opacity: social.isOnline ? 1 : 0.45,
+                        child: _ActionButton(
+                          label: social.isOnline
+                              ? 'Gift 🎁'
+                              : 'Gift 🎁 (offline)',
+                          color: AppColors.secondary,
+                          onPressed: _gift,
+                        ),
+                      ),
+                    ],
+                  ] else ...[
                     _ActionButton(
                       label: 'Return to jar',
                       color: AppColors.secondary,
