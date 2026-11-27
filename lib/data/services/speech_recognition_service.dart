@@ -1,3 +1,4 @@
+import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
@@ -17,10 +18,13 @@ class SpeechRecognitionService {
     void Function(String error)? onError,
     void Function(bool isListening)? onStatus,
   }) {
-    return _speech.initialize(
-      onError: (error) => onError?.call(error.errorMsg),
-      onStatus: (status) => onStatus?.call(status == 'listening'),
-    );
+    void errorListener(SpeechRecognitionError error) =>
+        onError?.call(error.errorMsg);
+    void statusListener(String status) => onStatus?.call(status == 'listening');
+    _speech
+      ..errorListener = errorListener
+      ..statusListener = statusListener;
+    return _speech.initialize(onError: errorListener, onStatus: statusListener);
   }
 
   /// Reports the words so far on every partial result, and again with
