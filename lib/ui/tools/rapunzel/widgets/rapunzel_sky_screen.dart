@@ -13,24 +13,12 @@ import '../view_model/rapunzel_sky_view_model.dart';
 import 'lantern_painter.dart';
 import 'night_sky_painter.dart';
 import 'rapunzel_colors.dart';
+import 'wish_editor_screen.dart';
+import 'wish_list_screen.dart';
 
-/// The main screen of the Rapunzel's lantern tool: a night sky where the
-/// saved wishes float as small lanterns and the newest unreleased wish is
-/// held as one big lit lantern.
-///
-/// Tap a lit lantern to read its wish; tap an unlit one to light it and read
-/// it. Swipe up to release the held lantern into the sky.
-///
-/// Performance (wiki §4.5): the sky and the static lanterns are one
-/// CustomPainter inside a RepaintBoundary, and every animating lantern is
-/// its own RepaintBoundary fed by its own AnimationController, so a release
-/// animation repaints only that lantern. At most
-/// [RapunzelSkyViewModel.maxConcurrentAnimations] lanterns animate at once;
-/// the rest keep a fixed flame and never repaint.
 class RapunzelSkyScreen extends StatefulWidget {
   const RapunzelSkyScreen({super.key, this.viewModel});
 
-  /// Pass one in tests; otherwise the screen builds and disposes its own.
   final RapunzelSkyViewModel? viewModel;
 
   @override
@@ -62,9 +50,9 @@ class _RapunzelSkyScreenState extends State<RapunzelSkyScreen> {
   void _onViewModelChanged() {
     final message = _viewModel.takeMessage();
     if (message != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
     final reading = _viewModel.reading;
     if (reading == null) {
@@ -113,85 +101,20 @@ class _RapunzelSkyScreenState extends State<RapunzelSkyScreen> {
     _viewModel.closeReading();
   }
 
-  /// The list of all wishes, read-only for now; the edit/delete list screen
-  /// lands with the wish-list issue.
-  Future<void> _showWishList() async {
-    final wishes = _viewModel.wishes;
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: RapunzelColors.skyHorizon,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Your wishes',
-                style: AppText.h2.copyWith(color: RapunzelColors.creamText),
-              ),
-              const SizedBox(height: 12),
-              if (wishes.isEmpty)
-                Text(
-                  'No wishes yet — they will float here once you write them.',
-                  style: AppText.body.copyWith(
-                    color: RapunzelColors.creamMuted,
-                  ),
-                )
-              else
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: wishes.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final wish = wishes[index];
-                      return DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: RapunzelColors.skyTop.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _viewModel.isLit(wish)
-                                      ? RapunzelColors.glow
-                                      : RapunzelColors.creamMuted,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  wish.text,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppText.body.copyWith(
-                                    color: RapunzelColors.creamText,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
+  Future<void> _openWishList() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const WishListScreen()),
     );
+    if (mounted) unawaited(_viewModel.refresh());
+  }
+
+  Future<void> _openEditorForNewWish() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const WishEditorScreen()),
+    );
+    if (mounted) unawaited(_viewModel.refresh());
   }
 
   void _finish() => Navigator.maybePop(context, true);
@@ -210,7 +133,7 @@ class _RapunzelSkyScreenState extends State<RapunzelSkyScreen> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
                     child: Row(
                       children: [
                         CircleIconButton(
@@ -218,7 +141,7 @@ class _RapunzelSkyScreenState extends State<RapunzelSkyScreen> {
                           semanticLabel: 'Back',
                           onPressed: () => Navigator.maybePop(context),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: SizedBox(
                             height: 44,
@@ -235,12 +158,13 @@ class _RapunzelSkyScreenState extends State<RapunzelSkyScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(width: 16),
                         CircleIconButton(
                           asset: 'assets/icons/ic_tools.svg',
                           semanticLabel: 'Your wishes',
-                          onPressed: _showWishList,
+                          onPressed: _openWishList,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12),
                         CircleIconButton(
                           asset: 'assets/icons/ic_check.svg',
                           semanticLabel: 'Finish',
@@ -249,6 +173,17 @@ class _RapunzelSkyScreenState extends State<RapunzelSkyScreen> {
                       ],
                     ),
                   ),
+                  if (!_viewModel.isLoading && _viewModel.wishes.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                      child: Text(
+                        'Your sky is empty. Write your first wish.',
+                        textAlign: TextAlign.center,
+                        style: AppText.body.copyWith(
+                          color: RapunzelColors.creamText,
+                        ),
+                      ),
+                    ),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -262,7 +197,11 @@ class _RapunzelSkyScreenState extends State<RapunzelSkyScreen> {
                                   color: RapunzelColors.creamText,
                                 ),
                               )
-                            : _SkyStage(viewModel: _viewModel, skySize: size);
+                            : _SkyStage(
+                                viewModel: _viewModel,
+                                skySize: size,
+                                onWriteWish: _openEditorForNewWish,
+                              );
                       },
                     ),
                   ),
@@ -276,13 +215,19 @@ class _RapunzelSkyScreenState extends State<RapunzelSkyScreen> {
   }
 }
 
-/// The sky itself: static sky painter plus one animated, RepaintBoundary'd
-/// layer per lantern that holds an animation slot.
+/// The sky itself: static sky painter plus one animated, RepaintBoundary'd layer per lantern that holds an animation slot.
 class _SkyStage extends StatelessWidget {
-  const _SkyStage({required this.viewModel, required this.skySize});
+  const _SkyStage({
+    required this.viewModel,
+    required this.skySize,
+    required this.onWriteWish,
+  });
 
   final RapunzelSkyViewModel viewModel;
   final Size skySize;
+
+  /// Opens the editor to write a new wish; shown while no lantern is held.
+  final VoidCallback onWriteWish;
 
   @override
   Widget build(BuildContext context) {
@@ -338,7 +283,8 @@ class _SkyStage extends StatelessWidget {
               child: CustomPaint(
                 size: skySize,
                 painter: NightSkyPainter(
-                  layout: layout ?? const SkyLayout(stars: [], lanternSlots: []),
+                  layout:
+                      layout ?? const SkyLayout(stars: [], lanternSlots: []),
                   staticLanterns: staticLanterns,
                   foreground: foreground != null && foregroundMotion == null
                       ? RapunzelSkyViewModel.foregroundSlot
@@ -357,6 +303,28 @@ class _SkyStage extends StatelessWidget {
                 'Swipe up to release your lantern',
                 textAlign: TextAlign.center,
                 style: AppText.body.copyWith(color: RapunzelColors.creamMuted),
+              ),
+            ),
+          // No lantern held: offer to write the next wish, like the unlit
+          // big lantern of the Kotlin app.
+          if (foreground == null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 20,
+              child: Center(
+                child: FilledButton(
+                  onPressed: onWriteWish,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: RapunzelColors.lanternBottom,
+                    foregroundColor: RapunzelColors.skyTop,
+                    shape: const StadiumBorder(),
+                    textStyle: AppText.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: const Text('Write a wish'),
+                ),
               ),
             ),
         ],
@@ -428,7 +396,9 @@ class _AnimatedLanternState extends State<_AnimatedLantern>
   void initState() {
     super.initState();
     final duration = switch (widget.motion) {
-      LanternMotion.bobbing => Duration(milliseconds: 2400 + widget.seed % 5 * 300),
+      LanternMotion.bobbing => Duration(
+        milliseconds: 2400 + widget.seed % 5 * 300,
+      ),
       LanternMotion.lighting => const Duration(milliseconds: 700),
       LanternMotion.releasing => const Duration(milliseconds: 2400),
     };
@@ -463,8 +433,12 @@ class _AnimatedLanternState extends State<_AnimatedLantern>
         var flamePhase = 0.0;
         switch (widget.motion) {
           case LanternMotion.bobbing:
-            left = widget.slot.dx * widget.skySize.width + math.cos(math.pi * t) * 2;
-            top = widget.slot.dy * widget.skySize.height + math.sin(2 * math.pi * t) * 4;
+            left =
+                widget.slot.dx * widget.skySize.width +
+                math.cos(math.pi * t) * 2;
+            top =
+                widget.slot.dy * widget.skySize.height +
+                math.sin(2 * math.pi * t) * 4;
             flamePhase = 2 * math.pi * t * 3;
           case LanternMotion.lighting:
             left = widget.slot.dx * widget.skySize.width;

@@ -11,14 +11,7 @@ import '../services/remote/analytics_firestore_service.dart';
 import '../services/remote/pending_write_firestore_service.dart';
 import 'offline_sync_repository.dart';
 
-/// The wishes of the Rapunzel's lantern tool: sqflite on the phone as the
-/// source of truth, Firestore as the backup.
-///
-/// Every write goes to Firestore right away when there is a connection
-/// (Firestore itself keeps it if the write fails) and is queued as a pending
-/// write when there is not, so [OfflineSyncRepository] can send it when the
-/// connection returns. The analytics events of BQ26 (`wish_created`,
-/// `wish_released`, ...) are written here, next to the change they describe.
+/// The wishes of the Rapunzel's lantern tool: sqflite on the phone as the source of truth, Firestore as the backup.
 class WishRepository {
   WishRepository({
     WishDao? dao,
@@ -41,8 +34,7 @@ class WishRepository {
   final OfflineSyncRepository _sync;
   final ConnectivityService _connectivity;
 
-  /// The Firestore document of [wish], the same one the pending-writes queue
-  /// writes to. Built as text, so it needs no Firestore (offline queue, tests).
+  /// The Firestore document of [wish], the same one the pending-writes queue writes to. Built as text, so it needs no Firestore (offline queue, tests).
   String pathFor(String userId, Wish wish) => 'users/$userId/wishes/${wish.id}';
 
   Stream<bool> get onlineChanges => _connectivity.onlineChanges;
@@ -56,8 +48,7 @@ class WishRepository {
     }
   }
 
-  /// All the wishes of the signed-in account, newest first. Empty when nobody
-  /// is signed in or the database cannot be read.
+  /// All the wishes of the signed-in account, newest first. Empty when nobody is signed in or the database cannot be read.
   Future<List<Wish>> wishes() async {
     final userId = _auth.currentUserId;
     if (userId == null) return [];
@@ -69,8 +60,7 @@ class WishRepository {
     }
   }
 
-  /// Saves a new, still held wish and returns it. Works offline: the wish is
-  /// in sqflite at once and the Firestore copy waits in the pending queue.
+  /// Saves a new, still held wish and returns it. Works offline: the wish is in sqflite at once and the Firestore copy waits in the pending queue.
   Future<Wish> save(String text) async {
     final userId = _requireUser();
     final wish = Wish.create(text);
@@ -88,8 +78,43 @@ class WishRepository {
     return wish;
   }
 
-  /// Releases a wish: its lantern floats up into the sky. The wish stays
-  /// saved, now marked released, both on the phone and in the cloud.
+  /// Changes the text of a wish that already exists, on the phone first and in the cloud right after (queued when there is no connection).
+  Future<SaveOutcome> update(Wish wish, String newText) async {
+    final userId = _requireUser();
+    final updated = wish.copyWith(text: Wish.limitText(newText.trim()));
+    await _dao.upsert(userId, updated);
+    unawaited(
+      _analytics.create(userId, {
+        'name': 'wish_updated',
+        'userId': userId,
+        'wish_id': updated.id,
+        'text_length': updated.text.length,
+        'createdAt': DateTime.now().toUtc().toIso8601String(),
+      }),
+    );
+    return _push(userId, updated);
+  }
+
+  /// Deletes a wish for good: gone from sqflite at once and from Firestore as
+  /// well. The delete is not put in the pending-writes queue — that queue
+  /// only carries sets, and a queued set would resurrect the wish — but
+  /// Firestore keeps the delete on the phone while offline and sends it when
+  /// the connection returns.
+  Future<void> delete(Wish wish) async {
+    final userId = _requireUser();
+    await _dao.delete(userId, wish.id);
+    unawaited(
+      _analytics.create(userId, {
+        'name': 'wish_deleted',
+        'userId': userId,
+        'wish_id': wish.id,
+        'createdAt': DateTime.now().toUtc().toIso8601String(),
+      }),
+    );
+    unawaited(_remote.delete(pathFor(userId, wish)).catchError(_report));
+  }
+
+  /// Releases a wish: its lantern floats up into the sky. The wish stays saved, now marked released, both on the phone and in the cloud.
   Future<SaveOutcome> release(Wish wish) async {
     final userId = _requireUser();
     final released = wish.copyWith(released: true, releasedAt: DateTime.now());
@@ -99,18 +124,13 @@ class WishRepository {
         'name': 'wish_released',
         'userId': userId,
         'wish_id': released.id,
-        'held_seconds': DateTime.now()
-            .difference(released.createdAt)
-            .inSeconds,
+        'held_seconds': DateTime.now().difference(released.createdAt).inSeconds,
         'createdAt': DateTime.now().toUtc().toIso8601String(),
       }),
     );
     return _push(userId, released);
   }
 
-  /// Firestore right away — it keeps the write on the phone when there is no
-  /// real network — plus the pending-writes queue as the second chance that
-  /// [OfflineSyncRepository] flushes when the connection returns.
   Future<SaveOutcome> _push(String userId, Wish wish) async {
     final path = pathFor(userId, wish);
     unawaited(_remote.set(path, wish.toMap()).catchError(_report));

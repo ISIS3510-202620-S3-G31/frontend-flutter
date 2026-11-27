@@ -49,10 +49,17 @@ class FakeAnalytics extends AnalyticsFirestoreService {
 
 class FakeRemote extends PendingWriteFirestoreService {
   final Map<String, Map<String, Object?>> docs = {};
+  final List<String> deleted = [];
 
   @override
   Future<void> set(String path, Map<String, Object?> data) async {
     docs[path] = data;
+  }
+
+  @override
+  Future<void> delete(String path) async {
+    deleted.add(path);
+    docs.remove(path);
   }
 }
 
@@ -156,6 +163,54 @@ void main() {
     final releasedEvent = analytics.events.last;
     expect(releasedEvent['wish_id'], wish.id);
     expect(releasedEvent['held_seconds'], isA<int>());
+  });
+
+  test('updating a wish changes the text locally and in Firestore', () async {
+    final wish = await repository.save('first try');
+
+    final outcome = await repository.update(wish, 'second try');
+
+    expect(outcome, SaveOutcome.saved);
+    expect((await repository.wishes()).single.text, 'second try');
+    expect(
+      remote.docs['users/ana/wishes/${wish.id}']!['text'],
+      'second try',
+    );
+    expect(
+      analytics.events.map((event) => event['name']),
+      contains('wish_updated'),
+    );
+    expect(pendingWrites.writes, isEmpty, reason: 'online means no queue');
+  });
+
+  test('updating offline keeps the wish locally and queues the new text', () async {
+    final wish = await repository.save('first try');
+    connectivity.online = false;
+
+    final outcome = await repository.update(wish, 'second try');
+
+    expect(outcome, SaveOutcome.savedOffline);
+    expect((await repository.wishes()).single.text, 'second try');
+    final queued = pendingWrites.writes.values.single;
+    expect(queued.path, 'users/ana/wishes/${wish.id}');
+    expect(queued.data['text'], 'second try');
+  });
+
+  test('deleting a wish removes it locally and from Firestore, without a queued set', () async {
+    final wish = await repository.save('gone soon');
+    connectivity.online = false;
+
+    await repository.delete(wish);
+
+    expect(await repository.wishes(), isEmpty);
+    expect(remote.deleted, ['users/ana/wishes/${wish.id}']);
+    expect(
+      analytics.events.map((event) => event['name']),
+      contains('wish_deleted'),
+    );
+    // A queued set would resurrect the wish on the next sync, so the delete
+    // must not be in the pending-writes queue.
+    expect(pendingWrites.writes, isEmpty);
   });
 
   test('wishes come back newest first', () async {

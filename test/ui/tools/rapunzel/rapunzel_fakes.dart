@@ -7,7 +7,8 @@ import 'package:frontend_flutter/data/repositories/wish_repository.dart';
 import 'package:frontend_flutter/data/services/wish_sky_layout.dart';
 import 'package:frontend_flutter/ui/tools/rapunzel/view_model/rapunzel_sky_view_model.dart';
 
-/// A repository that answers from memory, recording what was released.
+/// A repository that answers from memory, recording what was saved, updated,
+/// released and deleted.
 class FakeWishRepository extends WishRepository {
   FakeWishRepository({List<Wish> stored = const [], this.online = true})
     : _stored = List.of(stored);
@@ -15,10 +16,37 @@ class FakeWishRepository extends WishRepository {
   final List<Wish> _stored;
   bool online;
   final List<String> releasedIds = [];
+  final List<String> savedTexts = [];
+  final List<String> updatedIds = [];
+  final List<String> deletedIds = [];
+  bool failDeletes = false;
   final _changes = StreamController<bool>.broadcast();
 
   @override
   Future<List<Wish>> wishes() async => List.of(_stored);
+
+  @override
+  Future<Wish> save(String text) async {
+    savedTexts.add(text);
+    final wish = Wish.create(text, createdAt: DateTime(2026, 11, 27, 23));
+    _stored.insert(0, wish);
+    return wish;
+  }
+
+  @override
+  Future<SaveOutcome> update(Wish wish, String newText) async {
+    updatedIds.add(wish.id);
+    final index = _stored.indexWhere((stored) => stored.id == wish.id);
+    if (index >= 0) _stored[index] = wish.copyWith(text: newText);
+    return online ? SaveOutcome.saved : SaveOutcome.savedOffline;
+  }
+
+  @override
+  Future<void> delete(Wish wish) async {
+    if (failDeletes) throw Exception('no network');
+    deletedIds.add(wish.id);
+    _stored.removeWhere((stored) => stored.id == wish.id);
+  }
 
   @override
   Future<SaveOutcome> release(Wish wish) async {
