@@ -60,7 +60,10 @@ class _CookieJarScreenState extends State<CookieJarScreen> {
     if (!mounted) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => CookieInboxScreen(viewModel: _social)),
+      MaterialPageRoute(
+        builder: (_) => CookieInboxScreen(viewModel: _social),
+        settings: const RouteSettings(name: '/tools/cookie_jar/inbox'),
+      ),
     );
   }
 
@@ -69,6 +72,7 @@ class _CookieJarScreenState extends State<CookieJarScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => CookieFriendsScreen(viewModel: _social),
+        settings: const RouteSettings(name: '/tools/cookie_jar/friends'),
       ),
     );
   }
@@ -97,7 +101,10 @@ class _CookieJarScreenState extends State<CookieJarScreen> {
   Future<void> _newCookie() async {
     final created = await Navigator.push<CreatedCookie>(
       context,
-      MaterialPageRoute(builder: (_) => const NewCookieScreen()),
+      MaterialPageRoute(
+        builder: (_) => const NewCookieScreen(),
+        settings: const RouteSettings(name: '/tools/cookie_jar/new'),
+      ),
     );
     if (created != null) _viewModel.created(created);
   }

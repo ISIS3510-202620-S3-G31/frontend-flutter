@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../data/repositories/analytics_repository.dart';
 import '../../../../data/repositories/cookie_repository.dart';
 import '../../../../data/services/camera_service.dart';
 import '../../../../data/services/connectivity_service.dart';
@@ -22,7 +23,9 @@ class NewCookieViewModel extends ChangeNotifier {
     MicrophoneService? microphone,
     ConnectivityChecker? connectivity,
     PhotoCompressor? compressor,
+    AnalyticsRepository? analytics,
   }) : _repository = repository ?? CookieRepository.shared,
+       _customAnalytics = analytics,
        _camera = camera ?? const CameraService(),
        _compressor = compressor ?? cookieCompressor,
        _speech = speech ?? SpeechRecognitionService(),
@@ -32,6 +35,9 @@ class NewCookieViewModel extends ChangeNotifier {
   static const cookieCompressor = PhotoCompressor(maxSide: 1440, quality: 85);
 
   final CookieRepository _repository;
+  final AnalyticsRepository? _customAnalytics;
+  late final AnalyticsRepository _analytics =
+      _customAnalytics ?? AnalyticsRepository();
   final CameraService _camera;
   final PhotoCompressor _compressor;
   final SpeechRecognitionService _speech;
@@ -52,6 +58,10 @@ class NewCookieViewModel extends ChangeNotifier {
 
   bool _canDictate = false;
   bool _isListening = false;
+
+  /// Whether any words of this cookie came from the voice (BQ28).
+  bool _dictated = false;
+  bool _dictatedBeforeHold = false;
   bool _offline = false;
 
   /// True while the mic is held down.
@@ -156,6 +166,7 @@ class NewCookieViewModel extends ChangeNotifier {
     _holding = true;
     _restarts = 0;
     _textBeforeHold = _text;
+    _dictatedBeforeHold = _dictated;
     _spanStart = _caretBeforeHold = at.clamp(0, _text.length);
     _spanLength = 0;
     _notify();
@@ -189,6 +200,7 @@ class NewCookieViewModel extends ChangeNotifier {
     _session++;
     _restartTimer?.cancel();
     _text = _textBeforeHold;
+    _dictated = _dictatedBeforeHold;
     _spanStart = _caretBeforeHold;
     _spanLength = 0;
     _notify();
@@ -222,6 +234,7 @@ class NewCookieViewModel extends ChangeNotifier {
   }
 
   void _onWords(String words, bool isFinal) {
+    if (words.trim().isNotEmpty) _dictated = true;
     final before = _text.substring(0, _spanStart);
     final after = _text.substring(_spanStart + _spanLength);
     final gap = words.isNotEmpty && before.isNotEmpty && !before.endsWith(' ')
@@ -311,6 +324,7 @@ class NewCookieViewModel extends ChangeNotifier {
         text: _text,
         photo: _photo,
       );
+      _logCreated();
     } on CookieRuleException catch (error) {
       _message = error.message;
     } on FileSystemException {
@@ -319,6 +333,20 @@ class NewCookieViewModel extends ChangeNotifier {
       _saving = false;
       _notify();
     }
+  }
+
+  void _logCreated() {
+    unawaited(
+      _analytics.logToolStep(
+        toolId: 'cookie_jar',
+        stepName: 'cookie_created',
+        extra: {
+          'has_photo': _photo != null,
+          'dictated': _dictated,
+          'platform': 'flutter',
+        },
+      ),
+    );
   }
 
   void _notify() {

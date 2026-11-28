@@ -48,6 +48,10 @@ class CookieJarDrawing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return RepaintBoundary(child: _jar());
+  }
+
+  Widget _jar() {
     return AspectRatio(
       aspectRatio: _jarAspect,
       child: LayoutBuilder(
@@ -61,7 +65,11 @@ class CookieJarDrawing extends StatelessWidget {
 
           return Stack(
             children: [
-              const Positioned.fill(child: CustomPaint(painter: JarPainter())),
+              const Positioned.fill(
+                child: RepaintBoundary(
+                  child: CustomPaint(painter: JarPainter()),
+                ),
+              ),
               for (var i = 0; i < shown.length; i++)
                 Positioned(
                   left: bodyLeft + bodyWidth * _slots[i].x - cookieSize / 2,
@@ -70,9 +78,11 @@ class CookieJarDrawing extends StatelessWidget {
                   height: cookieSize,
                   child: Transform.rotate(
                     angle: _slots[i].degrees * math.pi / 180,
-                    child: _CookieButton(
-                      cookie: shown[i],
-                      onTap: () => onCookieTap(shown[i]),
+                    child: RepaintBoundary(
+                      child: _CookieButton(
+                        cookie: shown[i],
+                        onTap: () => onCookieTap(shown[i]),
+                      ),
                     ),
                   ),
                 ),
@@ -102,7 +112,9 @@ class _CookieButton extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: const CustomPaint(painter: CookiePainter()),
+          child: const RepaintBoundary(
+            child: CustomPaint(painter: CookiePainter()),
+          ),
         ),
       ),
     );
@@ -113,8 +125,15 @@ class _CookieButton extends StatelessWidget {
 class JarPainter extends CustomPainter {
   const JarPainter();
 
+  @visibleForTesting
+  static int paints = 0;
+
   @override
   void paint(Canvas canvas, Size size) {
+    assert(() {
+      paints++;
+      return true;
+    }());
     final w = size.width;
     final h = size.height;
     final outline = Paint()
@@ -177,8 +196,16 @@ class CookiePainter extends CustomPainter {
     Offset(0.12, 0.45),
   ];
 
+  /// Like [JarPainter.paints]: debug-only count of [paint] calls.
+  @visibleForTesting
+  static int paints = 0;
+
   @override
   void paint(Canvas canvas, Size size) {
+    assert(() {
+      paints++;
+      return true;
+    }());
     final r = size.shortestSide / 2;
     final center = size.center(Offset.zero);
     canvas
