@@ -33,6 +33,7 @@ class FakeSpeech implements SpeechRecognitionService {
   Future<void> listen({
     required void Function(String words, bool isFinal) onWords,
     bool preferOnDevice = false,
+    void Function(double level)? onSoundLevel,
   }) async {
     listens++;
     _onWords = onWords;
