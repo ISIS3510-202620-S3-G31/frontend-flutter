@@ -85,7 +85,7 @@ class WishRepository {
     await _dao.upsert(userId, updated);
     unawaited(
       _analytics.create(userId, {
-        'name': 'wish_updated',
+        'name': 'wish_edited',
         'userId': userId,
         'wish_id': updated.id,
         'text_length': updated.text.length,
