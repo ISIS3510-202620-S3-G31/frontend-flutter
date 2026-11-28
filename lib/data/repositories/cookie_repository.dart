@@ -238,6 +238,45 @@ class CookieRepository {
     return CreatedCookie(cookie, typedTitle: CookieRules.cleanTitle(title));
   }
 
+  Future<bool> hasCookie(String cookieId) async =>
+      await _dao.byId(_requireUser(), cookieId) != null;
+
+  Future<CookieModel> saveReceivedGift({
+    required String shareId,
+    required String title,
+    required String text,
+    required String fromUsername,
+    Uint8List? photo,
+  }) async {
+    final uid = _requireUser();
+    final existing = await _dao.byId(uid, shareId);
+    if (existing != null) return existing;
+    final now = _nowMillis;
+    final localPath = photo == null
+        ? null
+        : await _images.save(uid, shareId, photo);
+    final cookie = CookieModel(
+      id: shareId,
+      userId: uid,
+      title: await finalTitleFor(title),
+      text: text,
+      hasImage: photo != null,
+      localImagePath: localPath,
+      lastOpenedAt: now,
+      receivedFrom: fromUsername,
+      createdAt: now,
+      updatedAt: now,
+    );
+    await _dao.insert(cookie);
+    (await titleKeys()).add(cookie.titleKey);
+    if (photo != null) _memory.put(shareId, photo);
+    _afterWrite();
+    return cookie;
+  }
+
+  /// The sqflite DAO, for the social repository's local list of sent gifts.
+  CookieDao get dao => _dao;
+
   /// Moves a cookie from the jar to the history. It is a change of state, not a deletion, so it can come back.
   Future<CookieModel> eat(String cookieId) =>
       _changeState(cookieId, CookieState.eaten);

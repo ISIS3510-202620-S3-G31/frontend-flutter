@@ -4,12 +4,14 @@ import '../../../../data/models/cookie_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../view_model/cookie_jar_view_model.dart';
+import '../view_model/cookie_social_view_model.dart';
 import 'cookie_detail_dialog.dart';
 
 Future<void> showCookieList(
   BuildContext context,
-  CookieJarViewModel viewModel,
-) {
+  CookieJarViewModel viewModel, {
+  CookieSocialViewModel? social,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -17,7 +19,7 @@ Future<void> showCookieList(
     backgroundColor: AppColors.background,
     builder: (_) => FractionallySizedBox(
       heightFactor: 0.85,
-      child: CookieListSheet(viewModel: viewModel),
+      child: CookieListSheet(viewModel: viewModel, social: social),
     ),
   );
 }
@@ -50,9 +52,10 @@ Future<bool> confirmDeleteForever(BuildContext context) async {
 
 /// Two tabs, "In the jar" and "Eaten", with the titles of every cookie.
 class CookieListSheet extends StatelessWidget {
-  const CookieListSheet({super.key, required this.viewModel});
+  const CookieListSheet({super.key, required this.viewModel, this.social});
 
   final CookieJarViewModel viewModel;
+  final CookieSocialViewModel? social;
 
   @override
   Widget build(BuildContext context) {
@@ -82,11 +85,13 @@ class CookieListSheet extends StatelessWidget {
                       cookies: inJar,
                       empty: 'No cookies in the jar yet.',
                       viewModel: viewModel,
+                      social: social,
                     ),
                     _CookieList(
                       cookies: eaten,
                       empty: "You haven't eaten any cookie yet.",
                       viewModel: viewModel,
+                      social: social,
                       showHistoryActions: true,
                     ),
                   ],
@@ -105,12 +110,14 @@ class _CookieList extends StatelessWidget {
     required this.cookies,
     required this.empty,
     required this.viewModel,
+    this.social,
     this.showHistoryActions = false,
   });
 
   final List<CookieModel> cookies;
   final String empty;
   final CookieJarViewModel viewModel;
+  final CookieSocialViewModel? social;
   final bool showHistoryActions;
 
   @override
@@ -124,6 +131,7 @@ class _CookieList extends StatelessWidget {
       itemBuilder: (context, index) => _CookieRow(
         cookie: cookies[index],
         viewModel: viewModel,
+        social: social,
         showHistoryActions: showHistoryActions,
       ),
     );
@@ -135,10 +143,12 @@ class _CookieRow extends StatelessWidget {
     required this.cookie,
     required this.viewModel,
     required this.showHistoryActions,
+    this.social,
   });
 
   final CookieModel cookie;
   final CookieJarViewModel viewModel;
+  final CookieSocialViewModel? social;
   final bool showHistoryActions;
 
   Future<void> _delete(BuildContext context) async {
@@ -157,7 +167,7 @@ class _CookieRow extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      onTap: () => showCookieDetail(context, viewModel, cookie),
+      onTap: () => showCookieDetail(context, viewModel, cookie, social: social),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
