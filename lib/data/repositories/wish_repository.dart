@@ -7,6 +7,7 @@ import '../models/wish_model.dart';
 import '../services/auth_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/local/wish_dao.dart';
+import '../services/local/wish_memory_cache.dart';
 import '../services/remote/analytics_firestore_service.dart';
 import '../services/remote/pending_write_firestore_service.dart';
 import 'offline_sync_repository.dart';
@@ -20,12 +21,14 @@ class WishRepository {
     PendingWriteFirestoreService? remote,
     OfflineSyncRepository? sync,
     ConnectivityService? connectivity,
+    WishMemoryCache? cache,
   }) : _dao = dao ?? WishDao(),
        _auth = auth ?? AuthService(),
        _analytics = analytics ?? AnalyticsFirestoreService(),
        _remote = remote ?? PendingWriteFirestoreService(),
        _sync = sync ?? OfflineSyncRepository.shared,
-       _connectivity = connectivity ?? ConnectivityService();
+       _connectivity = connectivity ?? ConnectivityService(),
+       _cache = cache ?? WishMemoryCache.shared;
 
   final WishDao _dao;
   final AuthService _auth;
@@ -33,6 +36,10 @@ class WishRepository {
   final PendingWriteFirestoreService _remote;
   final OfflineSyncRepository _sync;
   final ConnectivityService _connectivity;
+
+  /// In-memory copy of the local wish lists, so screens do not re-query
+  /// sqflite on every build. Invalidated on any wish change.
+  final WishMemoryCache _cache;
 
   /// The Firestore document of [wish], the same one the pending-writes queue writes to. Built as text, so it needs no Firestore (offline queue, tests).
   String pathFor(String userId, Wish wish) => 'users/$userId/wishes/${wish.id}';
@@ -48,12 +55,16 @@ class WishRepository {
     }
   }
 
-  /// All the wishes of the signed-in account, newest first. Empty when nobody is signed in or the database cannot be read.
+  /// All the wishes of the signed-in account, newest first. Served from the
+  /// in-memory cache when it has them; only a miss queries sqflite. Empty
+  /// when nobody is signed in or the database cannot be read.
   Future<List<Wish>> wishes() async {
     final userId = _auth.currentUserId;
     if (userId == null) return [];
+    final cached = _cache.get(userId);
+    if (cached != null) return cached;
     try {
-      return await _dao.all(userId);
+      return _cache.put(userId, await _dao.all(userId));
     } on Exception catch (error) {
       debugPrint('[Wishes] Could not read the local wishes: $error');
       return [];
@@ -65,6 +76,7 @@ class WishRepository {
     final userId = _requireUser();
     final wish = Wish.create(text);
     await _dao.upsert(userId, wish);
+    _cache.invalidate(userId);
     unawaited(
       _analytics.create(userId, {
         'name': 'wish_created',
@@ -83,6 +95,7 @@ class WishRepository {
     final userId = _requireUser();
     final updated = wish.copyWith(text: Wish.limitText(newText.trim()));
     await _dao.upsert(userId, updated);
+    _cache.invalidate(userId);
     unawaited(
       _analytics.create(userId, {
         'name': 'wish_edited',
@@ -95,14 +108,10 @@ class WishRepository {
     return _push(userId, updated);
   }
 
-  /// Deletes a wish for good: gone from sqflite at once and from Firestore as
-  /// well. The delete is not put in the pending-writes queue — that queue
-  /// only carries sets, and a queued set would resurrect the wish — but
-  /// Firestore keeps the delete on the phone while offline and sends it when
-  /// the connection returns.
   Future<void> delete(Wish wish) async {
     final userId = _requireUser();
     await _dao.delete(userId, wish.id);
+    _cache.invalidate(userId);
     unawaited(
       _analytics.create(userId, {
         'name': 'wish_deleted',
@@ -119,6 +128,7 @@ class WishRepository {
     final userId = _requireUser();
     final released = wish.copyWith(released: true, releasedAt: DateTime.now());
     await _dao.upsert(userId, released);
+    _cache.invalidate(userId);
     unawaited(
       _analytics.create(userId, {
         'name': 'wish_released',

@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend_flutter/data/models/pending_write_model.dart';
+import 'package:frontend_flutter/data/models/wish_model.dart';
 import 'package:frontend_flutter/data/repositories/offline_sync_repository.dart';
 import 'package:frontend_flutter/data/repositories/wish_repository.dart';
 import 'package:frontend_flutter/data/services/auth_service.dart';
 import 'package:frontend_flutter/data/services/connectivity_service.dart';
 import 'package:frontend_flutter/data/services/local/pending_write_storage.dart';
 import 'package:frontend_flutter/data/services/local/wish_dao.dart';
+import 'package:frontend_flutter/data/services/local/wish_memory_cache.dart';
 import 'package:frontend_flutter/data/services/remote/analytics_firestore_service.dart';
 import 'package:frontend_flutter/data/services/remote/pending_write_firestore_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -63,6 +65,19 @@ class FakeRemote extends PendingWriteFirestoreService {
   }
 }
 
+/// Counts the `all` reads, so tests can tell a sqflite query from a cache hit.
+class CountingWishDao extends WishDao {
+  CountingWishDao({super.open});
+
+  int reads = 0;
+
+  @override
+  Future<List<Wish>> all(String userId) async {
+    reads++;
+    return super.all(userId);
+  }
+}
+
 /// Keeps the queue in a map instead of sqflite.
 class FakePendingWrites extends PendingWriteStorage {
   final Map<String, PendingWrite> writes = {};
@@ -109,8 +124,26 @@ void main() {
         connectivity: connectivity,
         auth: FakeAuth('ana'),
       ),
+      cache: WishMemoryCache(),
     );
   });
+
+  /// A repository with its own fresh cache and the [dao] given, so tests can
+  /// count the real sqflite reads.
+  WishRepository cachedRepository(WishDao dao) => WishRepository(
+    dao: dao,
+    auth: FakeAuth('ana'),
+    analytics: analytics,
+    remote: remote,
+    connectivity: connectivity,
+    sync: OfflineSyncRepository(
+      storage: pendingWrites,
+      remote: remote,
+      connectivity: connectivity,
+      auth: FakeAuth('ana'),
+    ),
+    cache: WishMemoryCache(),
+  );
 
   tearDown(() async => db.close());
 
@@ -234,6 +267,48 @@ void main() {
 
     final wishes = await repository.wishes();
     expect(wishes.map((wish) => wish.text), ['second', 'first']);
+  });
+
+  test('the screens query sqflite once and then the in-memory cache answers', () async {
+    final counting = CountingWishDao(open: () async => db);
+    final repo = cachedRepository(counting);
+
+    await repo.save('first');
+    await repo.save('second');
+
+    final first = await repo.wishes();
+    final second = await repo.wishes();
+    final third = await repo.wishes();
+
+    expect(counting.reads, 1, reason: 'only the first read reaches sqflite');
+    expect(second, same(first));
+    expect(third, same(first));
+    expect(first.map((wish) => wish.text), ['second', 'first']);
+  });
+
+  test('any wish change invalidates the cache', () async {
+    final counting = CountingWishDao(open: () async => db);
+    final repo = cachedRepository(counting);
+
+    final wish = await repo.save('one');
+    await repo.wishes();
+    expect(counting.reads, 1);
+
+    await repo.save('two');
+    await repo.wishes();
+    expect(counting.reads, 2, reason: 'a new wish drops the cached list');
+
+    await repo.update(wish, 'one edited');
+    await repo.wishes();
+    expect(counting.reads, 3, reason: 'an edit drops the cached list');
+
+    await repo.release(wish);
+    await repo.wishes();
+    expect(counting.reads, 4, reason: 'a release drops the cached list');
+
+    await repo.delete(wish);
+    await repo.wishes();
+    expect(counting.reads, 5, reason: 'a delete drops the cached list');
   });
 
   test('no signed-in user means no wishes and no crash', () async {
