@@ -178,7 +178,8 @@ void main() {
     );
     expect(
       analytics.events.map((event) => event['name']),
-      contains('wish_updated'),
+      contains('wish_edited'),
+      reason: 'BQ26 reads the wish_edited events',
     );
     expect(pendingWrites.writes, isEmpty, reason: 'online means no queue');
   });
@@ -211,6 +212,19 @@ void main() {
     // A queued set would resurrect the wish on the next sync, so the delete
     // must not be in the pending-writes queue.
     expect(pendingWrites.writes, isEmpty);
+  });
+
+  test('the four BQ26 events fire with the documented names, in order', () async {
+    final wish = await repository.save('one');
+    await repository.release(wish);
+    await repository.update(wish, 'two');
+    await repository.delete(wish);
+
+    expect(
+      analytics.events.map((event) => event['name']),
+      ['wish_created', 'wish_released', 'wish_edited', 'wish_deleted'],
+      reason: 'BQ26 depends on exactly these four event names',
+    );
   });
 
   test('wishes come back newest first', () async {
