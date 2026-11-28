@@ -31,13 +31,18 @@ class SpeechRecognitionService {
   /// [isFinal] true when the recognizer settles on them.
   ///
   /// Each report replaces the previous one; it is not an addition.
+  ///
+  /// [onSoundLevel] reports how loud the user is, as the recognizer measures
+  /// it (roughly -2 when silent to 10 when speaking loudly on Android).
   Future<void> listen({
     required void Function(String words, bool isFinal) onWords,
     bool preferOnDevice = false,
+    void Function(double level)? onSoundLevel,
   }) {
     return _speech.listen(
       onResult: (SpeechRecognitionResult result) =>
           onWords(result.recognizedWords, result.finalResult),
+      onSoundLevelChange: onSoundLevel,
       listenOptions: SpeechListenOptions(
         partialResults: true,
         // There is no way to ask whether on-device recognition exists, so

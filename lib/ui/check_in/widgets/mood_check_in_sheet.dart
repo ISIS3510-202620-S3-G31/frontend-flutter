@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../data/models/check_in_model.dart';
@@ -73,6 +74,7 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
       if (_viewModel.canDictate)
         _DictateButton(
           isListening: _viewModel.isListening,
+          voiceLevel: _viewModel.voiceLevel,
           onPressed: _toggleDictation,
         ),
     ];
@@ -229,24 +231,139 @@ class _MoodCheckInSheetState extends State<MoodCheckInSheet> {
 
 /// Starts and stops the dictation. Its state follows the recognizer, which
 /// stops on its own after a pause.
-class _DictateButton extends StatelessWidget {
-  const _DictateButton({required this.isListening, required this.onPressed});
+///
+/// While listening, soft rings pulse out of the mic and grow with the voice,
+/// so the user can see at a glance that the phone is hearing them.
+class _DictateButton extends StatefulWidget {
+  const _DictateButton({
+    required this.isListening,
+    required this.voiceLevel,
+    required this.onPressed,
+  });
 
   final bool isListening;
+  final ValueListenable<double> voiceLevel;
   final VoidCallback onPressed;
 
   @override
+  State<_DictateButton> createState() => _DictateButtonState();
+}
+
+class _DictateButtonState extends State<_DictateButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _follow();
+  }
+
+  @override
+  void didUpdateWidget(_DictateButton old) {
+    super.didUpdateWidget(old);
+    if (old.isListening != widget.isListening) _follow();
+  }
+
+  /// The rings only run while listening, so the sheet costs nothing otherwise.
+  void _follow() {
+    if (widget.isListening) {
+      _pulse.repeat();
+    } else {
+      _pulse
+        ..stop()
+        ..value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      tooltip: isListening ? 'Stop dictating' : 'Dictate your note',
-      icon: Icon(
-        isListening ? Icons.mic : Icons.mic_none,
-        color: isListening ? AppColors.accent : AppColors.textMuted,
-        size: 22,
-      ),
+    final listening = widget.isListening;
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (listening)
+          IgnorePointer(
+            child: RepaintBoundary(
+              child: CustomPaint(
+                size: const Size.square(44),
+                painter: _MicRingsPainter(
+                  pulse: _pulse,
+                  voiceLevel: widget.voiceLevel,
+                ),
+              ),
+            ),
+          ),
+        IconButton(
+          onPressed: widget.onPressed,
+          tooltip: listening ? 'Stop dictating' : 'Dictate your note',
+          style: IconButton.styleFrom(
+            backgroundColor: listening
+                ? AppColors.accent.withValues(alpha: 0.15)
+                : Colors.transparent,
+          ),
+          icon: Icon(
+            listening ? Icons.mic : Icons.mic_none,
+            color: listening ? AppColors.accent : AppColors.textMuted,
+            size: 22,
+          ),
+        ),
+      ],
     );
   }
+}
+
+/// Shows that the phone hears the user, like a voice message: while they
+/// speak, a soft halo swells with the voice and rings ripple out of the mic;
+/// in silence everything settles and only the mic stays.
+class _MicRingsPainter extends CustomPainter {
+  _MicRingsPainter({required this.pulse, required this.voiceLevel})
+    : super(repaint: Listenable.merge([pulse, voiceLevel]));
+
+  final Animation<double> pulse;
+  final ValueListenable<double> voiceLevel;
+
+  /// Below this the room is just quiet, not the user speaking.
+  static const _speaking = 0.08;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final level = voiceLevel.value;
+    if (level < _speaking) return;
+    final center = size.center(Offset.zero);
+    final base = size.shortestSide * 0.4;
+
+    canvas.drawCircle(
+      center,
+      base + size.shortestSide * 0.3 * level,
+      Paint()..color = AppColors.accent.withValues(alpha: 0.12 + 0.18 * level),
+    );
+
+    final reach = size.shortestSide * (0.25 + 0.45 * level);
+    for (final offset in const [0.0, 0.5]) {
+      final t = (pulse.value + offset) % 1;
+      canvas.drawCircle(
+        center,
+        base + reach * t,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = AppColors.accent.withValues(alpha: 0.7 * level * (1 - t)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MicRingsPainter old) => false;
 }
 
 

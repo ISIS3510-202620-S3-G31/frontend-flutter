@@ -84,6 +84,10 @@ class CheckInViewModel extends ChangeNotifier {
 
   bool get isListening => _isListening;
 
+  /// How loud the user is while dictating, from 0 (silent) to 1. Kept apart
+  /// from the rest of the state so only the mic redraws on every reading.
+  final ValueNotifier<double> voiceLevel = ValueNotifier(0);
+
   /// Shown under the note field when dictation could not run.
   String? get dictationMessage => _dictationMessage;
 
@@ -145,7 +149,11 @@ class CheckInViewModel extends ChangeNotifier {
     try {
       // Offline the recognizer has to run on the phone, which not every phone
       // can do. Trying is the only way to find out.
-      await _speech.listen(onWords: _onWords, preferOnDevice: _offline);
+      await _speech.listen(
+        onWords: _onWords,
+        preferOnDevice: _offline,
+        onSoundLevel: _onSoundLevel,
+      );
     } on Exception {
       _failDictation();
     }
@@ -184,7 +192,20 @@ class CheckInViewModel extends ChangeNotifier {
 
   void _onSpeechStatus(bool isListening) {
     _isListening = isListening;
+    if (!isListening) _onSoundLevel(_silent);
     _notify();
+  }
+
+  // Android reports about -2 to 1 for a quiet room and up to 10 for a loud
+  // voice, so the scale starts above the room's own noise.
+  static const _silent = 1.0;
+  static const _loud = 9.0;
+
+  void _onSoundLevel(double level) {
+    if (_disposed) return;
+    final share = ((level - _silent) / (_loud - _silent)).clamp(0.0, 1.0);
+    // Eases towards the new reading so the pulse breathes instead of jumping.
+    voiceLevel.value += (share - voiceLevel.value) * 0.5;
   }
 
   void _onSpeechError(String error) => _failDictation();
@@ -259,6 +280,7 @@ class CheckInViewModel extends ChangeNotifier {
     if (_isListening) _speech.stop();
     if (isReadingNote) _activeVoice?.stop();
     _activeVoice?.state.removeListener(_notify);
+    voiceLevel.dispose();
     super.dispose();
   }
 }
